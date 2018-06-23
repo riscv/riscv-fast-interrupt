@@ -361,7 +361,7 @@ additions for CLIC mode described in the following sections.
        0xm03   mideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
        0xm04   mie          Interrupt-enable register
        0xm05   mtvec        Trap-handler base address / interrupt mode
-(NEW)  0xm06   mtvt         Trap-handler vector table base address
+(NEW)  0xm07   mtvt         Trap-handler vector table base address
        0xm40   mscratch     Scratch register for trap handlers
        0xm41   mepc         Exception program counter
        0xm42   mcause       Cause of trap
