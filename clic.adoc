@@ -396,7 +396,7 @@ The {ie} CSR is hardwired to zero in CLIC mode, replaced by separate
 memory-mapped interrupt enables (`clicintie[__i__]`).
 
 The {ip} CSR is hardware to zero in CLIC mode, replaced by separate
-memory-mapped interrupt enables (`clicintip[__i__]`).
+memory-mapped interrupt pendings (`clicintip[__i__]`).
 
 === New {tvec} CSR modes
 
