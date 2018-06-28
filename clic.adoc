@@ -352,11 +352,16 @@ longer visible in {ip}/{ie}.
 The existing timer (`mtip`/`stip`/`etip`), software
 (`msip`/`ssip`/`esip`), and external interrupt inputs
 (`meip`/`seip`/`ueip`) are treated as additional local interrupt
-sources, where the privilege mode is hardwired but the interrupt level
-and priority can be altered using memory-mapped `clicintcfg[__i__]` registers.  For each
-of meip/mtip/msip/seip/stip/ssip/ueip/utip/usip, an 8-bit 
-configuration register is provided, which follows the format of the
-above.
+sources, where the privilege mode, interrupt level, and priority can
+be altered using memory-mapped `clicintcfg[__i__]` registers.  For
+each of
+`meip`/`mtip`/`msip`/`seip`/`stip`/`ssip`/`ueip`/`utip`/`usip`, an
+8-bit configuration register is provided, which follows the format of
+the above.
+
+NOTE: In CLIC mode, interrupt delegation for these signals is achieved
+via changing the interrupt's privilege mode in the CLIC interrupt
+input configuration, as with any other CLIC interrupt input.
 
 == CLIC CSRs
 
