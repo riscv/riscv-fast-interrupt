@@ -16,6 +16,7 @@
 :ip: pass:q[``**__m__**ip``]
 :nxti: pass:q[``**__m__**nxti``]
 :intstatus: pass:q[``**__m__**intstatus``]
+:il: pass:q[``**__m__**il``]
 :sps: pass:q[``**__m__**sps``]
 :spl: pass:q[``**__m__**spl``]
 
@@ -848,6 +849,8 @@ To take advantage of hardware preemption in the new CLIC design,
 inline handlers must save and restore {epc} and {cause} before
 enabling interrupts:
 
+[source]
+----
    .align 3
    foo:
       #----- Interrupts disabled on entry ---#
@@ -875,6 +878,7 @@ enabling interrupts:
       addi sp, sp, FRAMESIZE       # Free stack frame.
       mret                         # Return from handler.
       #------------------------------------#
+----
 
 NOTE: This version requires 10 more instructions, but reduces the time
 a preempting interrupt has to wait from a 13-instruction window to a
@@ -1261,12 +1265,12 @@ upper 16 bits of the {intstatus} registers.
 ----
  mintstatus
   31:28 mspl[3:0] // M stack pointer level
-  27:24 reserved  // To follow pattern of others.
+  27:24 reserved (WPRI)
   23:20 sspl[3:0] // S stack pointer level
      19 msps      // M stack pointer swapped?
-     18 reserved
+     18 reserved (WPRI)
      17 ssps      // S stack pointer swapped?
-     16 reserved
+     16 reserved (WPRI)
 
  sintstatus
   23:20 sspl[3:0]
@@ -1281,13 +1285,37 @@ swapped in the mode's stack pointer.  The 4-bit {spl} fields holds the
 interrupt level of the handler that successfully swapped in the
 privilege mode's stack pointer to current `sp`.
 
-=== Stack Swap CSR instructions ({scratchi}/{scratcho})
+=== Stack Swap CSR Instructions ({scratchi}/{scratcho})
 
-New instructions are provided to conditionally swap into the stack
-pointer when entering a higher-privilege mode, encoded as CSRRW
-instructions to two special CSR registers per privilege mode.
+When more than one privilege mode is supported, two new CSRs
+({scratchi}/{scratcho}) are defined to support conditional swapping of
+the stack pointer when entering/leaving a higher-privilege mode.
+These CSRs can be accessed with any CSR instruction, though are
+designed to be used with `csrrw` instructions.
 
-On entry to a handler, before decrementing the stack pointer:
+==== {scratchi}
+
+The {scratchi} CSR is accessed at handler entry.  For all CSR
+instructions accessing {scratchi}, a swap only occurs when {sps} is 0,
+indicating that no handler in the current privilege mode has swapped
+the stack pointer already.
+
+If {sps} is zero, the value returned in `rd` is the original value in
+{scratch}, {sps} is set to 1, and {spl} is set to {il} to record the
+interrupt level that swapped the stack pointer in this mode.  The new
+value written to {scratch} follows the usual CSR instruction
+convention, either the source argument (for `csrrw`/`csrrwi`), or the
+{scratch} value with bits set or cleared depending on the source
+operand and instruction type (for `csrrs`/`csrrsi`/`csrrc`/`csrrci`).
+
+If {sps} is not zero, the value returned in `rd` is `rs1` and no other
+CSR state update is performed (ignoring updates to performance
+counters).
+
+NOTE: The CSR instructions are defined to always copy a result
+({scratch} or `rs1`) to the destination to simplify implementations
+using register renaming, and in normal use has both `rs1` = `sp` and
+`rd` = `sp`.
 
 [source]
 ----
@@ -1301,15 +1329,26 @@ On entry to a handler, before decrementing the stack pointer:
       rd = rs1;
   }
 
-  // Usual use: csrrw sp, mscratchi, sp 
+  // Usual use: csrrw sp, mscratchi, sp
 ----
 
-The instruction is defined to always copy a result (`rs1` or
-`mscratch`) to the destination to simplify implementations using
-register renaming, and in normal use has both `rs1` = `sp` and `rd` =
-`sp`.
+==== {scratcho}
 
-On exit from a handler, after incrementing the stack pointer:
+The {scratcho} CSR is accessed at handler exit.  For all CSR
+instructions accessing {scratcho}, a swap only occurs when {spl}
+matches the current {il}, indicating that this interrupt level performed the stack pointer swap.
+
+If {spl} matches {il}, the value returned in `rd` is the original
+value in {scratch}, and {sps} is set to 0 to indicate the stack
+pointer has been swapped back.  The new value written to {scratch}
+follows the usual CSR instruction convention, either the source
+argument (for `csrrw`/`csrrwi`), or the {scratch} value with bits set
+or cleared depending on the source operand and instruction type (for
+`csrrs`/`csrrsi`/`csrrc`/`csrrci`).
+
+If {spl} does not match {il}, the value returned in `rd` is `rs1` and
+no other CSR state update is performed (ignoring updates to
+performance counters).
 
 [source]
 ----
@@ -1327,8 +1366,127 @@ On exit from a handler, after incrementing the stack pointer:
   // Usual use: csrrw sp, mscratcho, sp 
 ----
 
-The two shadows of {scratch}, {scratchi} and {scratcho}, are used to
-encode this new instruction behavior.
+=== Stack Swap Example Code
+
+Interrupt handlers running in the lowest privilege mode do not need to
+swap stack pointers, as they will only be entered by a horizontal
+interrupt from the same privilege mode.  In systems with multiple
+privilege modes, handlers running in higher privilege modes must
+account for vertical interrupts taken from a lower privilege mode (in
+which case the stack pointer must be swapped) as well as horizontal
+interrupts from the same privilege mode.
+
+[source]
+----
+    # Example of inline interrupt with stack swapping.
+   .align 3
+   foo:
+      csrrw sp, mscratchi, sp      # Conditionally swap in stack pointer.
+      addi sp, sp, -FRAMESIZE      # Create a frame on stack.
+      sw s0, offset(sp)            # Save working register.
+      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
+      sw s1, offset(sp)            # Save working register.
+      la s0, COUNTER               # Get counter address.
+      li s1, 1
+      amoadd.w x0, (s0), s1        # Increment counter in memory.
+      lw s1, offset(sp)            # Restore registers.
+      lw s0, offset(sp)
+      addi sp, sp, FRAMESIZE       # Free stack frame.
+      csrrw sp, mscratcho, sp      # Conditionally swap out stack pointer.
+      mret                         # Return from handler using saved mepc.
+----
+
+[source]
+----
+    # Example of inline preemptable interrupt with stack swapping.
+   .align 3
+   foo:
+      #----- Interrupts disabled on entry ---#
+      csrrw sp, mscratchi, sp      # Conditionally swap in stack pointer.
+      addi sp, sp, -FRAMESIZE      # Create a frame on stack.
+      sw s0, offset(sp)            # Save working register.
+      sw s1, offset(sp)            # Save working register.
+      csrr s0, mcause              # Read cause.
+      csrr s1, mepc                # Read epc.
+      csrrsi x0, mstatus, MIE      # Enable interrupts.
+      #----- Interrupts enabled ---------#
+      sw s0, offset(sp)            # Save cause on stack.
+      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
+      sw s1, offset(sp)            # Save epc on stack.
+      la s0, COUNTER               # Get counter address.
+      li s1, 1
+      amoadd.w x0, (s0), s1        # Increment counter in memory.
+      lw s1, offset(sp)            # Restore epc
+      lw s0, offset(sp)            # Restore cause
+      #----- Interrupts disabled  ---------#
+      csrrci x0, mstatus, MIE      # Disable interrupts.
+      csrw mepc, s1                # Put epc back.
+      csrw mcause, s0              # Put cause back.
+      lw s1, offset(sp)            # Restore s1.
+      lw s0, offset(sp)            # Restore s0.
+      addi sp, sp, FRAMESIZE       # Free stack frame.
+      csrrw sp, mscratcho, sp      # Conditionally swap out stack pointer.
+      mret                         # Return from handler.
+      #------------------------------------#
+----
+
+[source]
+----
+  # Example Unix C ABI interrupt trampoline with stack swapping.
+
+  irq_start:
+  #----Interrupts disabled
+    csrrw sp, mscratchi, sp # Conditionally swap in stack pointer.
+    sub sp, sp, -FRAMESIZE  # Allocate space on stack.
+    sw t0, OFFSET(sp)       # Save t0.
+    csrr t0, mcause         # Get mcause of interrupted context.
+    sw a0, OFFSET(sp)       # Save a0.
+    csrr a0, mepc           # Get mepc of interrupt context.
+    bgez t0, handle_exc     # Handle synchronous exception.
+    sw t0, OFFSET(sp)       # Save mcause of interrupted context.
+    sw t1-t6, OFFSET(sp)    # 6 more temporaries to save
+    sw a0, OFFSET(sp)       # Save mepc.
+    sw a1-a7, OFFSET(sp)    # 7 more arguments
+    sw ra, OFFSET(sp)       # 1 return address
+    csrrsi a0, mnxti, MIE   # Get highest current interrupt and enable interrupts.
+                            # Will return original interrupt if no others appear.
+  #----Interrupts enabled -----------------------
+
+  # ....
+  # Middle elided
+  # ....
+
+  #---- Critical section with interrupts disabled -----------------------
+    csrrci x0, mstatus, MIE # Disable interrupts
+    csrw mcause, t0         # Restore previous context.
+
+    lw t0, OFFSET(sp)       # Restore original t0 value.
+    csrw mepc, a0           # Restore previous context.
+
+    csrrsi a0, mnxti, 0     # Claim highest current interrupt.
+    bnez a0, get_entry      # Go around if new interrupt.
+
+    lw a0, OFFSET(sp)       # Restore original a0 value.
+    add sp, sp, FRAMESIZE   # Reclaim stack space.
+    csrrw sp, mscratcho, sp # Conditionally swap out stack pointer.
+    mret                    # Return from interrupt.
+  #-----------------------------------------------------------------------
+  #-----------------------------------------------------------------------
+   handle_exc:
+    #
+    # Perform exception processing with interrupts disabled
+    #
+    csrrw sp, mscratcho, sp  # Conditionally swap out stack pointer.
+    mret # Return from exception
+  #----------------------------------------------------------------------
+----
+
+When a boot sequence or a higher privilege mode begins normal
+execution ({il}=0} in a given privilege mode, the stack pointer
+register `sp` should be initialized to point to the privilege mode's
+stack, {sps} should be 1, and {spl} should be 0.  This prevents any
+interrupt handler in the same privilege mode from swapping out the
+active stack pointer.
 
 == Safe execution of urgent interrupts in lower-privileged modes
 
