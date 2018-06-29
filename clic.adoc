@@ -601,8 +601,9 @@ operation.
 
 A read of the {nxti} CSR returns either zero, indicating there is no
 suitable interrupt to service or that the highest ranked interrupt is
-selectively hardware vectored, or returns the address of the entry in
-the trap handler table for software trap vectoring.
+selectively hardware vectored or that the system is not in a CLIC
+mode, or returns the address of the entry in the trap handler table
+for software trap vectoring.
 
 If the CSR instruction that acccesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
@@ -630,7 +631,7 @@ interrupt.
    mcause.exccode = clic.id;   // Update interrupt id.
    rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
  } else {
-   // No interrupt or a selectively vectored interrupt.
+   // No interrupt or a selectively vectored interrupt, or in non-CLIC mode.
    rd = 0;
  }
 --
