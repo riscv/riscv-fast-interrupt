@@ -25,7 +25,7 @@
 :ret: pass:q[``**__m__**ret``]
 
 = SiFive Proposal for a RISC-V Core-Local Interrupt Controller (CLIC)
-Version 20180622
+Version 20180629
 
 == Background and Motivation
 
