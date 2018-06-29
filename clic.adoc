@@ -201,6 +201,9 @@ a 3-bit `nlbits` field, and a 1-bit `nvbits` field, plus reserved bits
     0     nvbits
 ----
 
+The `cliccfg` register resets to 0 (i.e., all interrupts are M-mode at
+level 15).
+
 ==== Specifying interrupt privilege mode
 
 NOTE: Figure out interaction with hypervisor mode.
