@@ -195,9 +195,9 @@ a 3-bit `nlbits` field, and a 1-bit `nvbits` field, plus reserved bits
   cliccfg register layout
 
   bits    field
-  7:6     nmbits[1:0]
-  5:3     nlbits[2:0]
-  2:1     reserved (WARL 0)
+  7:6     reserved (WARL 0)
+  5:4     nmbits[1:0]
+  3:1     nlbits[2:0]
     0     nvbits
 ----
 
