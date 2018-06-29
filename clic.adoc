@@ -1147,85 +1147,30 @@ in the U-mode region except that only the low 6 bits of
 
 === CLIC memory map for Multiple Harts
 
-In a system with multiple harts, the M-mode CLIC regions for all the harts are
-placed contiguously in the memory space.
+In a system with multiple harts, the M-mode CLIC regions for all the
+harts are placed contiguously in the memory space, followed by the
+S-mode CLIC regions for all harts.
 
-[source]
+In the SiFive Freedom platforms, the memory map is as follows,
+supporting up to 512 CLICs in a platform:
+
 ----
-Layout of CLIC M-mode regions across multiple harts
-Offset  Hart 
-0x0000  0
-0x1000  1
-0x2000  2
-... 
-0xN000  N
-----
+  0x0200_0000   CLINT
 
-NOTE: CLIC regions can be made accessible to other harts to support
-additional inter-processor interrupts via writes to
-`clicintip[__i__]`.
-
-If the system supports supervisor-mode and user-mode interrupts, the
-corresponding CLIC memory regions are laid out following the M-mode
-CLIC regions.
-
-[source]
-----
- # CLIC-base is start of CLIC in memory map
- M-region[h] = CLIC-base + 4096*h   # M-region for hart h.
- S-CLIC-base = M-region[maxHartID+1]
- S-region[h] = S-CLIC-base + 4096*h # S-region for hart h.
- U-CLIC-base = S-region[maxHartID+1]
- U-region[h] = U-CLIC-base + 4096*h # U-region for hart h.
-
- If no harts have supervisor mode, then U-CLIC-base = M-region[nHarts]
+  0x0280_0000   M-mode aperture for CLIC 0
+  0x0280_1000   M-mode aperture for CLIC 1
+  ...
+  0x02A0_0000   HS-mode aperture for CLIC 0
+  0x02A0_1000   HS-mode aperture for CLIC 1
+  ...
+  0x02C0_0000   S-mode aperture for CLIC 0
+  0x02C0_1000   S-mode aperture for CLIC 1
+  ...
+  0x02E0_0000   U-mode aperture for CLIC 0
+  0x02E0_1000   U-mode aperture for CLIC 1
 ----
 
-For systems with non-contiguous hart ID or harts containing different
-combinations of supported privilege modes, the maximum hart ID is used
-to space apart CLIC memory regions to simplify address calculations
-based on hart ID.  Any CLIC memory regions corresponding to
-unsupported privilege modes on a hart, or non-existent harts where
-harts are not contiguously numbered, are hardwired to zero.
-
-[source]
-----
-Layout of CLIC regions for 3 harts for M/S/U harts
-Offset  Hart Mode
-0x0000  0    M
-0x1000  1    M
-0x2000  2    M
-0x3000  0    S
-0x4000  1    S
-0x5000  2    S
-0x6000  0    U
-0x7000  1    U
-0x8000  2    U
-
-Layout of CLIC regions for 3 harts for M/U harts
-Offset  Hart Mode
-0x0000  0    M
-0x1000  1    M
-0x2000  2    M
-0x3000  0    U
-0x4000  1    U
-0x5000  2    U
-
-Layout of CLIC regions for 3 harts, where first is M/S/U and others are M/U
-
-Offset  Hart Mode
-0x0000  0    M
-0x1000  1    M
-0x2000  2    M
-0x3000  0    S
-0x4000  1    0 # Hardwired zero.
-0x5000  2    0 # Hardwired zero.
-0x6000  0    U
-0x7000  1    U
-0x8000  2    U
-----
-
-== CLIC and PCI Message-Signalled Interrupts (MSI)
+== CLIC and PCI Message-Signalled Interrupts (MSI)w
 
 NOTE: This is a proposed future extension.
 
