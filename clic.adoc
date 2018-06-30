@@ -16,6 +16,8 @@
 :ip: pass:q[``**__m__**ip``]
 :nxti: pass:q[``**__m__**nxti``]
 :intstatus: pass:q[``**__m__**intstatus``]
+:pp: pass:q[``**__m__**pp``]
+:pie: pass:q[``**__m__**pie``]
 :il: pass:q[``**__m__**il``]
 :sps: pass:q[``**__m__**sps``]
 :spl: pass:q[``**__m__**spl``]
@@ -329,7 +331,7 @@ invert the vectoring setting for input _i_.
 
 NOTE: The setting of `nvbits` does not alter the way in which the
 implemented `clicintcfg[__i__]` bits are interpreted as mode, level,
-or priority.  The encoding means that selectively hardware-vectored
+or priority.  The encoding means that selectively hardware-vectored (SHV)
 interrupts are always handled before non-hardware-vectored interrupts
 with identical settings in the other upper bits of
 `clicintcfg[__i__]`.  The assumption is that this is usually the
@@ -567,6 +569,7 @@ indicate user/supervisor) mirrored from `sstatus.spp`, while the user
 `ucause` register has no `upp` bit as interrupts can only have come
 from user mode.
 
+----
  scause
  Bits    Field      Description
  XLEN-1 Interrupt  Interrupt=1, Exception=0
@@ -583,6 +586,7 @@ from user mode.
  27:24  upil       Previous interrupt level
     23  upie       Previous interrupt enable, same as ustatus.upie
    9:0  exccode    Exception/interrupt code
+----
 
 NOTE: Not clear if user mode should ever see hardware vectoring in progress.
 
@@ -590,7 +594,7 @@ NOTE: Not clear if user mode should ever see hardware vectoring in progress.
 
 The {nxti} CSR can be used by software to service the next horizontal
 interrupt for the same privilege mode when it has greater level than
-the saved interrupt context (held in {cause}`.pil`, without incuring
+the saved interrupt context (held in {cause}`.pil`), without incuring
 the full cost of an interrupt pipeline flush and context save/restore.
 The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
 instructions, where the value read is a pointer to an entry in the
@@ -604,18 +608,25 @@ operation.
 
 A read of the {nxti} CSR returns either zero, indicating there is no
 suitable interrupt to service or that the highest ranked interrupt is
-selectively hardware vectored or that the system is not in a CLIC
-mode, or returns the address of the entry in the trap handler table
-for software trap vectoring.
+SHV or that the system is not in a CLIC mode, or returns a non-zero
+address of the entry in the trap handler table for software trap
+vectoring.
+
+NOTE: The {tvt} CSR could be set to memory addresses such that a table
+entry was at address zero, and this would be indistinguishable from
+the no-interrupt case.
 
 If the CSR instruction that acccesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
 operation, while the {cause} register's `exccode` field and the
 {intstatus} register's `**__m__**il` field can also be updated with
-the new interrupt level.
+the new interrupt id and level respectively.
 
-NOTE: If the CSR instruction does not include write side effects
-(e.g., `csrr t0, mnxti`), then no state update on any CSR occurs.
+NOTE: Following the usual convention for CSR instructions, if the CSR
+instruction does not include write side effects (e.g., `csrr t0,
+mnxti`), then no state update on any CSR occurs.  This can be used to
+determine if an interrupt could be taken without actually updating
+{il} and `exccode`.
 
 The {nxti} CSR is intended to be used inside an interrupt handler
 after an initial interrupt has been taken and {cause} and {epc}
@@ -629,12 +640,12 @@ interrupt.
  if (clic.priv==M && clic.level > mcause.pil
      && (cliccfg.nvbits==0 || clicintcfg[clic.id][8-CLICINTBITS]==0) ) {
    // The CLIC interrupt should be serviced before returning to the saved context,
-   // unless it's a selectively vectored interupt.
+   // unless it's a selectively hardware vectored interupt.
    minstatus.mil = clic.level; // Update hart's interrupt level.
    mcause.exccode = clic.id;   // Update interrupt id.
    rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
  } else {
-   // No interrupt or a selectively vectored interrupt, or in non-CLIC mode.
+   // No interrupt, or a selectively hardware vectored interrupt, or in non-CLIC mode.
    rd = 0;
  }
 --
@@ -803,6 +814,8 @@ interrupts.  To provide easy C coding for inline interrupt handlers,
 while reducing register save/restore overhead, we use standard
 interrupt attributes, which have the following syntax:
 
+[source]
+----
   /* Small ISR to poke device to clear interrupt and increment in-memory counter. */
   void __attribute__ ((interrupt))
   foo (void)
@@ -816,6 +829,7 @@ interrupt attributes, which have the following syntax:
     COUNTER++;
   #endif
   }
+----
 
 The attribute tells the C compiler to use callee-save for all
 registers, so the handler has to "pay as it goes" to use registers,
@@ -823,6 +837,8 @@ and only save the full caller-save set if it makes a nested regular C
 call.  The attribute also tells the C compiler to align the function
 entry point on an 8-byte boundary.
 
+[source]
+----
    .align 3
    foo:
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
@@ -836,6 +852,7 @@ entry point on an 8-byte boundary.
       lw s0, offset(sp)
       addi sp, sp, FRAMESIZE       # Free stack frame.
       mret                         # Return from handler using saved mepc.
+----
 
 With hardware vectoring, inline interrupt handlers can provide very
 rapid response for small tasks.
@@ -873,8 +890,8 @@ enabling interrupts:
       amoadd.w x0, (s0), s1        # Increment counter in memory.
       lw s1, offset(sp)            # Restore epc
       lw s0, offset(sp)            # Restore cause
-      #----- Interrupts disabled  ---------#
       csrrci x0, mstatus, MIE      # Disable interrupts.
+      #----- Interrupts disabled  ---------#
       csrw mepc, s1                # Put epc back.
       csrw mcause, s0              # Put cause back.
       lw s1, offset(sp)            # Restore s1.
@@ -897,61 +914,62 @@ re-enabling interrupts.
 
 An alternative model is where all interrupt handler routines use the
 standard C ABI.  In this case, the CLIC would use no hardware
-vectoring with a common software trampoline, and use the {nxti}
-instruction to obtain the trap-handler address.
+vectoring for the C ABI handlers and instead use a common software
+trampoline, which uses the {nxti} instruction to obtain the
+trap-handler address.  The code sequence below is annotated with an
+explanation of its operation.
 
 [source]
 ----
   # Example M-mode-only Unix C ABI interrupt trampoline.
+  # FRAMESIZE should be defined appropriately to hold saved context with ABI-specified alignment.
   # OFFSET should be replaced with individual stack frame locations.
-  irq_start:
-  #----Interrupts disabled for 12 instructions.
-    sub sp, sp, -FRAMESIZE  # Allocate space on stack.
-    sw t0, OFFSET(sp)       # Save t0.
-    csrr t0, mcause         # Get mcause of interrupted context.
+  # Register save/restore pseudo-code should be expanded to individual instructions.
+
+  irq_enter:
+  #----Interrupts disabled for 7 + SREGS instructions, where SREGS is number of registers saved. <1>
+    sub sp, sp, -FRAMESIZE  # Allocate space on stack. <2>
+    sw a1, OFFSET(sp)       # Save a1.
+    csrr a1, mcause         # Get mcause of interrupted context.
     sw a0, OFFSET(sp)       # Save a0.
     csrr a0, mepc           # Get mepc of interrupt context.
-    bgez t0, handle_exc     # Handle synchronous exception.
-    sw t0, OFFSET(sp)       # Save mcause of interrupted context.
-    sw t1-t6, OFFSET(sp)    # 6 more temporaries to save
+    bgez a1, handle_exc     # Handle synchronous exception. <3>
     sw a0, OFFSET(sp)       # Save mepc.
-    sw a1-a7, OFFSET(sp)    # 7 more arguments
-    sw ra, OFFSET(sp)       # 1 return address
+    sw a1, OFFSET(sp)       # Save mcause of interrupted context.
+    sw a2-a7, OFFSET(sp)    # Save other argument registers.
+    sw t0-t6, OFFSET(sp)    # Save temporaries.
+    sw ra, OFFSET(sp)       # 1 return address <5>
     csrrsi a0, mnxti, MIE   # Get highest current interrupt and enable interrupts.
-                            # Will return original interrupt if no others appear.
-  #----Interrupts enabled -----------------------
-    beqz a0, exit           # Check if original interrupt vanished.
-
-  get_entry:
-    lw t0, (a0)             # Indirect into handler vector table for function pointer.
-    csrrsi x0, mstatus, MIE # Enable interrupts (only needed for backwards branch here)
+                            # Will return original interrupt if no others appear. <6>
+  #----Interrupts enabled ----------------------- <7>
+    beqz a0, exit           # Check if original interrupt vanished. <8>
 
   service_loop:             # 5 instructions in pending-interrupt service loop.
-    jalr t0                 # Call C ABI Routine, a0 has interrupt ID encoded.
+    lw a1, (a0)             # Indirect into handler vector table for function pointer. <9>
+    csrrsi x0, mstatus, MIE # Ensure interrupts enabled. <10>
+
+    jalr a1                 # Call C ABI Routine, a0 has interrupt ID encoded. <11>
                             # Routine must clear down interrupt in CLIC.
-    csrrsi a0, mnxti, 0     # Claim any pending interrupt at level > mcause.pil
-    beqz a0, irq_return     # Exit if no interrupt.
-    lw t0, (a0)             # Get vector entry.
-    j service_loop          # Go around.
+    csrrsi a0, mnxti, MIE   # Claim any pending interrupt at level > mcause.pil <12>
+    bnez a0, service_loop   # Loop to service any interrupt. <13>
 
-  irq_return:               # Restore ABI registers with interrupts enabled.
-    lw ra, OFFSET(sp)       # 1 return address
-    lw a1-a7, OFFSET(sp)    # 7 arguments
-    lw t1-t6, OFFSET(sp)    # 6 temporaries
-
+  #--- Restore ABI registers with interrupts enabled --- <14>
+    lw ra, OFFSET(sp)       # Restore return address
+    lw t0-t6, OFFSET(sp)    # Restore temporaries.
+    lw a2-a7, OFFSET(sp)    # Restore other arguments.
+    lw a1, OFFSET(sp)       # Get saved mcause,
   exit:                     # Fast exit point.
-    lw t0, OFFSET(sp)       # Get saved mcause,
     lw a0, OFFSET(sp)       # Get saved mepc.
 
+    csrrci x0, mstatus, MIE # Disable interrupts <15>
   #---- Critical section with interrupts disabled -----------------------
-    csrrci x0, mstatus, MIE # Disable interrupts
-    csrw mcause, t0         # Restore previous context.
+    csrw mcause, a1         # Restore previous context.
 
-    lw t0, OFFSET(sp)       # Restore original t0 value.
+    lw a1, OFFSET(sp)       # Restore original a1 value.
     csrw mepc, a0           # Restore previous context.
 
-    csrrsi a0, mnxti, 0     # Claim highest current interrupt.
-    bnez a0, get_entry      # Go around if new interrupt.
+    csrrci a0, mnxti, MIE   # Claim highest current interrupt. <16>
+    bnez a0, service_loop   # Go around if new interrupt.
 
     lw a0, OFFSET(sp)       # Restore original a0 value.
     add sp, sp, FRAMESIZE   # Reclaim stack space.
@@ -959,11 +977,181 @@ instruction to obtain the trap-handler address.
   #-----------------------------------------------------------------------
   #-----------------------------------------------------------------------
    handle_exc:
-    #
+    # <4>
     # Perform exception processing with interrupts disabled
     #
     mret # Return from exception
   #----------------------------------------------------------------------
+----
+
+<1> An initial interrupt (II) causes entry to the handler with
+interrupts disabled, and {epc} and {cause} CSRs hold values
+representing the original interrupted context (OIC), including the PC
+in {epc}, the privilege mode in {pp} (visible in both {cause} and
+{status}), the interrupt level in {pil} (in {cause}) and the interrupt
+enable state in {pie} (visible in both {cause} and {status}).  The
+{cause} CSR and the {intstatus} CSRs additionally hold information on
+the interrupt to be handled, including `exccode` in {cause} and {il}
+in {intstatus}.
+
+<2> The interrupt trampoline needs sufficient space to store the OIC's
+caller-save registers as well as its `epc` and `cause` values, which
+are saved in a frame on the memory stack to support preemption.  This
+routine is M-mode only so does not need to consider swapping stacks
+from other privilege modes.  A simple constant bump of the stack
+pointer `sp` is sufficient to provide space to store the OIC.
+
+<3> The trap handler could have been entered by a synchronous
+exception instead of an interrupt, which can be determined by
+examining the sign bit of the returned {cause} value.  If the trap was
+for an exception (sign bit zero), the code jumps to exception handler
+code while keeping interrupts disabled.
+
+<4> The exception handler code is located here out of line to reduce
+performance impact on interrupts.  The main body of the trampoline
+only handles interrupts.
+
+<5> If this was an interrupt, the trampoline entry code continues to
+save all the caller-save registers to the stack.  This is done with
+interrupts disabled, as even if an interrupt arrived with a higher
+interrupt level it would still require all registers to be saved.
+
+<6> When {nxti} is read here, the interrupt inputs to the CLIC might
+have changed from the time the handler was initially entered.  The
+return value of {nxti}, which holds a pointer to an entry in the trap
+vector table, is saved in register `a0` so it can be passed as the
+first argument to the software-vectored interrupt handler, where it
+can be used to reconstruct the original interrupt id in the case where
+multiple vector entries use a common handler.  There are multiple
+cases to consider, all of which are handled correctly by the
+definition of {nxti}:
+
+* The II is still the ranking interrupt (no change).  In this case, as
+the level of the II will still be higher than `pil` from the OIC, {il}
+and `exccode` will be rewritten with the same value that they already
+had (effectively unchanged), and {nxti} will return the table entry
+for the II.
+
+* The II has been superceded by a higher-level non-SHV interrupt.  In
+this case, {il} will be set to the new higher interrupt level,
+`exccode` will be updated to the new interrupt id, and {nxti} will
+return the vector table entry for the new higher-level interrupt.  The
+OIC is not disturbed, retaining the original `epc` and the original
+`pil`.  This case reduces latency to service a more-important
+interrupt that arrives after the state-save sequence was begun for the
+less-important II.  The II, if still pending-enabled, will be serviced
+sometime after the higher-level interrupt as described below.
+
+* The II has been superceded by a higher-priority non-SHV interrupt at
+the same level.  This operates similarly to the previous case, with
+`exccode` updated to the new interrupt id.  Because the lower-priority
+interrupt had not begun to run its service routine, this optimization
+preserves the property that interrupt handlers at the same interrupt
+level but different priorities execute atomically with respect to each
+other (i.e., they do not preempt each other).
+
+* The II has disappeared and a lower-ranked non-SHV interrupt, which
+has interrupt level greater than the OIC's `pil` is present in CLIC.
+In this case, the {il} of the handler will be reduced to the
+lower-ranked interrupt's level, `exccode` will be updated with the new
+interrupt id, and {nxti} will return a pointer to the appropriate
+handler in table.  In this case, the new lower-ranked interrupt would
+still have caused the original context to have been interrupted to run
+the handler, and the disappearing II has simply caused the
+lower-ranked interrupt's entry and state-save sequence to begin
+earlier.
+
+* The II has disappeared and either there is no current interrupt from
+the CLIC, or the current ranking interrupt is a non-SHV interrupt with
+level lower than {pil}.  In this case, the {il} and `exccode` are not
+updated, and 0 is returned by {nxti}.  The following trampoline code
+will then not fetch a vector from the table, and instead just restore
+the OIC context and `mret` back to it.  This preserves the property
+that the OIC completes execution before servicing any new interrupt
+with a lower or equal interrupt level.
+
+* The II has been superceded by a higher-level SHV interrupt.  In this
+case, the {il} and `exccode` are not updated, and 0 is returned by
+{nxti}.  Once interrupts are reenabled for the following instruction,
+the processor will preempt the current handler and execute the vectored
+interrupt at a higher interrupt level using the function pointer
+stored in the vector table.
+
+<7> Interrupts are now enabled.  If a higher-level SHV interrupt had
+arrived while interrupts were disabled, then the current handler will
+be preempted and execution starts at the SHV handler address.  If a
+non-vectored higher-level interrupt arrives now, it will also preempt
+the current handler and begin a nested state-save sequence at the
+handler entry point `irq_enter`.
+
+<8> The branch checks if the II disappeared or if a higher priority
+SHV at the same level appeared, in which case the current handler
+returns to the OIC.  As most registers have not been touched, the
+routine can skip past most of the register restore code.  This
+preserves the property that interrupts (SHV or non-SHV) at the same
+level do not preempt each other.
+
+<9> The value returned by {nxti} is used to index the vector table and
+return the function pointer.
+
+<10> This `csrrsi` instruction enables interrupts and is redundant
+when proceeding sequentially from the first {nxti} read (6) or if
+looping back from the end of the `service_loop` (13).  However, it is
+required on the backward path from (16) to re-enable interrupts to
+allow preemption.  It is scheduled after the table lookup to use what
+will often be a load-use delay slot.
+
+<11> The `jalr` instruction actually calls the C ABI function that
+implements the handler.  Interrupts are enabled at this point, so the
+C function can be preempted at any time by an interrupt with a higher
+level than current {il}.
+
+<12> Once the handler returns, another read of {nxti} checks if there
+are any more interrupts to service.  Interrupts remain enabled.  The
+`csrrsi` includes a redundant set of the {ie} interrupt enable to
+force the CSR instruction to update CSR state.  Only non-SHV
+interrupts with a level greater than `pil` will be serviced in this
+loop.  Note that {il} can decrease from its current value on the
+{nxti} read.  {il} should not increase, as if a higher-level interrupt
+was ready, it should have preempted this instruction.
+
+<13> If there was another appropriate interrupt to service, the code
+loops back to perform the next handler call.  The `service_loop` only
+contains 5 instructions, allowing multiple back-back interrupts to be
+handled without saving and restoring contexts.  On a simple pipeline
+with a one-cycle load-use penalty, single-cycle CSR access, and a
+one-cycle taken-branch penalty, the service loop can initiate a new
+interrupt service with only 7 clock cycles of overhead per handler
+call.
+
+<14> This instruction sequence restores the OIC.  Interrupts are still
+enabled, so preemption is allowed during this restore.
+
+<15> Interrupts are disabled for the final steps of restoring the OIC,
+which requires loading `mcause` and `mepc` from the stacked values,
+and recovering the final register values from the OIC.
+
+<16> A final read of {nxti} is performed before returning, to reduce
+the maximum interrupt latency.  If a suitable interrupt arrives, it
+can be serviced without saving context.  The `csrrci` instruction
+includes a redundant clear of the interrupt enable bit to ensure the
+CSR state updates occur.  Interrupts must stay disabled until after
+the following branch to maintain the critical section used to restore
+the OIC in the case that there is no interrupt to service.
+
+The following table summarizes the machine state changes that occur at
+the first {nxti}:
+
+[source]
+----
+IC    at entry |->           |       at first nxti (6)
+il     CLIC                  |    CLIC
+    level id V |->  mil code | level id V    |-> mil code rd
+p    e<=p  ? ? |->           |                               # Shouldn't happen
+p    e>p   i 0 |->   e    i  |   f>p  j 0    |->  f    j   T # Same or superceded interrupt
+p    e>p   i 0 |->   e    i  |   f>p  j 1    |->  e    i   0 # Ignore vectored interrupt
+p    e>p   i 0 |->   e    i  |   f<=p j ?    |->  e    i   0 # Interrupt disappeared
+p    e>p   i 1 |->   e    i  |                               # Won't be in trampoline
 ----
 
 === Revised ABI for Embedded RISC-V
@@ -977,6 +1165,50 @@ instead of 16 in the standard Unix ABI.
 This will result in 18 instructions executed in the trampoline code
 before arriving at the correct handler function, of which 9 are stores
 (saving 7 registers plus 2 words for {epc} and {cause}).
+
+=== Analysis of interrupt latencies for C ABI trampoline
+
+The following analysis assumes a system with M-mode only and a new
+embedded ABI requiring 7 caller-save registers to be saved and
+restored.  For cycle timings, we assume a simple 3-stage pipeline that
+has a one-cycle taken-branch or pipeline flush penalty, a one-cycle
+load-use delay, and single-cycle CSR access.  This simple model
+ignores effects from contention in shared memory structures, or
+pipeline hazards from continuing long-latency operations in the
+interrupted code.
+
+==== Worst-case preempting C-ABI interrupt handler latency
+
+There are several cases to consider for the worst-case latency for a
+C-ABI higher-level interrupt handler that preempts lower-level code.
+
+If an interrupt arrives while interrupts are enabled, either inside or
+outside of a current handler, the processor will jump directly to
+`irq_enter` at the new interrupt level.  The system must flush the
+execution pipeline and then execute 18 instructions, the last of which
+is the `jalr` that calls the handler function.  These 18 instructions
+execute in 20 cycles using the simple pipeline model.
+
+When interrupts are disabled, the arriving preempting handler could be
+delayed.  If the preempting interrupt arrives while interrupts are
+disabled during the initial entry sequence (1)--(6), there will be no
+additional delay as the first {nxti} instruction (6) will cause the
+higher-level interrupt handler to be invoked, replacing the original
+interrupt cause.
+
+If the preempting interrupt arrives after interrupts are disabled (15)
+but before {nxti} is read (16), then the trampoline will observe the
+new interrupt during execution of the {nxti} read (16), and take a
+short branch back to the `service_loop`, which is lower latency than
+the interrupt-disabled case.
+
+If the preempting interrupt arrives after the read of {nxti} commits
+(16), then the interrupt has to wait an additional 4 instructions
+until the `mret` reenables interrupts, at which point the interrupt
+will be taken and the handler entered at `irq_enter`.  In the simple
+pipeline model, `mret` adds an additional pipeline flush cycle, so the
+preemption latency is 20+5 cycles, which represents the worst-case for
+a preempting C-ABI interrupt handler.
 
 == CLIC Interrupt IDs
 
@@ -1007,9 +1239,9 @@ ID  Interrupt   Note
  6  reserved
  7  mtip        Machine timer interrupt
 
- 8  ueip        User external (PLIC) interrupt      
+ 8  ueip        User external (PLIC) interrupt
  9  seip        Supervisor external (PLIC) interrupt
-10  reserved    
+10  reserved
 11  meip        Machine external (PLIC) interrupt
 
 12  csip        CLIC software interrupt
@@ -1035,7 +1267,7 @@ platforms, the local interrupt base address is `0x0200_0000`).
  CLIC/CLINT shared memory map
 
  Offset  Extent  Permissions   Contents
- 0x0000  4B      RW            hart0 msip 
+ 0x0000  4B      RW            hart0 msip
  0x0004  4B      RW            hart1 msip
  ..
  0x4000  4B      RW            hart0 mtimecmp lo
@@ -1065,7 +1297,7 @@ made accessible to the M-mode software running on the hart.
 0xc00     1B          RW            cliccfg
 
 clicintip[i] is read-only for level-based interrupts and read-write
-for edge-triggered interrupts. 
+for edge-triggered interrupts.
 ----
 
 NOTE: The `clicintip[__i__]` region is placed first as this is the
@@ -1312,7 +1544,7 @@ performance counters).
     rd = rs1;
   }
 
-  // Usual use: csrrw sp, mscratcho, sp 
+  // Usual use: csrrw sp, mscratcho, sp
 ----
 
 === Stack Swap Example Code
@@ -1383,7 +1615,7 @@ interrupts from the same privilege mode.
 ----
   # Example Unix C ABI interrupt trampoline with stack swapping.
 
-  irq_start:
+  irq_enter:
   #----Interrupts disabled
     csrrw sp, mscratchi, sp # Conditionally swap in stack pointer.
     sub sp, sp, -FRAMESIZE  # Allocate space on stack.
