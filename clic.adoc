@@ -910,7 +910,7 @@ WARNING: This form cannot be used with the existing CLINT scheme,
 unless the original interrupt pending signal is cleared before
 re-enabling interrupts.
 
-=== Calling C ABI functions as Interrupt Handlers
+== Calling C-ABI functions as Interrupt Handlers
 
 An alternative model is where all interrupt handler routines use the
 standard C ABI.  In this case, the CLIC would use no hardware
@@ -918,6 +918,8 @@ vectoring for the C ABI handlers and instead use a common software
 trampoline, which uses the {nxti} instruction to obtain the
 trap-handler address.  The code sequence below is annotated with an
 explanation of its operation.
+
+=== C-ABI Trampoline Code
 
 [source]
 ----
@@ -977,9 +979,9 @@ explanation of its operation.
   #-----------------------------------------------------------------------
   #-----------------------------------------------------------------------
    handle_exc:
-    # <4>
-    # Perform exception processing with interrupts disabled
-    #
+    # ...
+    # Perform exception processing with interrupts disabled <4> 
+    # ...
     mret # Return from exception
   #----------------------------------------------------------------------
 ----
@@ -1154,7 +1156,7 @@ p    e>p   i 0 |->   e    i  |   f<=p j ?    |->  e    i   0 # Interrupt disappe
 p    e>p   i 1 |->   e    i  |                               # Won't be in trampoline
 ----
 
-=== Revised ABI for Embedded RISC-V
+=== Revised C-ABI for Embedded RISC-V
 
 The overhead to save and restore registers in the interrupt trampoline
 can be reduced with a new embedded ABI that reduces the number of
@@ -1166,7 +1168,7 @@ This will result in 18 instructions executed in the trampoline code
 before arriving at the correct handler function, of which 9 are stores
 (saving 7 registers plus 2 words for {epc} and {cause}).
 
-=== Analysis of interrupt latencies for C ABI trampoline
+=== Analysis of worst-case interrupt latencies for C-ABI trampoline
 
 The following analysis assumes a system with M-mode only and a new
 embedded ABI requiring 7 caller-save registers to be saved and
@@ -1176,8 +1178,6 @@ load-use delay, and single-cycle CSR access.  This simple model
 ignores effects from contention in shared memory structures, or
 pipeline hazards from continuing long-latency operations in the
 interrupted code.
-
-==== Worst-case preempting C-ABI interrupt handler latency
 
 There are several cases to consider for the worst-case latency for a
 C-ABI higher-level interrupt handler that preempts lower-level code.
@@ -1209,215 +1209,6 @@ will be taken and the handler entered at `irq_enter`.  In the simple
 pipeline model, `mret` adds an additional pipeline flush cycle, so the
 preemption latency is 20+5 cycles, which represents the worst-case for
 a preempting C-ABI interrupt handler.
-
-== CLIC Interrupt IDs
-
-The original CLINT interrupts retain their interrupt ID in CLIC mode.
-The `cliccfgint` settings are now used to delegate these interrupts as
-required.
-
-An additional CLIC software interrupt bit (csip) is provided.  This is
-generally available for software use, but is usually used for the
-local background interrupt thread.
-
-CLIC interrupt inputs are allocated IDs beginning at interrupt ID 16.
-Any fast local interrupts that would have been connected at interrupt
-ID 16 and above should now be mapped into corresponding inputs of the
-CLIC.
-
-[source]
-----
-ID  Interrupt   Note
-
- 0  usip        User software Interrupt
- 1  ssip        Supervisor software Interrupt
- 2  reserved
- 3  msip        Machine software interrupt
-
- 4  utip        User timer interrupt
- 5  stip        Supervisor timer interrupt
- 6  reserved
- 7  mtip        Machine timer interrupt
-
- 8  ueip        User external (PLIC) interrupt
- 9  seip        Supervisor external (PLIC) interrupt
-10  reserved
-11  meip        Machine external (PLIC) interrupt
-
-12  csip        CLIC software interrupt
-13  reserved
-14  reserved
-15  reserved
-
-16+ inputs      CLIC external inputs
-----
-
-== CLIC memory map
-
-=== CLIC/CLINT shared memory map
-
-The CLIC reuses the CLINT memory map for the `msip`, `mtimecmp`, and
-`mtime` memory-mapped registers.  This simplifies providing both CLINT
-and CLIC mode in the same hardware.  The CLIC/CLINT memory map is
-given relative to a local interrupt base address (in SiFive Freedom
-platforms, the local interrupt base address is `0x0200_0000`).
-
-[source]
-----
- CLIC/CLINT shared memory map
-
- Offset  Extent  Permissions   Contents
- 0x0000  4B      RW            hart0 msip
- 0x0004  4B      RW            hart1 msip
- ..
- 0x4000  4B      RW            hart0 mtimecmp lo
- 0x4004  4B      RW            hart0 mtimecmp hi
- 0x4008  4B      RW            hart1 mtimecmp lo
- 0x400c  4B      RW            hart1 mtimecmp hi
- ..
- 0xbff8  4B      RW            mtime lo
- 0xbffc  4B      RW            mtime hi
-----
-
-=== M-Mode CLIC regions
-
-Each hart has a separate CLIC accessed by a separate address region.
-The following is the memory map of the 4KiB memory region designed to
-support M-mode access.  Where a system has PMP, this region must be
-made accessible to the M-mode software running on the hart.
-
-[source]
-----
- CLIC memory map
- M-mode regions
- Offset
-0x000+i   1B/input    R or RW       clicintip[i]
-0x400+i   1B/input    RW            clicintie[i]
-0x800+i   1B/input    RW            clicintcfg[i]
-0xc00     1B          RW            cliccfg
-
-clicintip[i] is read-only for level-based interrupts and read-write
-for edge-triggered interrupts.
-----
-
-NOTE: The `clicintip[__i__]` region is placed first as this is the
-only region usually written in interrupt handlers to clear down
-edge-triggered interrupt signal bits.  The CLIC base address, which
-also corresponds to the start of the `clicintip` array, can be loaded
-with a single `lui` instruction to reduce instruction count in
-handlers that have to calculate the appropriate `clicintip[__i__]`
-address.
-
-In systems that support additional privilege modes on a hart, an
-additional memory region is defined for each privilege mode that
-provides a restricted view of the CLIC's state.
-
-=== S-Mode CLIC regions for M/S/U harts
-
-Supervisor-mode CLIC regions only expose interrupts that have been
-configured to be supervisor-accessible via the M-mode CLIC region.
-System software must configure virtual memory and PMP permissions to
-only allow access to this region from appropriate supervisor-mode
-code.
-
-[source]
-----
-Layout of Supervisor-mode CLIC regions
-0x000+i   1B/input    R or RW       clicintip[i]
-0x400+i   1B/input    RW            clicintie[i]
-0x800+i   1B/input    RW            clicintcfg[i]
-----
-
-Any interrupt _i_ that is not accessible to S-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, and
-`clicintcfg[__i__]`.
-
-Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
-are inaccessible to S-mode.
-
-Where `cliccfg.nmbits` = 1, if `clicintcfg[__i__]` is set to S-mode
-(bit 7 is clear), interrupt _i_ is visible in the S-mode region except
-that only the low 7 bits of `clicintcfg[__i__]` can be written via the
-S-mode memory region.
-
-Where `cliccfg.nmbits` = 2, if bit 7 of `clicintcfg[__i__]` is clear
-(S-mode or U-mode), interrupt _i_ is visible through the S-mode region
-except that only the low 7 bits of `clicintcfg[__i__]` can be written
-via the S-mode memory region.  This allows the supervisor region to be
-used to selectively configure the interrupt as S-mode or U-mode.
-
-=== U-Mode CLIC regions in M/U harts or M/S/U harts
-
-User-mode CLIC regions only expose interrupts that have been
-configured to be user-accessible via the M-mode CLIC region.  System
-software must configure virtual memory and PMP permissions to only
-allow access to this region from appropriate user-mode code.
-
-[source]
-----
-Layout of user-mode CLIC regions
-0x000+i   1B/input    R or RW       clicintip[i]
-0x400+i   1B/input    RW            clicintie[i]
-0x800+i   1B/input    RW            clicintcfg[i]
-----
-
-Any interrupt _i_ that is not accessible to U-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, and
-`clicintcfg[__i__]`.
-
-Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
-are inaccessible to U-mode.
-
-In M/U-only harts, where `cliccfg.nmbits` = 1, if `clicintcfg[__i__]`
-is set to U-mode (bit 7 is clear), then interrupt _i_ is visible in the
-U-mode region except that only the low 7 bits of `clicintcfg[__i__]`
-can be written via the U-mode memory region.
-
-In M/S/U harts, if `cliccfg.nmbits`{lt} 2 then all interrupts are
-either M-mode or S-mode, and all are inaccessible to U-mode.
-
-In M/S/U harts, where `cliccfg.nmbits` = 2, if `clicintcfg[__i__]` is
-set to U-mode (bits 6 and 7 are clear), then interrupt _i_ is visible
-in the U-mode region except that only the low 6 bits of
-`clicintcfg[__i__]` can be written via the U-mode memory region.
-
-=== CLIC memory map for Multiple Harts
-
-In a system with multiple harts, the M-mode CLIC regions for all the
-harts are placed contiguously in the memory space, followed by the
-S-mode CLIC regions for all harts.
-
-In the SiFive Freedom platforms, the memory map is as follows,
-supporting up to 512 CLICs in a platform:
-
-----
-  0x0200_0000   CLINT
-
-  0x0280_0000   M-mode aperture for CLIC 0
-  0x0280_1000   M-mode aperture for CLIC 1
-  ...
-  0x02A0_0000   HS-mode aperture for CLIC 0
-  0x02A0_1000   HS-mode aperture for CLIC 1
-  ...
-  0x02C0_0000   S-mode aperture for CLIC 0
-  0x02C0_1000   S-mode aperture for CLIC 1
-  ...
-  0x02E0_0000   U-mode aperture for CLIC 0
-  0x02E0_1000   U-mode aperture for CLIC 1
-----
-
-== CLIC and PCI Message-Signalled Interrupts (MSI)w
-
-NOTE: This is a proposed future extension.
-
-PCI MSIs contain an interrupt number in the data portion of a memory
-store.  The CLIC will be extended to add another address to which PCI
-MSIs can be directed.  A MSI store to that address will set the
-`clicintip[__i__]` bit corresponding to the MSI data value.  The CLIC
-PCI address will reside in the same `0xc00` region as the `cliccfg`
-field, and will also be made available in S-mode and U-mode regions to
-allow MSIs to be restricted to S-mode and U-mode interrupt inputs
-respectively.
 
 == Managing Interrupt Stack Pointers Across Privilege Modes
 
@@ -1616,49 +1407,23 @@ interrupts from the same privilege mode.
   # Example Unix C ABI interrupt trampoline with stack swapping.
 
   irq_enter:
-  #----Interrupts disabled
+  #----
     csrrw sp, mscratchi, sp # Conditionally swap in stack pointer.
     sub sp, sp, -FRAMESIZE  # Allocate space on stack.
-    sw t0, OFFSET(sp)       # Save t0.
-    csrr t0, mcause         # Get mcause of interrupted context.
-    sw a0, OFFSET(sp)       # Save a0.
-    csrr a0, mepc           # Get mepc of interrupt context.
-    bgez t0, handle_exc     # Handle synchronous exception.
-    sw t0, OFFSET(sp)       # Save mcause of interrupted context.
-    sw t1-t6, OFFSET(sp)    # 6 more temporaries to save
-    sw a0, OFFSET(sp)       # Save mepc.
-    sw a1-a7, OFFSET(sp)    # 7 more arguments
-    sw ra, OFFSET(sp)       # 1 return address
-    csrrsi a0, mnxti, MIE   # Get highest current interrupt and enable interrupts.
-                            # Will return original interrupt if no others appear.
-  #----Interrupts enabled -----------------------
-
-  # ....
-  # Middle elided
-  # ....
-
-  #---- Critical section with interrupts disabled -----------------------
-    csrrci x0, mstatus, MIE # Disable interrupts
-    csrw mcause, t0         # Restore previous context.
-
-    lw t0, OFFSET(sp)       # Restore original t0 value.
-    csrw mepc, a0           # Restore previous context.
-
-    csrrsi a0, mnxti, 0     # Claim highest current interrupt.
-    bnez a0, get_entry      # Go around if new interrupt.
-
-    lw a0, OFFSET(sp)       # Restore original a0 value.
+    # ...
+    # Everything else same as above.
+    # ...
     add sp, sp, FRAMESIZE   # Reclaim stack space.
     csrrw sp, mscratcho, sp # Conditionally swap out stack pointer.
     mret                    # Return from interrupt.
   #-----------------------------------------------------------------------
   #-----------------------------------------------------------------------
    handle_exc:
-    #
+    # ...
     # Perform exception processing with interrupts disabled
-    #
-    csrrw sp, mscratcho, sp  # Conditionally swap out stack pointer.
-    mret # Return from exception
+    # ...
+    csrrw sp, mscratcho, sp # Conditionally swap out stack pointer.
+    mret                    # Return from exception
   #----------------------------------------------------------------------
 ----
 
@@ -1699,6 +1464,215 @@ which will execute URET but for a different context than that intiated
 by the higher-privilege mode.  This problem can be avoided by always
 running the urgent lower-privilege handlers at the highest interrupt
 level in the the lower-privilege mode.
+
+== CLIC Interrupt IDs
+
+The original CLINT interrupts retain their interrupt ID in CLIC mode.
+The `cliccfgint` settings are now used to delegate these interrupts as
+required.
+
+An additional CLIC software interrupt bit (csip) is provided.  This is
+generally available for software use, but is usually used for the
+local background interrupt thread.
+
+CLIC interrupt inputs are allocated IDs beginning at interrupt ID 16.
+Any fast local interrupts that would have been connected at interrupt
+ID 16 and above should now be mapped into corresponding inputs of the
+CLIC.
+
+[source]
+----
+ID  Interrupt   Note
+
+ 0  usip        User software Interrupt
+ 1  ssip        Supervisor software Interrupt
+ 2  reserved
+ 3  msip        Machine software interrupt
+
+ 4  utip        User timer interrupt
+ 5  stip        Supervisor timer interrupt
+ 6  reserved
+ 7  mtip        Machine timer interrupt
+
+ 8  ueip        User external (PLIC) interrupt
+ 9  seip        Supervisor external (PLIC) interrupt
+10  reserved
+11  meip        Machine external (PLIC) interrupt
+
+12  csip        CLIC software interrupt
+13  reserved
+14  reserved
+15  reserved
+
+16+ inputs      CLIC external inputs
+----
+
+== CLIC memory map
+
+=== CLIC/CLINT shared memory map
+
+The CLIC reuses the CLINT memory map for the `msip`, `mtimecmp`, and
+`mtime` memory-mapped registers.  This simplifies providing both CLINT
+and CLIC mode in the same hardware.  The CLIC/CLINT memory map is
+given relative to a local interrupt base address (in SiFive Freedom
+platforms, the local interrupt base address is `0x0200_0000`).
+
+[source]
+----
+ CLIC/CLINT shared memory map
+
+ Offset  Extent  Permissions   Contents
+ 0x0000  4B      RW            hart0 msip
+ 0x0004  4B      RW            hart1 msip
+ ..
+ 0x4000  4B      RW            hart0 mtimecmp lo
+ 0x4004  4B      RW            hart0 mtimecmp hi
+ 0x4008  4B      RW            hart1 mtimecmp lo
+ 0x400c  4B      RW            hart1 mtimecmp hi
+ ..
+ 0xbff8  4B      RW            mtime lo
+ 0xbffc  4B      RW            mtime hi
+----
+
+=== M-Mode CLIC regions
+
+Each hart has a separate CLIC accessed by a separate address region.
+The following is the memory map of the 4KiB memory region designed to
+support M-mode access.  Where a system has PMP, this region must be
+made accessible to the M-mode software running on the hart.
+
+[source]
+----
+ CLIC memory map
+ M-mode regions
+ Offset
+0x000+i   1B/input    R or RW       clicintip[i]
+0x400+i   1B/input    RW            clicintie[i]
+0x800+i   1B/input    RW            clicintcfg[i]
+0xc00     1B          RW            cliccfg
+
+clicintip[i] is read-only for level-based interrupts and read-write
+for edge-triggered interrupts.
+----
+
+NOTE: The `clicintip[__i__]` region is placed first as this is the
+only region usually written in interrupt handlers to clear down
+edge-triggered interrupt signal bits.  The CLIC base address, which
+also corresponds to the start of the `clicintip` array, can be loaded
+with a single `lui` instruction to reduce instruction count in
+handlers that have to calculate the appropriate `clicintip[__i__]`
+address.
+
+In systems that support additional privilege modes on a hart, an
+additional memory region is defined for each privilege mode that
+provides a restricted view of the CLIC's state.
+
+=== S-Mode CLIC regions for M/S/U harts
+
+Supervisor-mode CLIC regions only expose interrupts that have been
+configured to be supervisor-accessible via the M-mode CLIC region.
+System software must configure virtual memory and PMP permissions to
+only allow access to this region from appropriate supervisor-mode
+code.
+
+[source]
+----
+Layout of Supervisor-mode CLIC regions
+0x000+i   1B/input    R or RW       clicintip[i]
+0x400+i   1B/input    RW            clicintie[i]
+0x800+i   1B/input    RW            clicintcfg[i]
+----
+
+Any interrupt _i_ that is not accessible to S-mode appears as
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, and
+`clicintcfg[__i__]`.
+
+Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
+are inaccessible to S-mode.
+
+Where `cliccfg.nmbits` = 1, if `clicintcfg[__i__]` is set to S-mode
+(bit 7 is clear), interrupt _i_ is visible in the S-mode region except
+that only the low 7 bits of `clicintcfg[__i__]` can be written via the
+S-mode memory region.
+
+Where `cliccfg.nmbits` = 2, if bit 7 of `clicintcfg[__i__]` is clear
+(S-mode or U-mode), interrupt _i_ is visible through the S-mode region
+except that only the low 7 bits of `clicintcfg[__i__]` can be written
+via the S-mode memory region.  This allows the supervisor region to be
+used to selectively configure the interrupt as S-mode or U-mode.
+
+=== U-Mode CLIC regions in M/U harts or M/S/U harts
+
+User-mode CLIC regions only expose interrupts that have been
+configured to be user-accessible via the M-mode CLIC region.  System
+software must configure virtual memory and PMP permissions to only
+allow access to this region from appropriate user-mode code.
+
+[source]
+----
+Layout of user-mode CLIC regions
+0x000+i   1B/input    R or RW       clicintip[i]
+0x400+i   1B/input    RW            clicintie[i]
+0x800+i   1B/input    RW            clicintcfg[i]
+----
+
+Any interrupt _i_ that is not accessible to U-mode appears as
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, and
+`clicintcfg[__i__]`.
+
+Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
+are inaccessible to U-mode.
+
+In M/U-only harts, where `cliccfg.nmbits` = 1, if `clicintcfg[__i__]`
+is set to U-mode (bit 7 is clear), then interrupt _i_ is visible in the
+U-mode region except that only the low 7 bits of `clicintcfg[__i__]`
+can be written via the U-mode memory region.
+
+In M/S/U harts, if `cliccfg.nmbits`{lt} 2 then all interrupts are
+either M-mode or S-mode, and all are inaccessible to U-mode.
+
+In M/S/U harts, where `cliccfg.nmbits` = 2, if `clicintcfg[__i__]` is
+set to U-mode (bits 6 and 7 are clear), then interrupt _i_ is visible
+in the U-mode region except that only the low 6 bits of
+`clicintcfg[__i__]` can be written via the U-mode memory region.
+
+=== CLIC memory map for Multiple Harts
+
+In a system with multiple harts, the M-mode CLIC regions for all the
+harts are placed contiguously in the memory space, followed by the
+S-mode CLIC regions for all harts.
+
+In the SiFive Freedom platforms, the memory map is as follows,
+supporting up to 512 CLICs in a platform:
+
+----
+  0x0200_0000   CLINT
+
+  0x0280_0000   M-mode aperture for CLIC 0
+  0x0280_1000   M-mode aperture for CLIC 1
+  ...
+  0x02A0_0000   HS-mode aperture for CLIC 0
+  0x02A0_1000   HS-mode aperture for CLIC 1
+  ...
+  0x02C0_0000   S-mode aperture for CLIC 0
+  0x02C0_1000   S-mode aperture for CLIC 1
+  ...
+  0x02E0_0000   U-mode aperture for CLIC 0
+  0x02E0_1000   U-mode aperture for CLIC 1
+----
+
+== CLIC and PCI Message-Signalled Interrupts (MSI)
+
+NOTE: This is a proposed future extension.
+
+PCI MSIs contain an interrupt number in the data portion of a memory
+store.  The CLIC will be extended to add another address to which PCI
+MSIs can be directed.  A MSI store to that address will set the
+`clicintip[__i__]` bit corresponding to the MSI data value.  The CLIC
+PCI address will reside in the same `0xc00` region as the `cliccfg`
+field, and will also be made available in S-mode and U-mode regions to
+allow MSIs to be restricted to S-mode and U-mode interrupt inputs
+respectively.
 
 ////
 
