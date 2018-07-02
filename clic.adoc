@@ -1222,9 +1222,11 @@ is run in response to an interrupt, interrupt levels are used to
 prioritize execution of different tasks, and the processor should
 sleep inbetween interrupt events to save energy.
 
-The following code can be used as the background code that puts the
-processor to sleep with no active context, waiting for an interrupt
-using the `wfi` instruction.
+The following code can be used as the background code that runs at
+interrupt level 0 and which when there is no active work to do, puts
+the processor to sleep with no active context, waiting for an
+interrupt using the `wfi` instruction.  The code is entered at the
+`enter_loop` location and never returns directly.
 
 [source]
 ----
