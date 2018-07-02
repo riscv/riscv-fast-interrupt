@@ -776,6 +776,13 @@ mode `**__m__**cause.**__m__**pp`, at PC {epc}, with interrupt level
 `**__m__**cause.**__m__**pil`, and with the global interrupt enable
 for the restored mode as `**__m__**cause.**__m__**pie`.
 
+The {ret} instruction does not modify the
+`**__m__**cause.**__m__**pil` field in {cause}.  The
+`**__m__**cause.**__m__**pp` and `**__m__**cause.**__m__**pie` fields
+are modified following the behavior previously defined for
+`**__m__**status.**__m__**pp` and `**__m__**status.**__m__**pie`
+respectively.
+
 == Interrupt Handling Software
 
 === Interrupt Stack Software Conventions
@@ -1111,8 +1118,9 @@ are any more interrupts to service.  Interrupts remain enabled.  The
 force the CSR instruction to update CSR state.  Only non-SHV
 interrupts with a level greater than `pil` will be serviced in this
 loop.  Note that {il} can decrease from its current value on the
-{nxti} read.  {il} should not increase, as if a higher-level interrupt
-was ready, it should have preempted this instruction.
+{nxti} read.  {il} should not increase in this code, as interrupts are
+enabled here and if a higher-level interrupt was ready, it should have
+preempted this instruction.
 
 <13> If there was another appropriate interrupt to service, the code
 loops back to perform the next handler call.  The `service_loop` only
@@ -1206,6 +1214,88 @@ will be taken and the handler entered at `irq_enter`.  In the simple
 pipeline model, `mret` adds an additional pipeline flush cycle, so the
 preemption latency is 20+5 cycles, which represents the worst-case for
 a preempting C-ABI interrupt handler.
+
+== Interrupt-Driven C-ABI Model
+
+For many embedded systems, after initialization, essentially all code
+is run in response to an interrupt, interrupt levels are used to
+prioritize execution of different tasks, and the processor should
+sleep inbetween interrupt events to save energy.
+
+The following code can be used as the background code that puts the
+processor to sleep with no active context, waiting for an interrupt
+using the `wfi` instruction.
+
+[source]
+----
+    # Source code for interrupt-driven model background code.
+sleep:
+    csrrci x0, mstatus, MIE # Disable interrupts.  <1>
+    wfi                     # Processor waits for next interrupt event.
+    csrrsi a0, mnxti, MIE   # Gather interrupt details, and enable interrupts. <2>
+    beqz a0, sleep          # Go back to sleep if no interrupt (will be preempted if SHV). <3>
+
+service_loop: <4>
+    lw a1, (a0)             # Get handler address.
+    csrrsi x0, mstatus, MIE # Enable interrupts    
+    jalr a1                 # Call C-ABI handler routine
+    csrrsi a0, mnxti, MIE   # Claim any pending interrupt at level > 0
+    bnez a0, service_loop   # Loop to service any interrupt.
+
+    # This is also entry point to begin sleeping.
+enter_sleep: <5>
+    la a0, sleep
+    csrci x0, mstatus, MIE  # Disable interrupts.
+    #--- Interrupts disabled
+    csrw mepc, a0           # Initialize mepc to point to sleep
+    li a0, (MMODE)<<PP|(0)<<PIL|(1)<<PIE
+    csrw mcause, a0         # Initialize mcause to have pp=M, pil=0, pie=1
+    mret                    # Jump to sleep at level 0 with interrupts enabled.
+    #--- Interrupts enabled
+----
+
+<1> The `sleep` loop is used to stall the processor while waiting for
+work and is always entered at interrupt level 0.  Interrupts are
+disabled, then a `wfi` is executed.  The `wfi` will stall the
+processor until some event occurs.  When an event, including an
+interrupt occurs, the `wfi` retires.  Because interrupts are disabled,
+the hart does not jump to an interrupt handler but instead executes
+the next instruction, avoiding context save/restore overhead.
+
+<2> The read of {nxti} will determine if any non-SHV interrupt is
+available, and if so return a pointer to the table entry.  Interrupts
+are enabled by this instruction to allow SHV interrupts to be taken
+via preemption.
+
+<3> The value in `a0` checked by the branch can be zero for two
+reasons. Either there was no interrupt detected or an SHV interrupt
+was detected.  If there was no interrupt, the branch loops back to put
+the hart to sleep.  Interrupts are enabled, so any SHV interrupt
+(which all have higher interrupt level than the current interrupt
+level of 0) will preempt the branch's execution and call the SHV
+handler.  Once the SHV handler returns, the branch will resume and
+cause execution to return back to the `sleep_loop`.
+
+<4> The service loop is identical to that in the C-ABI interrupt
+handler, except that the previous interrupt level is 0, so all pending
+interrupts will be serviced in the loop before the loop exits.
+Interrupts are enabled, so preemption is allowed for both C-ABI
+trampoline and SHV interrupts.  When an SHV interrupt at the same or
+lower interrupt level is the next to be serviced, the {nxti}
+instruction will return 0 causing execution to drop out of the loop.
+The following code will reinitialize the hart's interrupt level to 0,
+and disable interrupts for one instruction, to ensure the SHV
+interrupt will be taken.
+
+<5> This code initializes `mepc` and `mcause` then uses an `mret` to
+jump to the `sleep` loop while simultaneously reseting interrupt level
+to 0 and enabling interrupts.  This is also the entry point to
+initiate interrupt-driven execution.  Interrupts are enabled to allow
+SHV interrupts to preempt execution on the first instruction in
+`sleep` (which disables interrupts again).
+
+This code does not increase worst-case interrupt latency over that of
+the C-ABI trampoline.
 
 == Managing Interrupts Across Privilege Modes
 
