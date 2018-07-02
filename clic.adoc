@@ -586,7 +586,7 @@ from user mode.
 
 NOTE: Not clear if user mode should ever see hardware vectoring in progress.
 
-=== New Handler Address and Interrupt-Enable CSR ({nxti})
+=== Next Interrupt Handler Address and Interrupt-Enable CSR ({nxti})
 
 The {nxti} CSR can be used by software to service the next horizontal
 interrupt for the same privilege mode when it has greater level than
@@ -1241,10 +1241,10 @@ save a register for handler's use before the correct stack is known.
 === Scratch Swap CSR ({scratchcsw})
 
 When more than one privilege mode is supported, a new CSR {scratchcsw}
-is defined to support conditional swapping of the {scratch} register
-when transitioning between privilege modes.  Though designed to be
-used with `csrrw` instructions, this CSR can be accessed with any CSR
-instruction.
+is defined for all but the lowest privilege mode to support
+conditional swapping of the {scratch} register when transitioning
+between privilege modes.  Though designed to be used with `csrrw`
+instructions, these CSRs can be accessed with any CSR instruction.
 
 For all CSR instructions accessing {scratchcsw}, the value written into
 `rd` is either {scratch} if {pp} is different than the current
@@ -1254,6 +1254,10 @@ mode difference, and if so, it is written obeying the usual CSR
 read-modify-write conventions (e.g., swap/set/clear bits) using the
 original {scratch} value as one source operand and the other source
 operand specified as usual in the instruction.
+
+NOTE: This is different than a regular CSR instruction as the value
+returned is different from the value used in the read-modify-write
+operation.
 
 NOTE: The CSR instructions are defined to always copy a result
 ({scratch} or `rs1`) to the `rd` destination to simplify
@@ -1376,10 +1380,12 @@ interrupt handlers.
 
 == Safe execution of urgent interrupts in lower-privileged modes
 
+NOTE: This is a preliminary proposal.
+
 In some case it is desirable to preempt a higher-privilege mode to
 execute time-critical interrupts in a lower-privilege mode.  These
 cases are handled by registering an interrupt handler trampoline in
-the higher privilege mode at the appropriate interrupt level which
+the higher-privilege mode at the appropriate interrupt level which
 then sets up a call to the user-level interrupt code.
 
 The higher-privilege trampoline code has to perform the following
@@ -1601,55 +1607,18 @@ supporting up to 512 CLICs in a platform:
   0x02E0_1000   U-mode aperture for CLIC 1
 ----
 
-== CLIC and PCI Message-Signalled Interrupts (MSI)
+== CLIC and Message-Signalled Interrupts (MSI)
 
-NOTE: This is a proposed future extension.
+NOTE: This is a proposal.
 
 PCI MSIs contain an interrupt number in the data portion of a memory
-store.  The CLIC will be extended to add another address to which PCI
-MSIs can be directed.  A MSI store to that address will set the
+store.  The CLIC will be extended to add another address to which MSIs
+can be directed.  A MSI store to that address will set the
 `clicintip[__i__]` bit corresponding to the MSI data value.  The CLIC
-PCI address will reside in the same `0xc00` region as the `cliccfg`
+MSI address will reside in the same `0xc00` region as the `cliccfg`
 field, and will also be made available in S-mode and U-mode regions to
 allow MSIs to be restricted to S-mode and U-mode interrupt inputs
 respectively.
 
-////
-
-
-== Extension for Hardware stacked {epc}/{cause} Registers
-
-WARNING: This section is out of date, and possibly obsolete.
-
-Each interrupt level, l, for privilege mode, m, adds additional
-[m]epc[l] and [m]cause[l] CSRs (e.g., mepc1/mcause1, mepc2/mcause2) to
-hold the nested interrupted context.
-
-The existing [m]epc/[m]cause CSRs are now modified to read and write
-the epc and cause of the current interrupt level (e.g., mepc now
-references mepc[mil]), so that an interrupt handler can be moved to a
-different interrupt level without recompiling the software.
-
-If the hart is currently running at some privilege mode (prev_mode) at
-some interrupt level (prev_il) and an enabled interrupt becomes
-pending at any interrupt level in a higher privilege mode or if an
-enabled interrupt at a higher interrupt level in the current privilege
-mode becomes pending, then execution is immediately transferred to a
-handler running with the new interrupt's privilege mode (new_mode) and
-interrupt level (new_il).  The CSR [new_mode]epc[new_il] is set to the
-pc of the interrupted application code or preempted interrupt handler,
-while the [new_mode]cause[new_il] register now captures the previous
-privilege mode, interrupt level and interrupt enable, as well as the
-id of the interrupt.  The interrupted level (prev_il) is held in bits
-26-24 of [new_mode]cause[new_il].
-
-The mpp/mpil/mpie, spp/spil/spie, and upp/upil/upie bits in the
-mcause/scause/ucause registers take over the function of the privilege
-and global interrupt-enable stack bits in mstatus/sstatus/ustatus.
-For backwards compatibility, in M-mode, the mpp[1:0] field in mstatus
-now accesses mcause[mil].ppm, and the mie bit now references
-mcause[mil].pie.  The mstatus.spp bit now accesses scause[sil].spp,
-and the mstatus.spie bit now accesses scause[sil].spie.  The
-mstatus.upie bit now accesses ucause[uil].upie.
-
-////
+The same mechanism can also be used by other software and non-PCI
+devices.
