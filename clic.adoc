@@ -810,6 +810,7 @@ of a higher privilege mode while lower privilege code is executing, or
 {scratch} can be used to point to more extensive thread-local context
 that might contain a stack pointer.
 
+[[inline-section,Inlines]]
 === Inline interrupt handlers and "interrupt attribute" for C
 
 Inline interrupt handlers are small leaf functions that handle simple
@@ -843,16 +844,17 @@ entry point on an 8-byte boundary.
 [source]
 ----
    .align 3
+      # Inline non-preemptible interrupt handler.
    foo:
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
-      sw s0, offset(sp)            # Save working register.
-      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
-      sw s1, offset(sp)            # Save working register.
-      la s0, COUNTER               # Get counter address.
-      li s1, 1
-      amoadd.w x0, (s0), s1        # Increment counter in memory.
-      lw s1, offset(sp)            # Restore registers.
-      lw s0, offset(sp)
+      sw a0, OFFSET(sp)            # Save working register.
+      sw x0, INTERRUPT_FLAG, a0    # Clear interrupt flag.
+      sw a1, OFFSET(sp)            # Save working register.
+      la a0, COUNTER               # Get counter address.
+      li a1, 1
+      amoadd.w x0, (a0), a1        # Increment counter in memory.
+      lw a1, OFFSET(sp)            # Restore registers.
+      lw a0, OFFSET(sp)
       addi sp, sp, FRAMESIZE       # Free stack frame.
       mret                         # Return from handler using saved mepc.
 ----
@@ -876,29 +878,30 @@ enabling interrupts:
 [source]
 ----
    .align 3
+      # Inline preemptible interuppt handler.
    foo:
       #----- Interrupts disabled on entry ---#
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
-      sw s0, offset(sp)            # Save working register.
-      sw s1, offset(sp)            # Save working register.
-      csrr s0, mcause              # Read cause.
-      csrr s1, mepc                # Read epc.
+      sw a0, OFFSET(sp)            # Save working register.
+      csrr a0, mcause              # Read cause.
+      sw a1, OFFSET(sp)            # Save working register.
+      csrr a1, mepc                # Read epc.
       csrrsi x0, mstatus, MIE      # Enable interrupts.
       #----- Interrupts enabled ---------#
-      sw s0, offset(sp)            # Save cause on stack.
-      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
-      sw s1, offset(sp)            # Save epc on stack.
-      la s0, COUNTER               # Get counter address.
-      li s1, 1
-      amoadd.w x0, (s0), s1        # Increment counter in memory.
-      lw s1, offset(sp)            # Restore epc
-      lw s0, offset(sp)            # Restore cause
+      sw a0, OFFSET(sp)            # Save cause on stack.
+      sw x0, INTERRUPT_FLAG, a0    # Clear interrupt flag.
+      sw a1, OFFSET(sp)            # Save epc on stack.
+      la a0, COUNTER               # Get counter address.
+      li a1, 1
+      amoadd.w x0, (a0), a1        # Increment counter in memory.
+      lw a1, OFFSET(sp)            # Restore epc
+      lw a0, OFFSET(sp)            # Restore cause
       csrrci x0, mstatus, MIE      # Disable interrupts.
       #----- Interrupts disabled  ---------#
-      csrw mepc, s1                # Put epc back.
-      csrw mcause, s0              # Put cause back.
-      lw s1, offset(sp)            # Restore s1.
-      lw s0, offset(sp)            # Restore s0.
+      csrw mepc, a1                # Put epc back.
+      lw a1, OFFSET(sp)            # Restore a1.
+      csrw mcause, a0              # Put cause back.
+      lw s0, OFFSET(sp)            # Restore s0.
       addi sp, sp, FRAMESIZE       # Free stack frame.
       mret                         # Return from handler.
       #------------------------------------#
@@ -1299,6 +1302,129 @@ SHV interrupts to preempt execution on the first instruction in
 This code does not increase worst-case interrupt latency over that of
 the C-ABI trampoline.
 
+== Alternate Interrupt Models for Software Vectoring
+
+Platforms may only implement non-vectored CLIC mode
+(`mtvec`=`?000010`) without selective hardware vectoring
+(`clic.nvbits=0`), in which case, hardware vectoring can be emulated
+by a single software trampoline present at `NBASE` using the separate
+vector table address in {tvt}.  There are several different software
+approaches possible, depending on system requirements and constraints,
+as detailed in following subsections.
+
+===  `gp` trampoline to inline interrupt handlers in single privilege mode
+
+Where interrupts are known to be generated and handled in a single
+privilege mode (i.e., M-mode only systems, or U-mode interrupt
+handlers), a three-instruction sequence using the `gp` register to
+hold the handler address can be used to indirect to an inline
+interrupt handler of the type described in <<Inlines>>.
+
+[source]
+----
+    # Software-vectored interrupt servicing in M-mode.
+    # Must be placed three instructions back from gp.
+irq_enter:
+    csrrci gp, mnxti, MIE   # Overwrite gp, keep interrupts disabled.
+    beqz gp, handle_exc     # Encountered exception.
+    jalr gp, gp             # Recreate gp and jump to handler.
+gp:                         # Must be right before system's gp location.
+    # ... gp data section
+
+    # Must be within range of beqz instruction.
+handle_exc:
+    # Has to recreate gp.
+----
+
+The three-instruction sequence relies on the `jalr` instruction
+recreating the value in the `gp` register, which is a known constant
+pointing into the middle of the global data area, by placing the
+`jalr` directly before the `gp` location in memory.  The routine
+jumped to by the `jalr` does not return via a `j ra` but instead ends
+with an `mret`.
+
+NOTE: This constraint on memory layout might not always be possible,
+particularly if the system does not allow placing executable memory
+right next to read-write memory, for example if the system does not
+allow a protection boundary to be placed at 'gp' and if executable
+code must not be writeable.
+
+The code can be used with preemptible inline interrupt handlers.
+
+=== Trampoline for preemptible inline handlers 
+
+This section describes a more general software-trampoline scheme for
+calling preemptible inline handlers, which factors out the
+{epc}/{cause} save code into the trampoline, and which uses a
+different interrupt handler calling convention.
+
+The interrupt handlers for this scheme have a calling convention where
+there is one caller-save argument register `a0` that passes in the
+handler address to distinguish different interrupt inputs, and one
+temporary register `a1` that is also caller-save.  These two registers
+had to be saved already by the trampoline. All other registers are
+callee-save, except for the return address `ra`.  The handler normally
+returns with a regular `j ra`.
+
+[source]
+----
+  # Example handler with new calling convention.
+  # Handlers have two temporary registers available, a0, a1.
+handler_example:
+  sw x0, INTERRUPT_FLAG, a0     # Clear interrupt flag.
+  la a0, COUNTER                # Get counter address.
+  li a1, 1                      # Increment value.
+  amoadd.w x0, (a0), a1         # Bump counter.
+  j ra
+
+  # Interrupt trampoline code.
+irq_enter:
+  #----- Interrupts disabled on entry ---#
+  addi sp, sp, -FRAMESIZE      # Create a frame on stack.
+  sw a0, OFFSET(sp)            # Save working register.
+  csrr a0, mcause              # Read cause.
+  bgez a0, handle_exc          # Handler exception.
+  sw a1, OFFSET(sp)            # Save working register.
+  csrr a1, mepc                # Read epc.
+  sw a0, OFFSET(sp)            # Save cause
+  csrrsi a0, mnxti, MIE        # Get highest interrupt, enable interrupts.
+  #----- Interrupts enabled ---------#
+  beqz a0, exit
+  sw a1, OFFSET(sp)            # Save epc.
+  sw ra, OFFSET(sp)            # Save return address.
+
+irq_loop:
+  lw a1, (a0)                  # Get function pointer.
+  jalr a1                      # Call handler code.
+  csrrsi a0, mnxti, MIE        # Get any next interrupt.
+  bnez a0, irq_loop            # Service interrupt if any.
+
+  lw ra, OFFSET(sp)            # Restore ra.
+  lw a1, OFFSET(sp)            # Get epc.
+exit:
+  lw a0, OFFSET(sp)            # Get cause.
+  csrrci x0, mstatus, MIE      # Disable interrupts.
+  #----- Interrupts disabled  ---------#
+  csrw mepc, a1                # Put epc back.
+  lw a1, OFFSET(sp)            # Restore a1.
+  csrw mcause, a0              # Put cause back.
+  lw a0, OFFSET(sp)            # Restore a0.
+  addi sp, sp, FRAMESIZE       # Free stack frame.
+  mret                         # Return from handler.
+  #------------------------------------#
+
+handle_exc:
+  # ...
+  # Handle exception with interrupts disabled.
+  # ...
+  addi sp, sp, FRAMESIZE  # Deallocate stack space
+  mret                    # Return from handler.
+  #------------------------------------#
+----
+
+This interrupt handler can be used together with the `wfi` sleep
+background routine shown above.
+
 == Managing Interrupts Across Privilege Modes
 
 Interrupt handlers need to have a place to save the previous context's
@@ -1307,13 +1433,11 @@ can be entered from a lower-privilege mode, a pointer to some safe
 memory for the context save must be swapped in at entry to the
 higher-privileged handler.  The RISC-V privileged architecture
 provides the {scratch} register to hold this information for a
-higher-privilege mode while executing in a lower-privilege mode.  For
-the following discussion and code examples, the assumption is that
+higher-privilege mode while executing in a lower-privilege mode.
+For the following discussion and code examples, the assumption is that
 {scratch} is used to hold the stack pointer but other software
 conventions are possible (e.g., {scratch} points to a thread context
 block).
-
-=== Interrupt Stack Conventions
 
 Existing RISC-V ABIs allow addresses immediately below the stack
 pointer to be overwritten by interrupt service routines.  The current
@@ -1322,21 +1446,25 @@ a handler is entered from a lower-privilege mode, but should not be
 swapped if entered from another handler in the same privilege mode,
 including when preempting an existing interrupt handler.  At exit from
 a handler, the lower-privilege stack pointer should be swapped back in
-if transitioning back to the lower-privilege mode.  A special CSR
-address is used to provide this {scratch} swap functionality, and is
-used once at the entry to a handler routine and once at handler exit.
+if transitioning back to the lower-privilege mode.
 
-NOTE: To perform this check in software would require a free register
-to read the value from {cause}, but some safe location is required to
-save a register for handler's use before the correct stack is known.
+=== Software Privileged Stack Swap
 
-=== Scratch Swap CSR ({scratchcsw})
+In this convention, when code is running in a lower privilege mode,
+{scratch} holds the stack pointer for the higher-privilege mode,
+otherwise, {scratch} holds zero.
 
-When more than one privilege mode is supported, a new CSR {scratchcsw}
-is defined for all but the lowest privilege mode to support
-conditional swapping of the {scratch} register when transitioning
-between privilege modes.  Though designed to be used with `csrrw`
-instructions, these CSRs can be accessed with any CSR instruction.
+NOTE: TBD
+
+=== Scratch Swap CSR ({scratchcsw}) for multiple privilege modes
+
+To accelerate interrupt handling with multiple privilege modes, a new
+CSR {scratchcsw} can be defined for all but the lowest privilege mode
+to support conditional swapping of the {scratch} register when
+transitioning between privilege modes.  The CSR instruction is used
+once at the entry to a handler routine and once at handler exit.
+Though designed to be used with `csrrw` instructions, these CSRs can
+be accessed with any CSR instruction.
 
 For all CSR instructions accessing {scratchcsw}, the value written into
 `rd` is either {scratch} if {pp} is different than the current
@@ -1469,6 +1597,14 @@ interrupts from the same privilege mode.
 In all cases, conditionally swapping the stack to account for
 potential privilege-mode changes adds two extra instructions to all
 interrupt handlers.
+
+== Separating stack per interrupt level
+
+Within a single privilege mode, it can be useful to separate interrupt
+handler tasks from application tasks to increase robustness, reduce
+space usage, and aid in system debugging.
+
+NOTE: TBD
 
 == Safe execution of urgent interrupts in lower-privileged modes
 
