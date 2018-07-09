@@ -288,7 +288,10 @@ among interrupts pending-and-enabled at the same privilege mode and
 interrupt level. The highest-priority interrupt at a given privilege
 mode and interrupt level is taken first.  In case there are multiple
 pending-and-enabled interrupts at the same highest priority, the
-lowest-numbered interrupt is taken first.
+highest-numbered interrupt is taken first.
+
+NOTE: The highest numbered interrupt wins in a tie.  This is the same
+as the original CLINT, but different than the PLIC.
 
 Any implemented priority bits are treated as the most-significant bits
 of a 8-bit unsigned integer with lower unimplemented bits set to 1.
