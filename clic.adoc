@@ -421,12 +421,12 @@ before.
 The {ie} CSR is hardwired to zero in CLIC mode, replaced by separate
 memory-mapped interrupt enables (`clicintie[__i__]`).
 
-The {ip} CSR is hardware to zero in CLIC mode, replaced by separate
+The {ip} CSR is hardwired to zero in CLIC mode, replaced by separate
 memory-mapped interrupt pendings (`clicintip[__i__]`).
 
 === New {tvec} CSR modes
 
-The new interrupt handling modes are encoded as new states in the
+The new interrupt-handling modes are encoded as new states in the
 existing {tvec} WARL register, where the low two bits of {tvec} are
 `10` or `11`.  In these modes, the trap vector base address held in
 {tvec} is constrained to be aligned on a 64-byte boundary.
@@ -494,8 +494,8 @@ Implementations might support only one of CLINT or CLIC mode.  If only
 CLINT mode is supported, writes to bit 1 are ignored and it’s always
 set to zero (current behavior).  If only CLIC mode is supported,
 writes to bit 1 are also ignored and it’s always set to one.  CLIC
-mode writes zero bits 2-5 (assuming no further CLIC extensions are
-supported).
+mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
+extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for vectoring is treated as a load with the privilege
@@ -566,6 +566,13 @@ code or preempted interrupt handler, while the {cause}
 register now captures the previous privilege mode (`pp`), interrupt
 level (`pil`) and interrupt enable (`pie`), as well as the id of the
 interrupt in `exccode`.
+
+In systems supporting both CLINT and CLIC modes, the new CLIC-specific
+fields (`minhv`, `mpp`, `mpil`, `mpie`) appear to be hardwired to zero
+in CLINT mode for backwards compatibilty.  When CLINT mode is written
+to {tvec}, the new {cause} state fields (`mhinv` and `mpil`) are
+zeroed (the other new {cause} fields, `mpp` and `mpie`, continue to
+reflect the state in the `mstatus` register).
 
 The supervisor `scause` register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from `sstatus.spp`, while the user
@@ -656,6 +663,10 @@ interrupt.
 NOTE: Vertical interrupts to different privilege modes will be taken
 preemptively by the hardware, so {nxti} effectively only ever handles
 the next interrupt in the same privilege mode.
+
+In CLINT mode, reads of {nxti} return 0, updates to {status} proceed
+as in CLIC mode, but updates to {intstatus} and {cause} do not take
+effect.
 
 === New Interrupt status ({intstatus}) CSR
 
