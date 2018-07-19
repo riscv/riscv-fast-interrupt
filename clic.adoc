@@ -32,14 +32,15 @@ The CLIC is designed to provide low-latency, vectored, pre-emptive
 interrupts for RISC-V systems.  When activated the CLIC subsumes and
 replaces the existing RISC-V local interrupt scheme (CLINT).  The CLIC
 design has a base design that requires minimal hardware, but supports
-additional extensions to provide hardware acceleration.
+additional extensions to provide hardware acceleration.  The goal of
+the CLIC design is to provide support for a variety of software ABI
+and interrupt models, without complex hardware that can impact
+high-performance processor implementations.
 
 NOTE: While the current CLIC design provides only hart-local interrupt
 control, future additions might also support directing interrupts to
 harts within a core, hence the name (also CLIC sounds better than HLIC
 or HIC).
-
-NOTE: The hardware-accelerated extensions are not specified yet.
 
 === Existing RISC-V Interrupts
 
@@ -1428,7 +1429,7 @@ handle_exc:
 This interrupt handler can be used together with the `wfi` sleep
 background routine shown above.
 
-== Managing Interrupts Across Privilege Modes
+== Managing Interrupt Stacks Across Privilege Modes
 
 Interrupt handlers need to have a place to save the previous context's
 state to provide working registers for the handler code.  If a handler
@@ -1454,20 +1455,81 @@ if transitioning back to the lower-privilege mode.
 === Software Privileged Stack Swap
 
 In this convention, when code is running in a lower privilege mode,
-{scratch} holds the stack pointer for the higher-privilege mode,
-otherwise, {scratch} holds zero.
+{scratch} holds the stack pointer for the higher-privilege mode.  When
+the higher-privilege mode is entered, {scratch} is set to zero to
+signal to any preempting handlers that the stack pointer has already
+been swapped.
 
-NOTE: TBD
+The old stack pointer is saved to new stack frame before new frame is
+created by bumping stack pointer, but this is done with interrupts
+disabled.
+
+[source]
+----
+  # This code is out of line to reduce worst-case preemption latency.
+enter_M:
+  sw sp, OFFSET-FRAMESIZE(sp) # Save previous mscratch (M-mode sp)
+  addi sp, sp, -FRAMESIZE   # Create a frame on stack.
+  sw a0, OFFSET(sp)         # Save a register.
+  csrrw a0, mscratch, 0     # Get previous sp, and zero mscratch.
+  sw a0, OFFSET(sp)         # Save previous sp (U-mode sp)
+  j  continue               # Jump back into handler
+
+irq_enter:
+  #----- Interrupts disabled on entry ---#
+  csrrw sp, mscratch, sp       # Swap stack pointer and scratch.
+  bnez mscratch, enter_M       # Check if entering M-mode
+  csrrw sp, mscratch, sp       # Already in M-mode, so swap sp back.
+  sw sp, OFFSET-FRAMESIZE(sp)  # Save previous sp to stack.
+  addi sp, sp, -FRAMESIZE      # Create a frame on stack.
+  sw x0, OFFSET(sp)            # Save previous mscratch to stack (was zero).
+  sw a0, OFFSET(sp)            # Save a register.  
+continue:
+  csrr a0, mcause              # Read cause.
+  bgez a0, handle_exc          # Handle exception.
+  sw a1, OFFSET(sp)            # Save working register.
+  csrr a1, mepc                # Read epc.
+  sw a0, OFFSET(sp)            # Save cause
+  csrrsi a0, mnxti, MIE        # Get highest interrupt, enable interrupts.
+  #----- Interrupts enabled ---------#
+  beqz a0, exit
+  ...
+
+  #---- Critical section with interrupts disabled -----------------------
+    ...
+
+    lw a0, OFFSET(sp)       # Get previous mscratch.
+    csrw mscratch, a0       # Put back in mscratch.
+    lw a0, OFFSET(sp)       # Restore original a0 value.
+    lw sp, OFFSET(sp)       # Restore previous sp
+    mret                    # Return from interrupt.
+  #-----------------------------------------------------------------------
+----
+
+This code can be used in a model where user-level code has one stack,
+and all interrupts and exceptions are handled on a second M-mode-only
+stack.  In addition, background non-handler code in M-mode can either
+use the same M-mode stack as the interrupt handler, or a separate
+M-mode stack.  The only difference is in the value held in {scratch}
+while the M-mode background thread is running (either 0 to indicate
+use the existing stack pointer in `sp` or non-zero to indicate this
+stack pointer shoudl be used in the handler.
 
 === Scratch Swap CSR ({scratchcsw}) for multiple privilege modes
+
+The above software scheme adds 7 instructions to the interrupt code
+path when preempting the same privilege mode, and adds an additional 6
+instructions (13 total including two taken branches) for interrupts
+from a lower-privilege mode into a higher-privileged mode.
 
 To accelerate interrupt handling with multiple privilege modes, a new
 CSR {scratchcsw} can be defined for all but the lowest privilege mode
 to support conditional swapping of the {scratch} register when
 transitioning between privilege modes.  The CSR instruction is used
-once at the entry to a handler routine and once at handler exit.
-Though designed to be used with `csrrw` instructions, these CSRs can
-be accessed with any CSR instruction.
+once at the entry to a handler routine and once at handler exit, so
+only adds two instructions to the interrupt code path.  Though
+designed to be used with `csrrw` instructions, these CSRs can be
+accessed with any CSR instruction.
 
 For all CSR instructions accessing {scratchcsw}, the value written into
 `rd` is either {scratch} if {pp} is different than the current
@@ -1507,7 +1569,7 @@ software tries to access a given mode's {scratchcsw} CSR from a
 lesser-privileged mode, so the new CSR does not open a virtualization
 hole.
 
-=== Stack Swap Example Code
+==== Stack Swap Example Code
 
 Interrupt handlers running in the lowest privilege mode do not need to
 swap stack pointers, as they will only be entered by a horizontal
@@ -1539,7 +1601,7 @@ interrupts from the same privilege mode.
 
 [source]
 ----
-    # Example of inline preemptable interrupt with stack swapping.
+    # Example of inline preemptible interrupt with stack swapping.
    .align 3
    foo:
       #----- Interrupts disabled on entry ---#
