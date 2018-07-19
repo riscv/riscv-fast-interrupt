@@ -132,7 +132,10 @@ interrupt enable in lower privilege mode.
 
 The CLIC design supports up to 1,024 interrupt inputs per hart, with
 each interrupt input _i_ having an 8-bit memory-mapped WARL
-configuration register, `clicintcfg[__i__]`.
+configuration register, `clicintcfg[__i__]`.  The first 16 interrupt
+inputs are reserved for the CLINT interrupts present in the low 16 bits
+of the {ip} and {ie} registers, so up to 1,008 local external
+interrupts can be added.
 
 A fixed parameter of the CLIC (`CLICINTBITS`) is how many total bits
 are present in the `clicintcfg` registers , with 2 {lt}
@@ -1802,6 +1805,10 @@ with a single `lui` instruction to reduce instruction count in
 handlers that have to calculate the appropriate `clicintip[__i__]`
 address.
 
+If an input _i_ is not present in the hardware, the corresponding
+`clicintip[__i__]`, `clicintie[__i__]`, `clicintcfg[__i__]` memory
+locations appear hardwired to zero.
+
 In systems that support additional privilege modes on a hart, an
 additional memory region is defined for each privilege mode that
 provides a restricted view of the CLIC's state.
@@ -1813,6 +1820,7 @@ configured to be supervisor-accessible via the M-mode CLIC region.
 System software must configure virtual memory and PMP permissions to
 only allow access to this region from appropriate supervisor-mode
 code.
+
 
 [source]
 ----
