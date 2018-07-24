@@ -265,12 +265,13 @@ these two cases.
 
 ----
  #bits   encoding           interrupt levels
-     1    x111                 7,                   15
-     2    xx11         3,      7,       11,         15
-     3    xxx1     1,  3,  5,  7,  9,   11,   13,   15
-     4    xxxx     1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+     1    l...                 7,                   15
+     2    ll..         3,      7,       11,         15
+     3    lll.     1,  3,  5,  7,  9,   11,   13,   15
+     4    llll     1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 
- x bits are available variable bits in level specification
+ "l" bits are available variable bits in level specification
+ "." bits are non-existent bits for level encoding, assumed to be 1
 ----
 
 If `nlbits` = 0, then all interrupts are treated as level 15.
@@ -278,11 +279,11 @@ If `nlbits` = 0, then all interrupts are treated as level 15.
 Examples of `cliccfg` settings:
 
  CLICINTBITS nmbits nlbits clicintcfg[i] interrupt levels
-       2      2       2      mm000000     15
-       3      2       2      mml00000     7,15
-       4      2       2      mmll0000     3,7,11,15
-       5      2       3      mmlll000     1,3,5,7,9,11,13,15
-       5      1       1      mlppp000     7,15
+       2      2       2      mm......     15
+       3      2       2      mml.....     7,15
+       4      2       2      mmll....     3,7,11,15
+       5      2       3      mmlll...     1,3,5,7,9,11,13,15
+       5      1       1      mlppp...     7,15
 
 ==== Specifying interrupt priority
 
@@ -347,11 +348,11 @@ non-vectored before vectored).
 Examples:
 
  CLICINTBITS nmbits nlbits nvbits clicintcfg[i] Vectored?
-       2      2       2      1    mm000000      M/S-mode interrupts
-       3      2       2      1    mml00000      Level 15
-       4      2       2      1    mmll0000      Levels 7, 15
-       5      2       3      1    mmlll000      Levels 3,7,11,15
-       5      1       1      1    mlppp000      Priorities 63,127,191,255
+       2      2       2      1    mm......      M/S-mode interrupts
+       3      2       2      1    mml.....      Level 15
+       4      2       2      1    mmll....      Levels 7, 15
+       5      2       3      1    mmlll...      Levels 3,7,11,15
+       5      1       1      1    mlppp...      Priorities 63,127,191,255
 
 === CLIC interaction with other local interrupts
 
