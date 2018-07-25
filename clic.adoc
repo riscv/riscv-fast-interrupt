@@ -376,7 +376,9 @@ input configuration, as with any other CLIC interrupt input.
 
 == CLIC CSRs
 
-This section describes the CLIC-related hart-specific CSRs.
+This section describes the CLIC-related hart-specific CSRs. When in
+CLINT mode, the behavior is intended to be software compatible with
+CLINT-only systems.
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -404,26 +406,32 @@ additions for CLIC mode described in the following sections.
 
 === Changes to {status} CSRs
 
-Operation of {status} is unchanged, except that the ``**__m__**pp``
-and ``**__m__**pie`` in {status} are now accessble via the {cause}
-register.
+When in CLINT mode, the {status} register behavior is unchanged (i.e.,
+backwards-compatible with CLINT mode).  When in CLIC mode, the
+``**__m__**pp`` and ``**__m__**pie`` in {status} are now accessible
+via fields in the {cause} register.
 
 === Changes to Delegation ({edeleg}/{ideleg}) CSRs
 
-The CLIC input configuration `clcintcfg[__i__]` specifies the
-privilege mode in which each interrupt should be taken, so the
-`mideleg` CSR ceases to have effect in CLIC mode.
+In CLIC mode, the CLIC input configuration `clcintcfg[__i__]`
+specifies the privilege mode in which each interrupt should be taken,
+so the {ideleg} CSR ceases to have effect in CLIC mode.  The {ideleg}
+CSR is still accessible and state bits retain their values when
+switching between CLIC and CLINT modes.
 
-Exception delegation specified by `medeleg` continues to function as
-before.
+Exception delegation specified by {edeleg} functions the same in CLIC
+mode as in CLINT mode.
 
 === Changes to {ie}/{ip} CSRs
 
-The {ie} CSR is hardwired to zero in CLIC mode, replaced by separate
+The {ie} CSR appears hardwired to zero in CLIC mode, replaced by separate
 memory-mapped interrupt enables (`clicintie[__i__]`).
 
-The {ip} CSR is hardwired to zero in CLIC mode, replaced by separate
-memory-mapped interrupt pendings (`clicintip[__i__]`).
+The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
+separate memory-mapped interrupt pendings (`clicintip[__i__]`).
+
+In systems that support both CLINT and CLIC modes, the state bits in
+{ie} and {ip} retain their value when switching between modes.
 
 === New {tvec} CSR modes
 
@@ -509,7 +517,7 @@ Instruction fetch at the handler address might cause misaligned or
 access exceptions, which are reported with {epc} containing the
 faulting instruction fetch address.
 
-In both vectored and non-vectored CLIC mode, synchronous exception
+In both vectored and non-vectored CLIC modes, synchronous exception
 traps always jump to NBASE.
 
 === New {tvt} CSR
@@ -517,6 +525,9 @@ traps always jump to NBASE.
 The {tvt} WARL XLEN-bit CSR holds the base address of the trap vector
 table, aligned on a 64-byte boundary.  Values other than 0 in the low
 6 bits of {tvt} are reserved.
+
+In systems that support both CLINT and CLIC modes, the {tvt} CSR is
+still accessible in CLINT mode (but does not have any effect).
 
 NOTE: A previous proposal used positive and negative offsets from
 {tvec} to point at the shared trampoline code and the trap vector
@@ -528,12 +539,12 @@ table to be independently located in the system memory map.
 
 === Changes to {epc} CSRs
 
-The {epc} CSRs behave as before, capturing the PC at which execution
-was interrupted.
+The {epc} CSRs behave the same in both modes, capturing the PC at
+which execution was interrupted.
 
 === Changes to {cause} CSRs
 
-In both CLINT and CLIC mode, the {cause} CSR is written at the time an
+In both CLINT and CLIC modes, the {cause} CSR is written at the time an
 interrupt or synchronous trap is taken, recording the reason for the
 interrupt or trap.  For CLIC mode, {cause} is also extended to record
 more information about the interrupted context, which is used to
@@ -572,8 +583,9 @@ In systems supporting both CLINT and CLIC modes, the new CLIC-specific
 fields (`minhv`, `mpp`, `mpil`, `mpie`) appear to be hardwired to zero
 in CLINT mode for backwards compatibilty.  When CLINT mode is written
 to {tvec}, the new {cause} state fields (`mhinv` and `mpil`) are
-zeroed (the other new {cause} fields, `mpp` and `mpie`, continue to
-reflect the state in the `mstatus` register).
+zeroed.  The other new {cause} fields, `mpp` and `mpie`, appear as
+zero in the {cause} CSR but the corresponding state bits in the
+`mstatus` register are not cleared.
 
 The supervisor `scause` register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from `sstatus.spp`, while the user
@@ -690,6 +702,9 @@ provide restricted views of mintstatus.
 
  uintstatus fields
  3:0  uil
+
+The {intstatus} registers are accessible in CLINT mode for system that
+support both modes.
 
 == CLIC Implementation Parameters
 
