@@ -138,8 +138,8 @@ of the {ip} and {ie} registers, so up to 1,008 local external
 interrupts can be added.
 
 A fixed parameter of the CLIC (`CLICINTBITS`) is how many total bits
-are present in the `clicintcfg` registers , with 2 {lt}
-`CLICINTBITS` {lt} 8.  The implemented bits are kept left-justified
+are present in the `clicintcfg` registers , with 2 {lt}=
+`CLICINTBITS` {lt}= 8.  The implemented bits are kept left-justified
 in the most-significant bits of each 8-bit `clicintcfg[__i__]`
 register, with the lower unimplemented bits treated as hardwired to 1.
 These configuration bits are interpreted as mode, level, and
