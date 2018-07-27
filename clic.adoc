@@ -47,7 +47,7 @@ or HIC).
 The existing RISC-V interrupt system already supports interrupt
 preemption, but only based on privilege mode.  At any point in time, a
 RISC-V hart is running with a current privilege mode.  The global
-interrupt enable bits, `mie`/`sie`/`uie`, held in the
+interrupt enable bits, MIE/SIE/UIE, held in the
 `mstatus`/`sstatus`/`ustatus` registers respectively, control whether
 interrupts can be taken for the current or higher privilege modes;
 interrupts are always disabled for lower-privileged modes.  Any
@@ -360,8 +360,8 @@ The CLIC subsumes the functionality of the fast local interrupts
 previously provided in bits 16 and up of {ip}/{ie}, so these are no
 longer visible in {ip}/{ie}.
 
-The existing timer (`mtip`/`stip`/`etip`), software
-(`msip`/`ssip`/`esip`), and external interrupt inputs
+The existing timer (`mtip`/`stip`/`utip`), software
+(`msip`/`ssip`/`usip`), and external interrupt inputs
 (`meip`/`seip`/`ueip`) are treated as additional local interrupt
 sources, where the privilege mode, interrupt level, and priority can
 be altered using memory-mapped `clicintcfg[__i__]` registers.  For
