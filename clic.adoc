@@ -109,14 +109,12 @@ interrupt to be processed to the processor.
 
 === CLIC Interrupt levels
 
-The CLIC extends interrupt preemption to support up to 16 interrupt
+The CLIC extends interrupt preemption to support up to 256 interrupt
 levels for each privilege mode, where higher-numbered interrupt levels
 can preempt lower-numbered interrupt levels.  Interrupt level 0
 corresponds to regular execution outside of an interrupt handler.
-Levels 1--15 correspond to interrupt handler levels. Usually systems
-will support 2 (7,15), 4 (3,7,11,15), 8 (1,3,5,7,9,11,13,15), or 15
-interrupt levels (1--15) in addition to level 0.  Platform profiles
-will dictate how many interrupt levels must be supported.
+Levels 1--255 correspond to interrupt handler levels. Platform
+profiles will dictate how many interrupt levels must be supported.
 
 Incoming interrupts with a higher interrupt level can preempt an
 active interrupt handler running at a lower interrupt level in the
@@ -156,12 +154,12 @@ integers, and takes a global maximum across all pending-and-enabled
 `clicintcfg` values to select the interrupt to present to the core.
 The `cliccfg` setting then determines how to split the maximum
 `clicintcfg` value into privilege mode (M/S/U), interrupt level
-(0--15), and interrupt priority (0--255).
+(0--255), and interrupt priority (0--255).
 
 WARNING: Selecting an interrupt level of 0 for a high privilege mode
-disables the interrupt, but can also masks any interrupt at a lower
-privilege mode since the higher privilege mode causes the interrupt
-signal to appear more urgent than any lower privilege mode interrupt.
+disables the interrupt, but can also mask any interrupt at a lower
+privilege mode since the higher-privilege mode causes the interrupt
+signal to appear more urgent than any lower-privilege mode interrupt.
 
 NOTE: On a multithreaded core, the `clicintcfg[__i__]` register might
 also contain a hart-id field to direct the interrupt to one hart on
@@ -190,22 +188,22 @@ variable bit in the `clicintcfg[__i__]` field can also be used to
 control whether interrupt _i_ uses hardware vectoring.
 
 The `cliccfg` register has three WARL fields, a 2-bit `nmbits` field,
-a 3-bit `nlbits` field, and a 1-bit `nvbits` field, plus reserved bits
-[1:0], which are WARL hardwired to zero in current spec.
+a 4-bit `nlbits` field, and a 1-bit `nvbits` field, plus a reserved
+bit WARL-hardwired to zero in current spec.
 
 [source]
 ----
   cliccfg register layout
 
   bits    field
-  7:6     reserved (WARL 0)
-  5:4     nmbits[1:0]
-  3:1     nlbits[2:0]
+  7       reserved (WARL 0)
+  6:5     nmbits[1:0]
+  4:1     nlbits[3:0]
     0     nvbits
 ----
 
 The `cliccfg` register resets to 0 (i.e., all interrupts are M-mode at
-level 15).
+level 255).
 
 ==== Specifying interrupt privilege mode
 
@@ -253,37 +251,37 @@ priv-modes nmbits clicintcfg[i] Interpretation
 
 ==== Specifying interrupt level
 
-The 3-bit `cliccfg.nlbits` WARL field indicates how many bits
+The 4-bit `cliccfg.nlbits` WARL field indicates how many bits
 immediately below the `cliccfg.nmbits` privilege-mode bits encode the
-level at which the interrupt is taken.  Valid values are 0--4.
+level at which the interrupt is taken.  Valid values are 0--8.
 
 If the `nmbits + nlbits` {gt} `CLICINTBITS`, then the lower bits of
-the 4-bit interrupt level are assumed to be all 1s.  If `nlbits` {lt}
-4, then the lower bits of the 4-bit interrupt level are assumed to be
+the 8-bit interrupt level are assumed to be all 1s.  If `nlbits` {lt}
+8, then the lower bits of the 8-bit interrupt level are assumed to be
 all 1s.  The following table shows how levels are encoded in either of
 these two cases.
 
 ----
- #bits   encoding           interrupt levels
-     1    l...                 7,                   15
-     2    ll..         3,      7,       11,         15
-     3    lll.     1,  3,  5,  7,  9,   11,   13,   15
-     4    llll     1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+ #bits   encoding          interrupt levels
+     1    l.......                        127,                            255
+     2    ll......           63,          127,            191,            255
+     3    lll.....     31,   63,   95,    127,    159,    191,    223,    255
+     4    llll....  15,31,47,63,79,95,111,127,143,159,175,191,207,223,239,255
 
  "l" bits are available variable bits in level specification
  "." bits are non-existent bits for level encoding, assumed to be 1
 ----
 
-If `nlbits` = 0, then all interrupts are treated as level 15.
+If `nlbits` = 0, then all interrupts are treated as level 255.
 
 Examples of `cliccfg` settings:
 
  CLICINTBITS nmbits nlbits clicintcfg[i] interrupt levels
-       2      2       2      mm......     15
-       3      2       2      mml.....     7,15
-       4      2       2      mmll....     3,7,11,15
-       5      2       3      mmlll...     1,3,5,7,9,11,13,15
-       5      1       1      mlppp...     7,15
+       2      2       2      mm......     255
+       3      2       2      mml.....     127,255
+       4      2       2      mmll....     63,127,191,255
+       5      2       3      mmlll...     31,63,95,127,159,191,223,255
+       5      1       1      mlppp...     127,255
 
 ==== Specifying interrupt priority
 
@@ -349,9 +347,9 @@ Examples:
 
  CLICINTBITS nmbits nlbits nvbits clicintcfg[i] Vectored?
        2      2       2      1    mm......      M/S-mode interrupts
-       3      2       2      1    mml.....      Level 15
-       4      2       2      1    mmll....      Levels 7, 15
-       5      2       3      1    mmlll...      Levels 3,7,11,15
+       3      2       2      1    mml.....      Level 255
+       4      2       2      1    mmll....      Levels 127, 255
+       5      2       3      1    mmlll...      Levels 63,127,191,255
        5      1       1      1    mlppp...      Priorities 63,127,191,255
 
 === CLIC interaction with other local interrupts
@@ -555,12 +553,14 @@ through the trap handling process.
 
  mcause
  Bits    Field      Description
- XLEN-1 Interrupt  Interrupt=1, Exception=0
-    30  minhv      Hardware vectoring in progress when set
- 29:28  mpp        Previous privilege mode, same as mstatus.mpp
- 27:24  mpil       Previous interrupt level
-    23  mpie       Previous interrupt enable, same as mstatus.mpie
-   9:0  Exccode    Exception/interrupt code
+ XLEN-1 Interrupt    Interrupt=1, Exception=0
+    30  minhv        Hardware vectoring in progress when set
+ 29:28  mpp[1:0]     Previous privilege mode, same as mstatus.mpp
+    27  mpie         Previous interrupt enable, same as mstatus.mpie
+ 26:24  (reserved)
+ 23:16  mpil[7:0]    Previous interrupt level
+ 15:10  (reserved)
+   9:0  Exccode[9:0] Exception/interrupt code
 
 The `mcause.mpp` and `mcause.mpie` fields mirror the `mstatus.mpp` and
 `mstatus.mpie` fields, and are aliased into `mcause` to reduce context
@@ -596,20 +596,26 @@ from user mode.
 ----
  scause
  Bits    Field      Description
- XLEN-1 Interrupt  Interrupt=1, Exception=0
-    30  sinhv      Hardware vectoring in progress when set
-    28  spp        Previous privilege mode, same as sstatus.spp
- 27:24  spil       Previous interrupt level
-    23  spie       Previous interrupt enable, same as sstatus.spie
-   9:0  exccode    Exception/interrupt code
+ XLEN-1 Interrupt    Interrupt=1, Exception=0
+    30  sinhv        Hardware vectoring in progress when set
+    29 (reserved)
+    28  spp          Previous privilege mode, same as sstatus.spp
+    27  spie         Previous interrupt enable, same as sstatus.spie
+ 26:24  (reserved)
+ 23:16  spil[7:0]    Previous interrupt level
+ 15:10  (reserved)
+   9:0  exccode[9:0] Exception/interrupt code
 
  ucause
  Bits    Field      Description
- XLEN-1 Interrupt  Interrupt=1, Exception=0
-    30  uinhv      Hardware vectoring in progress when set
- 27:24  upil       Previous interrupt level
-    23  upie       Previous interrupt enable, same as ustatus.upie
-   9:0  exccode    Exception/interrupt code
+ XLEN-1 Interrupt   Interrupt=1, Exception=0
+    30  uinhv       Hardware vectoring in progress when set
+ 29:28 (reserved)
+    27  upie        Previous interrupt enable, same as ustatus.upie
+ 26:24  (reserved)
+ 23:16  upil[7:0]    Previous interrupt level
+ 15:10  (reserved)
+   9:0  exccode[9:0] Exception/interrupt code
 ----
 
 NOTE: Not clear if user mode should ever see hardware vectoring in progress.
@@ -689,20 +695,22 @@ each supported privilege mode.  These fields are read-only.  The
 primary reason to expose these fields is to support debug.
 
  mintstatus fields
- 15:12 mil
- 11: 8 Reserved # To follow pattern of others.
-  7: 4 sil
-  3: 0 uil
+ 31:24 mil
+ 23:16 (reserved) # To follow pattern of others.
+ 15: 8 sil
+  7: 0 uil
 
 Corresponding supervisor mode, `sintstatus`, and user, `uintstatus`,
 provide restricted views of mintstatus.
 
  sintstatus fields
- 7:4  sil
- 3:0  uil
+ 31:16 (reserved)
+ 15: 8 sil
+  7: 0 uil
 
  uintstatus fields
- 3:0  uil
+ 31: 8 (reserved)
+  7: 0 uil
 
 The {intstatus} registers are accessible in CLINT mode for system that
 support both modes.
@@ -714,10 +722,10 @@ support both modes.
 Name           Value Range                     Description
 CLICANDCLINT   0-1                             Implements CLINT mode also?
 CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U, 3=M/S/U
-CLICLEVELS     2-16                            Number of interrupt levels including 0
+CLICLEVELS     2-256                           Number of interrupt levels including 0
 CLICINPUTS     4-1024                          Always has MSIP, MTIP, MEIP, CSIP
 CLICMAXID      12-1024                         Largest interrupt ID
-CLICINTBITS    2-8                             Number of bits implemented in cliccfgint[i]
+CLICINTBITS    2-8                             Number of bits implemented in clicintcfg[i]
 CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for cliccfg.nmbits
 CLICCFGLBITS   0-ceil(lg2((lg2(CLICLEVELS))))  Number of bits implemented for cliccfg.nlbits
 CLICSIVEC      0-1                             Selective vectoring supported?
