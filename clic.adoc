@@ -24,7 +24,7 @@
 :ret: pass:q[``**__m__**ret``]
 
 = SiFive Proposal for a RISC-V Core-Local Interrupt Controller (CLIC)
-Version 20180727
+Version 20180831
 
 == Background and Motivation
 
@@ -66,8 +66,8 @@ address of the interrupt vector table.  The low bits of the WARL
 {tvec} register indicate what interrupt model is supported.  The
 original settings of {tvec} mode (`*00` and `*01`) indicate use of the
 CLINT model with either non-vectored or vectored transfer to a handler
-function, with the 4-byte aligned table base address held in the upper
-bits of {tvec}.
+function, with the 4-byte (or greater) aligned table base address held
+in the upper bits of {tvec}.
 
 NOTE: WARL means "Write Any, Read Legal" indicating that any value can
 be attempted to be written but only supported values are retained.
@@ -438,7 +438,8 @@ In systems that support both CLINT and CLIC modes, the state bits in
 The new interrupt-handling modes are encoded as new states in the
 existing {tvec} WARL register, where the low two bits of {tvec} are
 `10` or `11`.  In these modes, the trap vector base address held in
-{tvec} is constrained to be aligned on a 64-byte boundary.
+{tvec} is constrained to be aligned on a 64-byte or larger
+power-of-two boundary.
 
 ----
  mtvec   Action on Interrupt
@@ -448,14 +449,14 @@ existing {tvec} WARL register, where the low two bits of {tvec} are
  000011  pc := M[TBASE + XLEN/8 * exccode)] & ~1  (vectored CLIC mode)
  xxxx1?  (xxxx!=0000)                            Reserved
 
- OBASE = mtvec[XLEN-1:2]<<2 # Original vector base was 4-byte aligned.
- NBASE = mtvec[XLEN-1:6]<<6 # New vector base is 64-byte aligned.
- TBASE = mtvt[XLEN-1:6]<<6  # Trap vector table base is 64-byte aligned.
+ OBASE = mtvec[XLEN-1:2]<<2 # Original vector base was at least 4-byte aligned.
+ NBASE = mtvec[XLEN-1:6]<<6 # New vector base is at least 64-byte aligned.
+ TBASE = mtvt[XLEN-1:6]<<6  # Trap vector table base is at least 64-byte aligned.
 ----
 
 Writing a value to {tvec} with the low two bits `10` selects a
 non-vectored CLIC mode, where the processor jumps to the
-64-byte-aligned trap handler address held in the upper XLEN-6 bits of
+trap handler address held in the upper XLEN-6 bits of
 {tvec} for all exceptions and interrupts in privilege mode
 `**__m__**`.
 
@@ -523,8 +524,8 @@ traps always jump to NBASE.
 === New {tvt} CSR
 
 The {tvt} WARL XLEN-bit CSR holds the base address of the trap vector
-table, aligned on a 64-byte boundary.  Values other than 0 in the low
-6 bits of {tvt} are reserved.
+table, aligned on a 64-byte or greater power-of-two boundary.  Values
+other than 0 in the low 6 bits of {tvt} are reserved.
 
 In systems that support both CLINT and CLIC modes, the {tvt} CSR is
 still accessible in CLINT mode (but does not have any effect).
