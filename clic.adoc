@@ -1746,7 +1746,7 @@ level in the the lower-privilege mode.
 == CLIC Interrupt IDs
 
 The original CLINT interrupts retain their interrupt ID in CLIC mode.
-The `cliccfgint` settings are now used to delegate these interrupts as
+The `clicintcfg` settings are now used to delegate these interrupts as
 required.
 
 An additional CLIC software interrupt bit (csip) is provided.  This is
