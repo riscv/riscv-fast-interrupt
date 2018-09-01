@@ -157,7 +157,7 @@ The `cliccfg` setting then determines how to split the maximum
 (0--255), and interrupt priority (0--255).
 
 WARNING: Selecting an interrupt level of 0 for a high privilege mode
-disables the interrupt, but can also mask any interrupt at a lower
+disables the interrupt, but also masks any interrupt at a lower
 privilege mode since the higher-privilege mode causes the interrupt
 signal to appear more urgent than any lower-privilege mode interrupt.
 
