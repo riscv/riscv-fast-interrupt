@@ -1474,13 +1474,13 @@ Interrupt handlers need to have a place to save the previous context's
 state to provide working registers for the handler code.  If a handler
 can be entered from a lower-privilege mode, a pointer to some safe
 memory for the context save must be swapped in at entry to the
-higher-privileged handler.  The RISC-V privileged architecture
-provides the {scratch} register to hold this information for a
-higher-privilege mode while executing in a lower-privilege mode.
-For the following discussion and code examples, the assumption is that
-{scratch} is used to hold the stack pointer but other software
-conventions are possible (e.g., {scratch} points to a thread context
-block).
+higher-privileged handler to avoid security holes. The RISC-V
+privileged architecture provides the {scratch} register to hold this
+information for a higher-privilege mode while executing in a
+lower-privilege mode.  For the following discussion and code examples,
+the assumption is that {scratch} is used to hold the
+higher-privilege-mode stack pointer but other software conventions are
+possible (e.g., {scratch} points to a thread context block).
 
 Existing RISC-V ABIs allow addresses immediately below the stack
 pointer to be overwritten by interrupt service routines.  The current
@@ -1545,14 +1545,14 @@ continue:
   #-----------------------------------------------------------------------
 ----
 
-This code can be used in a model where user-level code has one stack,
-and all interrupts and exceptions are handled on a second M-mode-only
-stack.  In addition, background non-handler code in M-mode can either
-use the same M-mode stack as the interrupt handler, or a separate
-M-mode stack.  The only difference is in the value held in {scratch}
-while the M-mode background thread is running (either 0 to indicate
-use the existing stack pointer in `sp` or non-zero to indicate this
-stack pointer shoudl be used in the handler.
+This code can be used in a secure model where user-level code has one
+stack, and all interrupts and exceptions are handled on a second
+M-mode-only stack.  In addition, background non-handler code in M-mode
+can either use the same M-mode stack as the interrupt handler, or a
+separate M-mode stack.  The only difference is in the value held in
+{scratch} while the M-mode background thread is running (either 0 to
+indicate use the existing stack pointer in `sp` or non-zero to
+indicate this stack pointer shoudl be used in the handler.
 
 === Scratch Swap CSR ({scratchcsw}) for multiple privilege modes
 
