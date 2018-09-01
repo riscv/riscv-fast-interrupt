@@ -848,10 +848,11 @@ stack pointer.
 
 When interrupts are taken vertically into a higher privilege mode, the
 stack pointer must be swapped to a stack within the higher privilege
-mode.  The {scratch} registers can be used to hold the stack pointer
-of a higher privilege mode while lower privilege code is executing, or
-{scratch} can be used to point to more extensive thread-local context
-that might contain a stack pointer.
+mode to avoid a security hole.  The {scratch} registers can be used to
+hold the stack pointer of a higher-privilege mode while
+lower-privilege code is executing, or {scratch} can be used to point
+to more extensive thread-local context that might contain a stack
+pointer.
 
 [[inline-section,Inlines]]
 === Inline interrupt handlers and "interrupt attribute" for C
@@ -888,6 +889,7 @@ entry point on an 8-byte boundary.
 ----
    .align 3
       # Inline non-preemptible interrupt handler.
+      # Only safe for horizontal interrupts.
    foo:
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
       sw a0, OFFSET(sp)            # Save working register.
@@ -922,6 +924,7 @@ enabling interrupts:
 ----
    .align 3
       # Inline preemptible interuppt handler.
+      # Only safe for horizontal interrupts.
    foo:
       #----- Interrupts disabled on entry ---#
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
@@ -972,7 +975,8 @@ explanation of its operation.
 
 [source]
 ----
-  # Example M-mode-only Unix C ABI interrupt trampoline.
+  # Example Unix C ABI interrupt trampoline.
+  # Only safe for horizontal interrupts.
   # FRAMESIZE should be defined appropriately to hold saved context with ABI-specified alignment.
   # OFFSET should be replaced with individual stack frame locations.
   # Register save/restore pseudo-code should be expanded to individual instructions.
@@ -1365,7 +1369,8 @@ interrupt handler of the type described in <<Inlines>>.
 
 [source]
 ----
-    # Software-vectored interrupt servicing in M-mode.
+    # Software-vectored interrupt servicing.
+    # Only safe for horizontal interrupts.
     # Must be placed three instructions back from gp.
 irq_enter:
     csrrci gp, mnxti, MIE   # Overwrite gp, keep interrupts disabled.
@@ -1412,6 +1417,7 @@ returns with a regular `j ra`.
 [source]
 ----
   # Example handler with new calling convention.
+  # Only safe for horizontal interrupts.
   # Handlers have two temporary registers available, a0, a1.
 handler_example:
   sw x0, INTERRUPT_FLAG, a0     # Clear interrupt flag.
