@@ -1558,7 +1558,7 @@ can either use the same M-mode stack as the interrupt handler, or a
 separate M-mode stack.  The only difference is in the value held in
 {scratch} while the M-mode background thread is running (either 0 to
 indicate use the existing stack pointer in `sp` or non-zero to
-indicate this stack pointer shoudl be used in the handler.
+indicate this stack pointer should be used in the handler.
 
 === Scratch Swap CSR ({scratchcsw}) for multiple privilege modes
 
