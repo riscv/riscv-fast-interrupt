@@ -728,7 +728,7 @@ CLICMAXID      12-1024                         Largest interrupt ID
 CLICINTBITS    2-8                             Number of bits implemented in clicintcfg[i]
 CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for cliccfg.nmbits
 CLICCFGLBITS   0-ceil(lg2((lg2(CLICLEVELS))))  Number of bits implemented for cliccfg.nlbits
-CLICSIVEC      0-1                             Selective vectoring supported?
+CLICSELHVEC    0-1                             Selective hardware vectoring supported?
 CLICMTVECALIGN 6-13                            Number hardwired zero LSBs in mtvec address.
 ----
 
