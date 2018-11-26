@@ -387,14 +387,14 @@ additions for CLIC mode described in the following sections.
        0xm00   mstatus      Status register
        0xm02   medeleg      Exception delegation register
        0xm03   mideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
-       0xm04   mie          Interrupt-enable register
+       0xm04   mie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0xm05   mtvec        Trap-handler base address / interrupt mode
 (NEW)  0xm07   mtvt         Trap-handler vector table base address
        0xm40   mscratch     Scratch register for trap handlers
        0xm41   mepc         Exception program counter
        0xm42   mcause       Cause of trap
        0xm43   mtval        Bad address or instruction
-       0xm44   mip          Interrupt-pending register
+       0xm44   mip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0xm45   mnxti        Interrupt handler address and enable modifier
  (NEW) 0xm46   mintstatus   Current interrupt levels
  (NEW) 0xm48   mscratchcsw  Conditional scratch swap on priv mode change
