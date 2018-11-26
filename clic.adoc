@@ -1953,9 +1953,95 @@ supporting up to 512 CLICs in a platform:
   0x02E0_1000   U-mode aperture for CLIC 1
 ----
 
+=== Expanded CLIC Memory Map Option
+
+NOTE: This is an early proposal.
+
+The expanded CLIC memory map provides a simpler interface to the
+individual fields in `clicintctl` and now supports up to 4,096 total
+interrupt inputs.  A systems supporting the expanded CLIC memory map
+must also support the original compressed CLIC memory map.  The two
+CLIC memory regions will control the same hardware.
+
+[source]
+----
+   Expanded CLIC memory map
+   M-mode regions
+   Offset
+  0x0000+i   1B/input    R or RW   clicintip[i]
+  0x1000+i   1B/input    RW        clicintie[i]
+  0x2000     1B          RW        cliccfg
+  0x4000+i*4 1B/input    RW        clicintctl[i].mode byte
+  0x4001+i*4 1B/input    RW        clicintctl[i].level byte
+  0x4002+i*4 1B/input    RW        clicintctl[i].priority byte
+  0x4003+i*4 1B/input    RW        clicintctl[i].shv byte
+  ...
+  0x7FFF     1B/input    RW        clicintctl[4095].shv
+
+clicintip[i] is read-only for level-based interrupts and read-write
+for edge-triggered interrupts.
+----
+
+The expanded memory map retains the same byte address for interrupt
+pending and interrupt enable, but expands the interrupt control
+register into four separate byte fields.  Each of the mode, level,
+priority, and selective-hardware vectoring settings is allocated a
+separate byte address.  The bits that are writeable/readable in that
+byte are those selected by `cliccfg`.  A single 32-bit memory
+instruction can access all four bytes controlling a single interrupt's
+settings.
+
+Any writable mode bits are made accessible in the least-significant
+bits of the first byte, with the upper bits hardwired to zero.  If
+there are no mode bits, then the whole byte is hardwired to return
+zero.
+
+Any writable level bits are made accessible in the most-significant
+bits of the level byte, while the least-significant bits return 1 when
+read.
+
+Any writable priority bits are made accessible in the most-significant
+bits of the priority byte, while the least-significant bits return 1
+when read.
+
+If the selective hardware vectoring bit is supported it appears in the
+LSB of the shv byte.  The upper bits return 0 when read.
+
+Writing to the SHV byte when selective hardware vectoring is enabled
+can change the mode, level, or priority bytes also depending on the
+value in `cliccfg`, which determines which of these fields overlaps
+with SHV.
+
+[source]
+----
+Example setting of cliccfg and resulting memory map for CLICINTCTLBITS=4
+
+  cliccfg.nmbits = 0, nlbits=2, nshv=1
+
+  Byte Offset  Bits       Meaning
+  0x4000      0000_0000   Hardwired to zero
+  0x4001      ll11_1111   Two writable level bits plus 6 trailing hardwired 1s
+  0x4002      pp11_1111   Two writable priority bits plus 6 trailing hardwired 1s
+  0x4003      0000_000s   One writable SHV bit that overlaps bit 6 of previous byte (lowest p bit)
+
+  cliccfg.nmbits = 1, nlbits=1, nshv=0
+
+  Byte Offset  Bits       Meaning
+  0x4000      0000_000m   Single writable bit (1=M, 0=U)
+  0x4001      l111_1111   One writable level bit plus 7 trailing hardwired 1s
+  0x4002      ppp1_1111   Three writable priority bits plus 5 trailing hardwired 1s
+  0x4003      0000_0000   Hardwired to zero.
+----
+
+Other privilege modes have a similar memory layout in a different
+memory region to support multiple privilege modes.  In each
+lower-privilege aperture, only those interrupt inputs that have been
+configured by machine mode will appear in the lower-privilege memory
+aperture.
+
 == CLIC and Message-Signalled Interrupts (MSI)
 
-NOTE: This is a proposal.
+NOTE: This is an early proposal.
 
 PCI MSIs contain an interrupt number in the data portion of a memory
 store.  The CLIC will be extended to add another address to which MSIs
