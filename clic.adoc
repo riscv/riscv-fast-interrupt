@@ -311,9 +311,11 @@ selective interrupt hardware vectoring.
 If `nvbits` = 0, then selective interrupt vectoring is turned off, and
 all interrupts are vectored according to the mode setting held in the
 low bits of {tvec}.  The {tvec} register is used to specify the
-handler PC for non-vectored mode, and to specify the table base
-address for hardware vectored mode.  A separate {tvt} CSR is provided
-to support software vectored mode, and selective input vectoring.
+handler PC for non-vectored CLIC mode.  A separate {tvt} CSR holds the
+base address of a table of trap-handler function pointers used when
+{tvec} is set to hardware-vectored CLIC mode.  The same {tvt} CSR
+provides the table base address for selective hardware vectoring and
+for software vectoring using the {nxti} CSR.
 
 If `nvbits` = 1, then selective interrupt vectoring is turned on.  The
 least-significant implemented bit of `clicintctl[__i__]` (i.e.,
@@ -327,7 +329,8 @@ vectored in hardware via a table pointed to by the additional {tvt}
 CSR.
 
 NOTE: Selective hardware vectoring is intended to be used with the
-non-vectored CLIC mode.
+non-vectored CLIC mode.  Selective hardware vectoring has no effect if
+the base mode is hardware vectoring.
 
 NOTE: We could alternatively have `clicintctl[__i__][8-CLICINTCTLBITS]`
 invert the vectoring setting for input _i_.
