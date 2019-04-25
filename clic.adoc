@@ -676,7 +676,7 @@ interrupt.
      && (cliccfg.nvbits==0 || clicintctl[clic.id][8-CLICINTCTLBITS]==0) ) {
    // The CLIC interrupt should be serviced before returning to the saved context,
    // unless it's a selectively hardware vectored interupt.
-   minstatus.mil = clic.level; // Update hart's interrupt level.
+   mintstatus.mil = clic.level; // Update hart's interrupt level.
    mcause.exccode = clic.id;   // Update interrupt id.
    rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
  } else {
@@ -1734,7 +1734,7 @@ same privilege mode.
   csrrw rd, mscratchcswl, rs1
 
   // Pseudocode operation.
-  if ( (mcause.pil==0) != (minstatus.mil==0) ) then {
+  if ( (mcause.pil==0) != (mintstatus.mil==0) ) then {
       t = rs1; rd = mscratch; mscratch = t;
   } else {
       rd = rs1; // mscratch unchanged.
