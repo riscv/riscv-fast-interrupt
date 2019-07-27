@@ -180,7 +180,7 @@ the same interrupt IDs.
 
 === CLIC configuration (`cliccfg`)
 
-The CLIC has a single memory-mapped 6-bit global configuration
+The CLIC has a single memory-mapped 8-bit global configuration
 register, `cliccfg`, that defines how the `clicintctl[__i__]`
 registers are subdivided into mode, level, and priority fields, which
 are held in descending order from the most-significant to the
