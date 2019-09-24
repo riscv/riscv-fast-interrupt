@@ -35,8 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC)
-Version 0.8
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20190924
 
 == Background and Motivation
 
