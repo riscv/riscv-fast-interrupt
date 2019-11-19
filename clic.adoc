@@ -35,13 +35,14 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20190924
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20191120
 
 == Background and Motivation
 
-The CLIC is designed to provide low-latency, vectored, pre-emptive
+The Core-Local Interrupt Controller (CLIC) is designed to provide
+low-latency, vectored, pre-emptive
 interrupts for RISC-V systems.  When activated the CLIC subsumes and
-replaces the existing RISC-V local interrupt scheme (CLINT).  The CLIC
+replaces the original RISC-V basic local interrupt scheme.  The CLIC
 design has a base design that requires minimal hardware, but supports
 additional extensions to provide hardware acceleration.  The goal of
 the CLIC design is to provide support for a variety of software ABI
@@ -80,15 +81,16 @@ The {tvec} register specifies both the interrupt mode and the base
 address of the interrupt vector table.  The low bits of the WARL
 {tvec} register indicate what interrupt model is supported.  The
 original settings of {tvec} mode (`*00` and `*01`) indicate use of the
-CLINT model with either non-vectored or vectored transfer to a handler
+original basic model with either non-vectored or vectored transfer to a handler
 function, with the 4-byte (or greater) aligned table base address held
 in the upper bits of {tvec}.
 
 NOTE: WARL means "Write Any, Read Legal" indicating that any value can
-be attempted to be written but only supported values are retained.
+be attempted to be written but only some supported values will actually
+be written.
 
-NOTE: CLIC mode is enabled using previously reserved values (`*10` or
-`*11`) in the low two bits of {tvec}.
+NOTE: CLIC mode is enabled using previously reserved values (`*11`)
+in the low two bits of {tvec}.
 
 === CLIC versus PLIC
 
@@ -102,19 +104,19 @@ only a CLIC, while multicore systems might have a CLIC per-core and a
 single shared PLIC.  The PLIC ``**__m__**eip`` signals are treated as
 hart-local interrupt sources by the CLIC at each core.
 
-=== CLIC versus CLINT
+=== CLIC versus Original Basic Controller
 
-The Core-Local Interrupt (CLINT) block was a small unit that provided
-local interrupts on earlier designs, and managed the software, timer,
-and external interrupt signals
+The existing original basic interrupt controller was a small unit
+that provided local interrupts based on earlier designs, and managed
+the software, timer, and external interrupt signals
 (``**__m__**sip``/``**__m__**tip``/``**__m__**eip`` signals in
-the {ip} register).  The CLINT also allowed additional custom
-fast interrupt signals to be added in bits 16 and up of the
+the {ip} register).  This basic controller also allowed additional
+custom fast interrupt signals to be added in bits 16 and up of the
 {ip} register.
 
 New settings of {tvec} mode as described below are used to enable CLIC
-modes instead of the original CLINT modes.  Platform profiles may
-require either or both of the original CLINT and CLIC interrupt modes.
+modes instead of the original basic modes.  Platform profiles may
+require either or both of the original basic and CLIC interrupt modes.
 
 == CLIC Design
 
@@ -182,7 +184,6 @@ M-mode CLIC memory map
   Offset
   0x0000       1B          RW        cliccfg
   0x0004       4B          R         clicinfo   
-  0x0008       4B          RW        mintthresh 
 
   0x1000+4*i   1B/input    R or RW   clicintip[i]
   0x1001+4*i   1B/input    RW        clicintie[i]
@@ -213,14 +214,21 @@ priority fields, and whether selective hardware vectoring is supported.
 
 The `cliccfg` register has three WARL fields, a 2-bit `nmbits` field,
 a 4-bit `nlbits` field, and a 1-bit `nvbits` field, plus a reserved
-bit WARL-hardwired to zero in current spec.
+bit WPRI-hardwired to zero in current spec.
+
+NOTE: WPRI means "Writes Preserve Values, Reads Ignore Values"
+indicating whole read/write fields are reserved for future use. Software
+should ignore the values read from these fields, and should preserve
+the values held in these fields when writing values to other fields of
+the same register. For forward compatibility, implementations that do
+not furnish these fields must hardwire them to zero.
 
 [source]
 ----
   cliccfg register layout
 
   bits    field
-  7       reserved (WARL 0)
+  7       reserved (WPRI 0)
   6:5     nmbits[1:0]
   4:1     nlbits[3:0]
     0     nvbits
@@ -232,8 +240,6 @@ level 255).
 Detailed explanation for each field are described in the following sections.
 
 ==== Specifying interrupt privilege mode
-
-NOTE: Figure out interaction with hypervisor mode.
 
 The 2-bit `cliccfg.nmbits` WARL field encodes how many bits in a
 `clicintattr[__i__].mode` register are used to hold an input __i__'s
@@ -314,12 +320,16 @@ If `nlbits` = 0, then all interrupts are treated as level 255.
 
 Examples of `cliccfg` settings:
 
- CLICINTCTLBITS nmbits nlbits clicintctl[i] interrupt levels
-       2         2       2      mm......     255
-       3         2       2      mml.....     127,255
-       4         2       2      mmll....     63,127,191,255
-       5         2       3      mmlll...     31,63,95,127,159,191,223,255
-       5         1       1      mlppp...     127,255
+ CLICINTCTLBITS nlbits clicintctl[i] interrupt levels
+       0         2      ........     255
+       1         2      l.......     127,255
+       2         2      ll......     63,127,191,255
+       3         3      lll.....     31,63,95,127,159,191,223,255
+       4         1      lppp....     127,255
+
+ "." bits are non-existent bits for level encoding, assumed to be 1
+ "l" bits are available variable bits in level specification
+ "p" bits are available variable bits in priority specification
 
 ==== Specifying interrupt priority
 
@@ -332,7 +342,7 @@ pending-and-enabled interrupts at the same highest priority, the
 highest-numbered interrupt is taken first.
 
 NOTE: The highest numbered interrupt wins in a tie.  This is the same
-as the original CLINT, but different than the PLIC.
+as the original basic mode, but different than the PLIC.
 
 Any implemented priority bits are treated as the most-significant bits
 of a 8-bit unsigned integer with lower unimplemented bits set to 1.
@@ -356,12 +366,12 @@ non-vectoring has the advantage of smaller code size (by sharing and
 reusing one copy of common code to save/restore contexts) at the price of
 slightly slower interrupt response.
 
-If `nvbits` = 0, then selective interrupt vectoring is not implemented.
+If `nvbits` = 0, then selective interrupt hardware vectoring is not implemented.
 So all interrupts are non-vectored and are directed to the common code
 at {tvec} register.
 
 
-If `nvbits` = 1, then selective interrupt vectoring is implemented.
+If `nvbits` = 1, then selective interrupt hardware vectoring is implemented.
 The bit `clicintattr[__i__].shv` controls the vectoring behavior of
 interrupt _i_.  If `clicintattr[__i__].shv` is 0, then
 the interrupt is non-vectored and always jumps to the common code at
@@ -380,8 +390,10 @@ This is a read-only register to show information useful for debugging.
 
 [source]
 ----
+  clicinfo register layout
+
   bits    field
-  31:25   reserved (WARL 0)
+  31:25   reserved (WPRI 0)
   24:21   CLICINTCTLBITS
   20:13   version (for version control)
           20:17 for architecture version, 16:13 for implementation version
@@ -397,7 +409,7 @@ The `version` field specifies the implementation version of CLIC. The upper
 the implementation version.
 
 The `CLICINTCTLBITS` field specifies how many hardware bits are actually
-implemented in the `clicintctl` registers, with 2 {le} `CLICINTCTLBITS` {le} 8.
+implemented in the `clicintctl` registers, with 0 {le} `CLICINTCTLBITS` {le} 8.
 The implemented bits are kept left-justified in the most-significant bits of
 each 8-bit `clicintctl[__i__]` register, with the lower unimplemented bits
 treated as hardwired to 1.
@@ -405,10 +417,8 @@ treated as hardwired to 1.
 === Interrupt-Level Threshold (`mintthresh`)
 
 The interrupt-level threshold (`mintthresh`) is a new read-write CSR,
-which holds an 8-bit field for each privilege mode (i.e., `mth`, `hth`,
-`sth`, `uth`). It holds its current threshold level, and adds some support
-CSR addresses that allow the field to be read/written independently.
-It has similar ordering as `mip`/`mie`.
+which holds an 8-bit field (`th`) for the threshold level of the
+associated privilege mode. 
 
 A typical usage of the interrupt-level threshold is for implementing
 critical sections. The current handler can temporarily raise its effective
@@ -416,12 +426,27 @@ interrupt level to implement a critical section among a subset of levels,
 while still allowing higher interrupt levels to preempt.
 
 The current hart's effective interrupt level would then be:
-    effective_level = max( `mintstatus.mil`, `mintthresh.mth` )
+    effective_level = max( `mintstatus.mil`, `mintthresh.th` )
 
 The max is used to prevent a hart from dropping below its original level
-which would break a bunch of assumptions in design, and also makes it
+which would break assumptions in design, and also makes it
 simple for software to remove threshold without knowing its own level
 by simply writing zero.
+
+The interrupt-level threshold is only valid when running in associated
+privilege mode and not in other modes. This is because interrupts for
+lower privilege modes are always disabled, whereas interrupts for higher
+privilege modes are always enabled. For example, machine-mode interrupts
+will not be masked by machine-mode threshold setting when running in user mode.
+This is analogous to how mstatus.mie does not mask machine-mode interrupts
+when running in lower privilege modes.
+
+NOTE: This behavior significantly reduces
+the hardware cost because it only needs to select one global maximum interrupt
+and compare with the threshold of the associated mode (while ignoring thresholds
+in other modes). Otherwise, hardware would have to select multiple maximum
+interrupts (one per mode), compare and qualify with their associated thresholds,
+then pick a qualified maximum interrupt with the highest privilege mode.
 
 
 === CLIC Interrupt Pending (`clicintip`)
@@ -430,8 +455,8 @@ Each interrupt input has a dedicated interrupt pending bit (`clicintip[__i__]`)
 and occupies one byte in the memory map for ease of access.
 
 
-`clicintip[__i__]` is read-only for level-triggered interrupts
-and read-write for edge-triggered interrupts.
+`clicintip[__i__]` is a read-write register. Software-based (direct) writes
+to these pending bits have priority over hardware-based writes (triggers).
 
 For level-triggered interrupts, users should not clear the pending bits
 directly but instead should clear the interrupt sources (devices).
@@ -456,9 +481,21 @@ entry address. However, if the CSR instruction does not include write side effec
 interrupt pending bit is not cleared. This behavior allows software to optimize the
 selection and execution of interrupts using `mnxti`.
 
+NOTE: During normal operation, software does not need to clear pending bits
+because CLIC hardware already supports automatic clearing of pending bits for
+edge-triggered interrupts. As for level-triggered interrupts, they should be
+cleared at interrupt sources (devices) so no need to clear the pending bits.
+Therefore, software usually only needs to modify pending bits in the
+initialization process or testing.
+
+
+This is because our CLIC HW already supports automatic clearing of pending bits for edge-triggered interrupts and thus SW never has to worry about clearing pending bits regardless of interrupt types (level or edge).
+
 
 === CLIC Interrupt Enable (`clicintie`)
-Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`) and occupies one byte in the memory map for ease of access. This is bit is read-write and enable/disable the corresponding interrupt.
+Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
+and occupies one byte in the memory map for ease of access. This is bit is read-write
+and enable/disable the corresponding interrupt.
 
 
 
@@ -470,7 +507,7 @@ This register specifies various attributes for each interrupt.
 ----
         Bits           Field 
         7:6            mode
-        5:3            reserved
+        5:3            reserved (WPRI 0)
         2:1            trig
         0              shv
 ----
@@ -484,15 +521,21 @@ This feature allows some interrupts to all jump to a common base address held
 in {tvec}, while the others are vectored in hardware via a table pointed to
 by the additional {tvt} CSR.
 
+NOTE: if `cliccfg.nvbits` is 0, the selective interrupt hardware vectoring
+feature is not implemented and thus `shv` field appears hardwired to
+zero (WARL 0).
 
-The 2-bit `trig` field specifies the trigger type and polarity for each interrupt input.
-Bit 1, `trig[0]`, is defined as "edge-triggered" (0: level-triggered, 1: edge-triggered);
-while bit 2, `trig[1]`, is defined as "negative-edge" (0: positive-edge, 1: negative-edge).
 
-The 2-bit `mode` field specifies which privilege mode this interrupt operates in. This field
-uses the same encoding as the `mstatus.mpp` (11: machine mode, 01: supervisor mode, 00 user mode).
-The default value for `clicintattr.mode` is 11 to represent machine mode. The valid length
-of this field can be programmed with `cliccfg.nmbits`.
+The 2-bit `trig` field specifies the trigger type and polarity for each
+interrupt input. Bit 1, `trig[0]`, is defined as "edge-triggered"
+(0: level-triggered, 1: edge-triggered); while bit 2, `trig[1]`, is defined
+as "negative-edge" (0: positive-edge, 1: negative-edge).
+
+The 2-bit `mode` field specifies which privilege mode this interrupt
+operates in. This field uses the same encoding as the `mstatus.mpp`
+(11: machine mode, 01: supervisor mode, 00 user mode). The default value
+for `clicintattr.mode` is 11 to represent machine mode. The valid length of
+this field can be programmed with `cliccfg.nmbits`.
 
 
 === CLIC Interrupt Input Control (`clicintctl`)
@@ -500,16 +543,16 @@ of this field can be programmed with `cliccfg.nmbits`.
 The CLIC design supports up to 4096 interrupt inputs per hart, with
 each interrupt input _i_ having an 8-bit memory-mapped WARL
 control register, `clicintctl[__i__]`.  The first 16 interrupt
-inputs are reserved for the CLINT interrupts present in the low 16 bits
-of the {ip} and {ie} registers, so up to 4080 local external
-interrupts can be added.
+inputs are reserved for the original basic mode interrupts present in
+the low 16 bits of the {ip} and {ie} registers, so up to 4080 local
+external interrupts can be added.
 
 A fixed parameter of the CLIC (`CLICINTCTLBITS`) is how many total bits
-are present in the `clicintctl` registers , with 2 {le}
+are present in the `clicintctl` registers , with 0 {le}
 `CLICINTCTLBITS` {le} 8.  The implemented bits are kept left-justified
 in the most-significant bits of each 8-bit `clicintctl[__i__]`
 register, with the lower unimplemented bits treated as hardwired to 1.
-These configuration bits are interpreted as mode, level, and
+These configuration bits are interpreted as level and
 priority depend on the setting of the `cliccfg` register as
 described below.
 
@@ -518,63 +561,38 @@ Each interrupt input also has an orthogonal interrupt-enable bit
 in the memory map.  For level-sensitive hardware interrupts, the
 interrupt-pending bits are read-only.
 
-The CLIC circuitry treats the `clicintctl` values as unsigned
-integers, and takes a global maximum across all pending-and-enabled
-`clicintctl` values to select the interrupt to present to the core.
-The `cliccfg` setting then determines how to split the maximum
-`clicintctl` value into privilege mode (M/S/U), interrupt level
-(0--255), and interrupt priority (0--255).
+To select an interrupt to present to the core, the CLIC hardware
+combines the valid bits in `clicintattr.mode` and
+`clicintctl` to form an unsigned value, then picks the global maximum
+across all pending-and-enabled interrupts based on this value.
+Next, the `cliccfg` setting determines how to split
+the maximum `clicintctl` value into interrupt level and interrupt
+priority. Finally, the interrupt level of the selected interrupt is
+compared with the interrupt-level threshold of the associated privelege
+mode to determine whether it is qualified or masked by the threshold
+(and thus no interrupt is presented).
 
-WARNING: Selecting an interrupt level of 0 for a high privilege mode
-disables the interrupt, but also masks any interrupt at a lower
-privilege mode since the higher-privilege mode causes the interrupt
-signal to appear more urgent than any lower-privilege mode interrupt.
 
-NOTE: On a multithreaded core, the `clicintctl[__i__]` register might
-also contain a hart-id field to direct the interrupt to one hart on
-the core.  This multithreaded option is not discussed further in this
-proposal.
+WARNING: Selecting an interrupt at a high privilege mode masks any
+interrupt at a lower privilege mode since the higher-privilege mode
+causes the interrupt signal to appear more urgent than any lower-privilege
+mode interrupt.
+
 
 ==== Interrupt Input Identification Number
 
 The 4096 CLIC interrupt vectors are given unique identification numbers
 with {cause} Exception Code (`exccode`) values.  To maintain backward
-compatibility, the original CLINT interrupts retain their original
+compatibility, the original basic mode interrupts retain their original
 cause values, while the new interrupts are numbered starting at 16.
 
 To support Non-Maskable Interrupt (NMI), the exccode for NMI is defined
 as 0xFFF with mcause.Interrupt=0.
 
-NOTE: When upgrading an earlier CLINT-based system design that had
-local interrupts attached directly to bits 16 and above, these local
-interrupts can be now attached as CLIC inputs 16 and above to retain
-the same interrupt IDs.
-
-=== CLIC/CLINT shared memory map
-
-The CLIC reuses the CLINT memory map for the `msip`, `mtimecmp`, and
-`mtime` memory-mapped registers.  This simplifies providing both CLINT
-and CLIC mode in the same hardware.  The CLIC/CLINT memory map is
-given relative to a local interrupt base address (which is implementation
-dependent).
-
-[source]
-----
- CLIC/CLINT shared memory map
-
- Offset  Extent  Permissions   Contents
- 0x0000  4B      RW            hart0 msip
- 0x0004  4B      RW            hart1 msip
- ..
- 0x4000  4B      RW            hart0 mtimecmp lo
- 0x4004  4B      RW            hart0 mtimecmp hi
- 0x4008  4B      RW            hart1 mtimecmp lo
- 0x400c  4B      RW            hart1 mtimecmp hi
- ..
- 0xbff8  4B      RW            mtime lo
- 0xbffc  4B      RW            mtime hi
-----
-
+NOTE: When upgrading an earlier original basic interrupt system design
+that had local interrupts attached directly to bits 16 and above, these
+local interrupts can be now attached as CLIC inputs 16 and above to
+retain the same interrupt IDs.
 
 === S-Mode CLIC regions for M/S/U harts
 
@@ -655,8 +673,8 @@ S-mode CLIC regions for all harts.
 == CLIC CSRs
 
 This section describes the CLIC-related hart-specific CSRs. When in
-CLINT mode, the behavior is intended to be software compatible with
-CLINT-only systems.
+original basic mode, the behavior is intended to be software
+compatible with basic-mode-only systems.
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -676,7 +694,7 @@ additions for CLIC mode described in the following sections.
        0xm43   mtval        Bad address or instruction
        0xm44   mip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0xm45   mnxti        Interrupt handler address and enable modifier
- (NEW) 0xm46   mintstatus   Current interrupt levels
+ (NEW) 0xm??   mintstatus   Current interrupt levels
  (NEW) 0xm48   mscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0xm49   mscratchcswl Conditional scratch swap on level change
  (NEW) 0xm50   mclicbase    Base address for CLIC memory mapped registers
@@ -686,9 +704,9 @@ additions for CLIC mode described in the following sections.
 
 === Changes to {status} CSRs
 
-When in CLINT mode, the {status} register behavior is unchanged (i.e.,
-backwards-compatible with CLINT mode).  When in CLIC mode, the
-``**__m__**pp`` and ``**__m__**pie`` in {status} are now accessible
+When in original basic mode, the {status} register behavior is unchanged
+(i.e., backwards-compatible with original basic mode).  When in CLIC mode,
+the ``**__m__**pp`` and ``**__m__**pie`` in {status} are now accessible
 via fields in the {cause} register.
 
 === Changes to Delegation ({edeleg}/{ideleg}) CSRs
@@ -697,10 +715,10 @@ In CLIC mode, the CLIC input configuration `clcintcfg[__i__]`
 specifies the privilege mode in which each interrupt should be taken,
 so the {ideleg} CSR ceases to have effect in CLIC mode.  The {ideleg}
 CSR is still accessible and state bits retain their values when
-switching between CLIC and CLINT modes.
+switching between CLIC and original basic modes.
 
 Exception delegation specified by {edeleg} functions the same in CLIC
-mode as in CLINT mode.
+mode as in original basic mode.
 
 === Changes to {ie}/{ip} CSRs
 
@@ -710,7 +728,7 @@ memory-mapped interrupt enables (`clicintie[__i__]`).
 The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
 separate memory-mapped interrupt pendings (`clicintip[__i__]`).
 
-In systems that support both CLINT and CLIC modes, the state bits in
+In systems that support both original basic and CLIC modes, the state bits in
 {ie} and {ip} retain their value when switching between modes.
 
 === New {tvec} CSR mode for CLIC
@@ -723,8 +741,8 @@ power-of-two boundary.
 
 ----
  mtvec   Action on Interrupt
- aaaa00  pc := OBASE                              (original non-vectored CLINT mode)
- aaaa01  pc := OBASE + 4 * exccode                (original vectored CLINT mode)
+ aaaa00  pc := OBASE                              (original non-vectored basic mode)
+ aaaa01  pc := OBASE + 4 * exccode                (original vectored basic mode)
 
  000011                                           (CLIC mode)
          (non-vectored)
@@ -782,21 +800,21 @@ is:
            0x800018 # Interrupt 3 handler function pointer
 ----
 
-NOTE: The original CLINT vectored mode simply jumped to an address in
+NOTE: The original basic vectored mode simply jumped to an address in
 the trap vector table, while the new CLIC vectored mode reads a
 handler function address from the table, and jumps to it in hardware.
 
-NOTE: This version of the proposal has dropped the previously proposed
-instruction encoding for the trap handler vector addresses, as it
-complicated static initialization in C.  The entries in the table are
-simple XLEN-bit function pointers.
+NOTE: The vector table contains vector addresses rather than
+instructions because it simplifies  static initialization in C.
+More specifically, the entries in the table are simple XLEN-bit
+function pointers.
 
 NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
 traps on fetches to the trap vector table.
 
-Implementations might support only one of CLINT or CLIC mode.  If only
-CLINT mode is supported, writes to bit 1 are ignored and it is always
-set to zero (current behavior).  If only CLIC mode is supported,
+Implementations might support only one of original basic or CLIC mode.
+If only basic mode is supported, writes to bit 1 are ignored and it is
+always set to zero (current behavior).  If only CLIC mode is supported,
 writes to bit 1 are also ignored and it is always set to one.  CLIC
 mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
 extensions are supported).
@@ -817,59 +835,12 @@ In CLIC mode, synchronous exception traps always jump to NBASE.
 === New {tvt} CSR
 
 The {tvt} WARL XLEN-bit CSR holds the base address of the trap vector
-table, aligned on a 64-byte or greater power-of-two boundary (details
-described below).  Values other than 0 in the low 6 bits of {tvt}
-are reserved.
+table, aligned on a 64-byte or greater power-of-two boundary. The actual
+alignment can be determined by writing ones to the low-order bits then reading
+them back. Values other than 0 in the low 6 bits of {tvt} are reserved.
 
-To speed up the frequency and reduce gate count, the minimum alignment
-of {tvt} is proportional to the maximum number of interrupts implemented.
-More specifically, the detailed minimum alignment requirement is specified
-in the following table.
-
-
-[options="header",cols="^,^"]
-|====================
-|Maximum number of interrupts | Minimum alignment for `mtvt`
-|0 to 16	      |  64-byte
-|17 to 32	      |  128-byte
-|33 to 64	      |  256-byte
-|65 to 128	      |  512-byte
-|129 to 256	      |  1 KiB
-|257 to 512	      |  2 KiB
-|513 to 1024	      |  4 KiB
-|1025 to 2048	      |  8 KiB
-|2045 to 4096	      |  16 KiB
-|====================
-
-Alternatively, the minimum alignment in the table above
-can also be represented as the following formula:
-
-[source]
-----
- 2^ceiling(log2(N)) x 4 bytes, where N is the maximum number of interrupt sources. 
-----
-
-This minimum alignment simplifies the calculation of the
-vector table entry address by replacing the original addition
-operation with a simple concatenation operation. With this alignment,
-the address of the vector table entry is now simply calculated as:
-
-[source]
-----
- "mtvec[XLEN-1 : (ceiling(log2(N))+2)]" concatenating "interrupt_ID" concatenating "00"
-----
-
-
-In systems that support both CLINT and CLIC modes, the {tvt} CSR is
-still accessible in CLINT mode (but does not have any effect).
-
-NOTE: A previous proposal used positive and negative offsets from
-{tvec} to point at the shared trampoline code and the trap vector
-table respectively, but this imposed a hard constraint on memory
-layout, which would be problematic when the trampoline code would
-prefer to be in flash/ROM while the writable vector table should be in
-SRAM. The {tvt} CSR allows the trampoline code and the trap vector
-table to be independently located in the system memory map.
+In systems that support both original basic and CLIC modes, the {tvt} CSR is
+still accessible in basic mode (but does not have any effect).
 
 === Changes to {epc} CSRs
 
@@ -878,9 +849,9 @@ which execution was interrupted.
 
 === Changes to {cause} CSRs
 
-In both CLINT and CLIC modes, the {cause} CSR is written at the time an
-interrupt or synchronous trap is taken, recording the reason for the
-interrupt or trap.  For CLIC mode, {cause} is also extended to record
+In both original basic and CLIC modes, the {cause} CSR is written at the
+time an interrupt or synchronous trap is taken, recording the reason for
+the interrupt or trap.  For CLIC mode, {cause} is also extended to record
 more information about the interrupted context, which is used to
 reduce the overhead to save and restore that context for an {ret}
 instruction. CLIC mode {cause} also adds state to record progress
@@ -892,7 +863,7 @@ through the trap handling process.
     30  minhv        Hardware vectoring in progress when set
  29:28  mpp[1:0]     Previous privilege mode, same as mstatus.mpp
     27  mpie         Previous interrupt enable, same as mstatus.mpie
- 26:24  (reserved)
+ 26:24  (reserved)   
  23:16  mpil[7:0]    Previous interrupt level
  15:12  (reserved)
  11:0  Exccode[11:0] Exception/interrupt code
@@ -915,13 +886,13 @@ register now captures the previous privilege mode (`pp`), interrupt
 level (`pil`) and interrupt enable (`pie`), as well as the id of the
 interrupt in `exccode`.
 
-In systems supporting both CLINT and CLIC modes, the new CLIC-specific
-fields (`minhv`, `mpp`, `mpil`, `mpie`) appear to be hardwired to zero
-in CLINT mode for backwards compatibilty.  When CLINT mode is written
-to {tvec}, the new {cause} state fields (`mhinv` and `mpil`) are
-zeroed.  The other new {cause} fields, `mpp` and `mpie`, appear as
-zero in the {cause} CSR but the corresponding state bits in the
-`mstatus` register are not cleared.
+In systems supporting both original basic and CLIC modes, the new
+CLIC-specific fields (`minhv`, `mpp`, `mpil`, `mpie`) appear to be
+hardwired to zero in basic mode for backwards compatibilty.  When
+basic mode is written to {tvec}, the new {cause} state fields
+(`mhinv` and `mpil`) are zeroed.  The other new {cause} fields,
+`mpp` and `mpie`, appear as zero in the {cause} CSR but the corresponding
+state bits in the `mstatus` register are not cleared.
 
 The supervisor `scause` register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from `sstatus.spp`, while the user
@@ -930,30 +901,29 @@ from user mode.
 
 ----
  scause
- Bits    Field      Description
- XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  sinhv        Hardware vectoring in progress when set
-    29 (reserved)
-    28  spp          Previous privilege mode, same as sstatus.spp
-    27  spie         Previous interrupt enable, same as sstatus.spie
+ Bits    Field        Description
+ XLEN-1 Interrupt     Interrupt=1, Exception=0
+    30  sinhv         Hardware vectoring in progress when set
+    29  (reserved)
+    28  spp           Previous privilege mode, same as sstatus.spp
+    27  spie          Previous interrupt enable, same as sstatus.spie
  26:24  (reserved)
- 23:16  spil[7:0]    Previous interrupt level
- 15:10  (reserved)
-   9:0  exccode[9:0] Exception/interrupt code
+ 23:16  spil[7:0]     Previous interrupt level
+ 15:12  (reserved)
+ 11:0   exccode[11:0] Exception/interrupt code
 
  ucause
- Bits    Field      Description
- XLEN-1 Interrupt   Interrupt=1, Exception=0
-    30  uinhv       Hardware vectoring in progress when set
- 29:28 (reserved)
-    27  upie        Previous interrupt enable, same as ustatus.upie
+ Bits    Field       Description
+ XLEN-1 Interrupt    Interrupt=1, Exception=0
+    30  uinhv        Hardware vectoring in progress when set
+ 29:28  (reserved)
+    27  upie         Previous interrupt enable, same as ustatus.upie
  26:24  (reserved)
  23:16  upil[7:0]    Previous interrupt level
- 15:10  (reserved)
-   9:0  exccode[9:0] Exception/interrupt code
+ 15:12  (reserved)
+ 11:0  exccode[11:0] Exception/interrupt code
 ----
 
-NOTE: Not clear if user mode should ever see hardware vectoring in progress.
 
 === Next Interrupt Handler Address and Interrupt-Enable CSR ({nxti})
 
@@ -1019,7 +989,7 @@ NOTE: Vertical interrupts to different privilege modes will be taken
 preemptively by the hardware, so {nxti} effectively only ever handles
 the next interrupt in the same privilege mode.
 
-In CLINT mode, reads of {nxti} return 0, updates to {status} proceed
+In original basic mode, reads of {nxti} return 0, updates to {status} proceed
 as in CLIC mode, but updates to {intstatus} and {cause} do not take
 effect.
 
@@ -1047,16 +1017,17 @@ provide restricted views of mintstatus.
  31: 8 (reserved)
   7: 0 uil
 
-The {intstatus} registers are accessible in CLINT mode for system that
+The {intstatus} registers are accessible in original basic mode for system that
 support both modes.
 
 === New CLIC Base ({clicbase}) CSR
 
-The {clicbase} CSR is an XLEN-bit read-only or WARL read-write register
-providing the base address of CLIC memory mapped registers. If it is
-read-only, the CLIC base address is hardwired by hardware and cannot be
-changed. If it is read-write, the system start-up code must set it
-properly to indicate the starting address of CLIC memory mapped registers. 
+The {clicbase} CSR is an XLEN-bit WARL read-write register
+providing the base address of CLIC memory mapped registers.
+Its value should be set up by the system start-up code to indicate
+the starting address of CLIC memory mapped registers. 
+Nevertheless, in some low-cost implementation, this CLIC base address
+can also be hardwired to a fixed value and thus cannot be changed.
 
 Since the CLIC memory map must be aligned at a 4KiB boundary, the {clicbase}
 CSR has its 12 least-significant bits hardwired to zero. It is used
@@ -1067,10 +1038,10 @@ to inform software about the location of CLIC memory mappped registers.
 [source]
 ----
 Name           Value Range                     Description
-CLICANDCLINT   0-1                             Implements CLINT mode also?
+CLICANDBASIC   0-1                             Implements original basic mode also?
 CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U, 3=M/S/U
 CLICLEVELS     2-256                           Number of interrupt levels including 0
-CLICINPUTS     4-4096                          Always has MSIP, MTIP, MEIP, CSIP
+NUM_INTERRUPT  4-4096                          Always has MSIP, MTIP, MEIP, CSIP
 CLICMAXID      12-4095                         Largest interrupt ID
 CLICINTCTLBITS 2-8                             Number of bits implemented in clicintctl[i]
 CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for cliccfg.nmbits
@@ -1136,12 +1107,14 @@ context fields in {cause} and {epc}.
 
 To implement a critical section between interrupt handlers at
 different levels in the same privilege mode, an interrupt handler at
-any interrupt level can clear the mode's global interrupt-enable bit,
-{ie}, to prevent any interrupts with the same privilege mode from
+any interrupt level can temporarily raise the interrupt-level threshold
+(`mintthresh.th`) to mask a subset of levels,
+while still allowing higher interrupt levels to preempt.
+Alternatively, although not recommended due to worse system impacts, it can 
+clear the mode's global interrupt-enable bit 
+({ie}) to prevent any interrupts with the same privilege mode from
 being taken.
 
-NOTE: Need to specify a way to set an interrupt-level threshold, to
-more selectively disable preemption.
 
 === Synchronous Exception Handling
 
@@ -1262,7 +1235,7 @@ build up a global address.  A simple pipeline would encounter two
 pipeline flushes (on entry and on exit), plus the cycles taken to fetch
 the hardware vector entry.
 
-These inline handlers can be used with the original CLINT design as
+These inline handlers can be used with the original basic mode design as
 well as the new CLIC design.
 
 To take advantage of hardware preemption in the new CLIC design,
@@ -1307,7 +1280,7 @@ a preempting interrupt has to wait from a 13-instruction window to a
 6-instruction window (the instruction that disables interrupts can be
 preempted before committing).
 
-WARNING: This form cannot be used with the existing CLINT scheme,
+WARNING: This form cannot be used with the existing original basic scheme,
 unless the original interrupt pending signal is cleared before
 re-enabling interrupts.
 
@@ -2089,42 +2062,10 @@ This new CSR operates similarly to {scratchcsw} except that the swap
 condition is true when the interrupter and interruptee are not both
 application tasks or not both interrupt handlers.
 
-== Safe execution of urgent interrupts in lower-privileged modes
-
-NOTE: This is a preliminary proposal.
-
-In some case it is desirable to preempt a higher-privilege mode to
-execute time-critical interrupts in a lower-privilege mode.  These
-cases are handled by registering an interrupt handler trampoline in
-the higher-privilege mode at the appropriate interrupt level which
-then sets up a call to the user-level interrupt code.
-
-The higher-privilege trampoline code has to perform the following
-operations:
-
-- save entire higher-privilege context state
-- clear entire context state
-- ensure "trap on lower-privilege RET instruction"  is set
-- set timeout timer
-- redirect to lower-privilege handler
-- lower-privilege handler runs, and either exits with a RET that
-  causes a trap, or timeout timer interrupt
-- restore entire higher-privilege context state
-
-The {status} register already contains a `TSR` bit to trap on
-supervisor return.  An additional `TUR` bit in {status} would allowing
-trapping user-level URET instructions to support such interrupts.
-
-A complication is that the user-level interrupt handler might be
-preempted by another user-level handler at a higher interrupt level,
-which will execute URET but for a different context than that intiated
-by the higher-privilege mode.  This problem can be avoided by always
-running the urgent lower-privilege handlers at the highest interrupt
-level in the the lower-privilege mode.
 
 == CLIC Interrupt IDs
 
-The original CLINT interrupts retain their interrupt ID in CLIC mode.
+The original basic mode interrupts retain their interrupt ID in CLIC mode.
 The `clicintctl` settings are now used to delegate these interrupts as
 required.
 
@@ -2164,19 +2105,3 @@ ID  Interrupt   Note
 16+ inputs      CLIC external inputs
 ----
 
-
-== CLIC and Message-Signalled Interrupts (MSI)
-
-NOTE: This is an early proposal.
-
-PCI MSIs contain an interrupt number in the data portion of a memory
-store.  The CLIC will be extended to add another address to which MSIs
-can be directed.  A MSI store to that address will set the
-`clicintip[__i__]` bit corresponding to the MSI data value.  The CLIC
-MSI address will reside in the same `0xc00` region as the `cliccfg`
-field, and will also be made available in S-mode and U-mode regions to
-allow MSIs to be restricted to S-mode and U-mode interrupt inputs
-respectively.
-
-The same mechanism can also be used by other software and non-PCI
-devices.
