@@ -1,0 +1,45 @@
+Date: 2020/4/28
+Task Group: Fast Interrupts
+Chair: Krste Asanovic
+Co-Chair: Kevin Chen
+Number of Attendees: ~10
+Current issues on github: https://github.com/riscv/riscv-fast-interrupt/blob/master/clic.adoc
+
+Issues discussed:
+
+#75: Reorganize spec
+
+We agreed to reorganize spec to place basic software vectoring first,
+and hardware vectoring later.  This does not change the spec, or
+declare what's mandatory, but just want to reorganize the document for
+readability.
+
+#61: NMI
+
+There is a separate proposal for resumable NMI that is more general
+than just for CLIC.  Krste to email out the proposal to general tech
+list.
+
+#45, #59: CLIC and CLINT running concurrently in different privilege
+ modes
+
+We agreed to support having at least switchable between only CLINT and
+only CLIC across privilege modes when hardware supports both.  This
+does not mandate that a system must support both.
+
+There was debate about supporting CLIC in one priv mode and CLINT in
+another priv mode.  A motivating example was to have a simple
+interrupt controller in M-mode (for security verification) and allow
+more featureful controller in U/S-mode (for application performance).
+Consensus was that this needs clarification on how this will work.
+
+#54 Adding CSIP software interrupt bit
+
+The original motiviation was to provide a software interrupt that was higher
+fixed priority than timer but lower than other interrupts.  The group
+is considering dropping this, but needs further discussion.
+
+
+
+
+
