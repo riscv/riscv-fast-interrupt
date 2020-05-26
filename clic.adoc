@@ -243,7 +243,7 @@ not furnish these fields must hardwire them to zero.
     0     nvbits
 ----
 
-The `cliccfg` register resets to 0 (i.e., all interrupts are M-mode at
+The `nmbits` and `nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
 level 255).
 
 Detailed explanation for each field are described in the following sections.
@@ -374,12 +374,12 @@ non-vectoring has the advantage of smaller code size (by sharing and
 reusing one copy of common code to save/restore contexts) at the price of
 slightly slower interrupt response.
 
-If `nvbits` = 0, then selective interrupt hardware vectoring is not implemented.
-So all interrupts are non-vectored and are directed to the common code
+When `nvbits` is 0, selective interrupt hardware vectoring is not implemented.
+In this case, all interrupts are non-vectored and are directed to the common code
 at {tvec} register.
 
 
-If `nvbits` = 1, then selective interrupt hardware vectoring is implemented.
+When `nvbits` is 1, selective interrupt hardware vectoring is implemented.
 The bit `clicintattr[__i__].shv` controls the vectoring behavior of
 interrupt _i_.  If `clicintattr[__i__].shv` is 0, then
 the interrupt is non-vectored and always jumps to the common code at
