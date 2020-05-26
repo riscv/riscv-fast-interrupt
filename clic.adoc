@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200423
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200526
 
 == Background and Motivation
 
@@ -243,28 +243,32 @@ not furnish these fields must hardwire them to zero.
     0     nvbits
 ----
 
-The `cliccfg` register resets to 0 (i.e., all interrupts are M-mode at
+The `nmbits` and `nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
 level 255).
 
 Detailed explanation for each field are described in the following sections.
 
 ==== Specifying Interrupt Privilege Mode
 
-The 2-bit `cliccfg.nmbits` WARL field encodes how many bits in a
-`clicintattr[__i__].mode` register are used to hold an input __i__'s
-privilege mode.
+The 2-bit `cliccfg.nmbits` WARL field specifies how many bits of actual
+registers are implemented in `clicintattr[__i__].mode` to represent an input __i__'s
+privilege mode. Although this field is always 2-bit wide, the actual registers
+implemented in `clicintattr[__i__].mode` can be fewer.
 
-M-mode-only systems do not support privilege-mode fields in the
-`clicintattr.mode` registers (`cliccfg.nmbits` = 0).
+For example, in M-mode-only systems, only M-mode exists so we do not
+need any extra bit to represent the supported privilege-modes. In this case,
+there is no actual registers needed/implemented in the `clicintattr.mode`
+and thus `cliccfg.nmbits` is 0.
 
-M/U-mode systems with user-level interrupts support `cliccfg.nmbits` =
+In M/U-mode systems with user-level interrupts support, `cliccfg.nmbits` can be set to
 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
 M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
 the MSB of a `clicintattr[__i__].mode` register indicates that interrupt
 intput is taken in M-mode, while a value of 0 indicates that interrupt
 is taken in U-mode.
 
-M/S/U-mode systems support 0, 1, or 2 bits of privilege-mode field.
+Similarly, in M/S/U-mode systems, `cliccfg.nmbits` can be set to 0, 1, or 2 bits
+to represent privilege-modes.
 `cliccfg.nmbits` = 0 indicates that all local interrupts are taken in
 M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
 (1) and U-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
@@ -374,12 +378,12 @@ non-vectoring has the advantage of smaller code size (by sharing and
 reusing one copy of common code to save/restore contexts) at the price of
 slightly slower interrupt response.
 
-If `nvbits` = 0, then selective interrupt hardware vectoring is not implemented.
-So all interrupts are non-vectored and are directed to the common code
+When `nvbits` is 0, selective interrupt hardware vectoring is not implemented.
+In this case, all interrupts are non-vectored and are directed to the common code
 at {tvec} register.
 
 
-If `nvbits` = 1, then selective interrupt hardware vectoring is implemented.
+When `nvbits` is 1, selective interrupt hardware vectoring is implemented.
 The bit `clicintattr[__i__].shv` controls the vectoring behavior of
 interrupt _i_.  If `clicintattr[__i__].shv` is 0, then
 the interrupt is non-vectored and always jumps to the common code at
