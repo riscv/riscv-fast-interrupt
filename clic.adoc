@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200526
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200529
 
 == Background and Motivation
 
@@ -739,9 +739,7 @@ power-of-two boundary.
 
  OBASE = mtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
  NBASE = mtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
- TBASE = mtvt                 # Trap vector table base is aligned proportionally
-                              # to the maximum number of interrupts (see details
-                              # below).
+ TBASE = mtvt[XLEN-1:6]<<6    # Trap vector table base is at least 64-byte aligned.
 
 ----
 
