@@ -674,10 +674,10 @@ additions for CLIC mode described in the following sections.
        0xm43   xtval        Bad address or instruction
        0xm44   xip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0xm45   xnxti        Interrupt handler address and enable modifier
- (NEW) 0xm??   xintstatus   Current interrupt levels
+ (NEW) 0xm46   xintstatus   Current interrupt levels
+ (NEW) 0xm47   xintthresh   Interrupt-level threshold
  (NEW) 0xm48   xscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0xm49   xscratchcswl Conditional scratch swap on level change
- (NEW) 0xm??   xintthresh   Interrupt-level threshold
  (NEW) 0x3??   mclicbase    Base address for CLIC memory mapped registers
 
          m is the nibble encoding the privilege mode (M=0x3, S=0x1, U=0x0)
