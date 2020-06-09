@@ -803,10 +803,11 @@ extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for vectoring is treated as a load with the privilege
-mode of the interrupt handler.  If there is an access exception on the
-table load, {epc} holds the faulting address.  If this was a page
-fault, the table load can be resumed by returning with {epc} pointing
-to the table entry and the trap handler mode bit set.
+mode and interrupt level of the interrupt handler.  If there is an
+access exception on the table load, {epc} holds the faulting address.
+If this was a page fault, the table load can be resumed by returning
+with {epc} pointing to the table entry and the trap handler mode bit
+set.
 
 Instruction fetch at the handler address might cause misaligned or
 access exceptions, which are reported with {epc} containing the
