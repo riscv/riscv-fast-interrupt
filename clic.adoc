@@ -906,6 +906,9 @@ from user mode.
  11:0  exccode[11:0] Exception/interrupt code
 ----
 
+For exceptions, in CLIC mode, the `mcause` has the new CLIC format.
+On the other hand, in other modes, the `mcause` has the original format.
+
 
 === Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
 
