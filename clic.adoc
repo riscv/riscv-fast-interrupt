@@ -711,6 +711,9 @@ memory-mapped interrupt enables (`clicintie[__i__]`).
 The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
 separate memory-mapped interrupt pendings (`clicintip[__i__]`).
 
+Writes to {ie}/{ip} will be ignored and will not trap (i.e., no access faults).
+{ie}/{ip} always appear to be zero in CLIC mode.
+
 In systems that support both original basic and CLIC modes, the state bits in
 {ie} and {ip} retain their value when switching between modes.
 
