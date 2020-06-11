@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200529
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200611
 
 == Background and Motivation
 
@@ -267,7 +267,7 @@ without using any register either).
 In M/U-mode systems with user-level interrupts support, `cliccfg.nmbits` can be
 set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
 M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
-the most significant bit (MSB) of a `clicintattr[__i__].mode` register
+the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
 indicates that interrupt intput is taken in M-mode,
 while a value of 0 indicates that interrupt is taken in U-mode.
 
@@ -435,11 +435,15 @@ treated as hardwired to 1.
 === CLIC Interrupt Pending (`clicintip`)
 
 Each interrupt input has a dedicated interrupt pending bit (`clicintip[__i__]`)
-and occupies one byte in the memory map for ease of access.
+and occupies one byte in the memory map for ease of access. The actual pending
+bit is located at bit 0 (i.e., the least-significant bit).
 
 
 `clicintip[__i__]` is a read-write register. Software-based (direct) writes
 to these pending bits have priority over hardware-based writes (triggers).
+For edge-triggered interrupts, software writes will set/clear pending bits.
+In contrast, for level-triggered interrupts, software writes to pending bits
+are ignored completely
 
 For level-triggered interrupts, users should not clear the pending bits
 directly but instead should clear the interrupt sources (devices).
@@ -447,15 +451,15 @@ directly but instead should clear the interrupt sources (devices).
 For edge-triggered interrupts, to speed up interrupt processing,
 hardware is designed to help clearing interrupt pending bits.
 Nevertheless, the clearing mechanism and timing are different
-for Selective Hardware Vectoring (SHV) mode and non-SHV (common code) mode.
+for vectored mode and non-vectored (common code) mode.
 Detailed operations for each case are described below.
 
-When a Selective Hardware Vectoring (SHV or vectored) interrupt is
+When a vectored interrupt is
 selected and serviced, the hardware will automatically clear the corresponding
 pending bit in edge-triggered mode. In this case, software does not need
 to clear pending bit at all in the service routine.
 
-In contrast, when non-SHV (common code) interrupt is selected, the hardware
+In contrast, when a non-vectored (common code) interrupt is selected, the hardware
 will not automatically clear the pending bit in edge-triggered mode. Instead,
 hardware will clear the corresponding pending bit only when software uses a
 `csrrsi/csrrci {nxti}` instruction to select this interrupt and return its
@@ -470,11 +474,6 @@ edge-triggered interrupts. As for level-triggered interrupts, they should be
 cleared at interrupt sources (devices) so no need to clear the pending bits.
 Therefore, software usually only needs to modify pending bits in the
 initialization process or testing.
-
-
-This is because our CLIC HW already supports automatic clearing of pending bits
-for edge-triggered interrupts and thus SW never has to worry about clearing
-pending bits regardless of interrupt types (level or edge).
 
 
 === CLIC Interrupt Enable (`clicintie`)
