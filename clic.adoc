@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200611
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200623
 
 == Background and Motivation
 
@@ -917,7 +917,8 @@ On the other hand, in other modes, the `mcause` has the original format.
 
 The {nxti} CSR can be used by software to service the next horizontal
 interrupt for the same privilege mode when it has greater level than
-the saved interrupt context (held in {cause}`.pil`), without incuring
+the saved interrupt context (held in {cause}`.pil`) and greater level
+than the interrupt threshold of the corresponding privilege mode, without incuring
 the full cost of an interrupt pipeline flush and context save/restore.
 The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
 instructions, where the value read is a pointer to an entry in the
