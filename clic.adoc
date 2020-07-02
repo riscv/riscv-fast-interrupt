@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200623
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200702
 
 == Background and Motivation
 
@@ -1860,17 +1860,17 @@ disabled.
 ----
   # This code is out of line to reduce worst-case preemption latency.
 enter_M:
-  sw sp, OFFSET-FRAMESIZE(sp) # Save previous mscratch (M-mode sp)
-  addi sp, sp, -FRAMESIZE   # Create a frame on stack.
-  sw a0, OFFSET(sp)         # Save a register.
-  csrrw a0, mscratch, 0     # Get previous sp, and zero mscratch.
-  sw a0, OFFSET(sp)         # Save previous sp (U-mode sp)
-  j  continue               # Jump back into handler
+  sw sp, OFFSET-FRAMESIZE(sp)  # Save previous mscratch (M-mode sp)
+  addi sp, sp, -FRAMESIZE      # Create a frame on stack.
+  sw a0, OFFSET(sp)            # Save a register.
+  csrrw a0, mscratch, 0        # Get previous sp, and zero mscratch.
+  sw a0, OFFSET(sp)            # Save previous sp (U-mode sp)
+  j  continue                  # Jump back into handler
 
 irq_enter:
   #----- Interrupts disabled on entry ---#
   csrrw sp, mscratch, sp       # Swap stack pointer and scratch.
-  bnez mscratch, enter_M       # Check if entering M-mode
+  bnez sp, enter_M             # Check if entering M-mode
   csrrw sp, mscratch, sp       # Already in M-mode, so swap sp back.
   sw sp, OFFSET-FRAMESIZE(sp)  # Save previous sp to stack.
   addi sp, sp, -FRAMESIZE      # Create a frame on stack.
@@ -1890,11 +1890,11 @@ continue:
   #---- Critical section with interrupts disabled -----------------------
     ...
 
-    lw a0, OFFSET(sp)       # Get previous mscratch.
-    csrw mscratch, a0       # Put back in mscratch.
-    lw a0, OFFSET(sp)       # Restore original a0 value.
-    lw sp, OFFSET(sp)       # Restore previous sp
-    mret                    # Return from interrupt.
+    lw a0, OFFSET(sp)          # Get previous mscratch.
+    csrw mscratch, a0          # Put back in mscratch.
+    lw a0, OFFSET(sp)          # Restore original a0 value.
+    lw sp, OFFSET(sp)          # Restore previous sp
+    mret                       # Return from interrupt.
   #-----------------------------------------------------------------------
 ----
 
