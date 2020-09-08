@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200702
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200908
 
 == Background and Motivation
 
@@ -312,8 +312,13 @@ priv-modes nmbits clicintattr[i].mode  Interpretation
 
 ==== Specifying Interrupt Level
 
-The 4-bit `cliccfg.nlbits` WARL field indicates how many bits
-are used to encode the interrupt level.  Valid values are 0--8.
+`clicintctl[__i__]` is an 8-bit memory-mapped WARL control register
+to specify interrupt level and interrupt priority.
+For interrupt level, the 4-bit `cliccfg.nlbits` WARL field indicates
+how many bits in `clicintctl[__i__]`
+are used to encode the interrupt level.  Valid values are 0--8
+and interrupt level are located in the most-significant bits of
+`clicintctl[__i__]` register.
 
 If the `nlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
 the 8-bit interrupt level are assumed to be all 1s.  If `nlbits` {lt}
@@ -533,7 +538,8 @@ NOTE: For security purpose, the `mode` field can only be set to a privilege leve
 
 === CLIC Interrupt Input Control (`clicintctl`)
 
-`clicintctl[__i__]` is an 8-bit memory-mapped WARL control register.
+`clicintctl[__i__]` is an 8-bit memory-mapped WARL control register
+to specify interrupt level and interrupt priority.
 The number of bits actually implemented in this register is specified
 by a fixed parameter `CLICINTCTLBITS` (in `clicinfo`), which has a value
 between 0 to 8. The implemented bits are kept left-justified
