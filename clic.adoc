@@ -369,8 +369,14 @@ mode and interrupt level is taken first.  In case there are multiple
 pending-and-enabled interrupts at the same highest priority, the
 highest-numbered interrupt is taken first.
 
-NOTE: The highest numbered interrupt wins in a tie.  This is the same
+NOTE: The highest numbered interrupt wins in a tie (when
+privilege mode, level and priority are all identical). This is the same
 as the original basic interrupt mode, but different than the PLIC.
+
+Notice that the 8-bit interrupt level is used to determine preemption
+(for nesting interrupts). In contrast, the 8-bit interrupt priority
+does not affect preemption but is only used as a tie-breaker
+when there are multiple pending interrupts with the same interrupt level.
 
 Any implemented priority bits are treated as the most-significant bits
 of a 8-bit unsigned integer with lower unimplemented bits set to 1.
@@ -553,7 +559,7 @@ between 0 to 8. The implemented bits are kept left-justified
 in the most-significant bits of each 8-bit `clicintctl[__i__]`
 register, with the lower unimplemented bits treated as hardwired to 1.
 These control bits are interpreted as level and priority according to
-the setting in the CLIC Configuration register (`cliccfg`).
+the setting in the CLIC Configuration register (`cliccfg.nlbits`).
 
 To select an interrupt to present to the core, the CLIC hardware
 combines the valid bits in `clicintattr.mode` and
