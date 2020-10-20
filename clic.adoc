@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20200908
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20201020
 
 == Background and Motivation
 
@@ -312,22 +312,29 @@ priv-modes nmbits clicintattr[i].mode  Interpretation
 
 ==== Specifying Interrupt Level
 
-`clicintctl[__i__]` is an 8-bit memory-mapped WARL control register
-to specify interrupt level and interrupt priority.
-For interrupt level, the 4-bit `cliccfg.nlbits` WARL field indicates
-how many bits in `clicintctl[__i__]`
-are used to encode the interrupt level.  Valid values are 0--8
-and interrupt level are located in the most-significant bits of
-`clicintctl[__i__]` register.
+The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits
+in `clicintctl[__i__]` are assigned to encode the interrupt level.
+Valid values are 0--8.
 
-If the `nlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
-the 8-bit interrupt level are assumed to be all 1s.  If `nlbits` {lt}
-8, then the lower bits of the 8-bit interrupt level are assumed to be
-all 1s.  The following table shows how levels are encoded in either of
-these two cases.
+Although the interrupt level is an 8-bit unsigned integer, the number
+of bits actually assigned or implemented can be fewer than 8.
+As described above, the number of bits assigned is specified in
+`cliccfg.nlbits`. The number of bits actually implemented can be derived
+from `cliccfg.nlbits` and a fixed parameter `clicinfo.CLICINTCTLBITS`
+(with value between 0 to 8) which specifies bits implemented for both
+interrupt level and priority.
+
+If the actual bits assigned or implemented are fewer than 8, then these bits
+are left-justified and appended with 1's for the lower missing bits.
+For example, if the `nlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
+the 8-bit interrupt level are assumed to be all 1s.  Similarly,
+if `nlbits` {lt} 8, then the lower bits of the 8-bit interrupt level are
+assumed to be all 1s. The following table shows how levels are encoded
+for these cases.
 
 ----
  #bits   encoding          interrupt levels
+     0    ........                                                        255
      1    l.......                        127,                            255
      2    ll......           63,          127,            191,            255
      3    lll.....     31,   63,   95,    127,    159,    191,    223,    255
@@ -550,7 +557,7 @@ the setting in the CLIC Configuration register (`cliccfg`).
 
 To select an interrupt to present to the core, the CLIC hardware
 combines the valid bits in `clicintattr.mode` and
-`clicintctl` to form an unsigned value, then picks the global maximum
+`clicintctl` to form an unsigned integer, then picks the global maximum
 across all pending-and-enabled interrupts based on this value.
 Next, the `cliccfg` setting determines how to split
 the `clicintctl` value into interrupt level and interrupt
