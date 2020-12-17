@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20201020
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20201217
 
 == Background and Motivation
 
@@ -196,13 +196,20 @@ M-mode CLIC memory map
   0x0008-0x07FF              reserved
   0x0800-0x0FFF              custom
 
+  0x0040         4B          RW        clicinttrig[0]
+  0x0044         4B          RW        clicinttrig[1]
+  0x0048         4B          RW        clicinttrig[2]
+  ...
+  0x00B4         4B          RW        clicinttrig[29]
+  0x00B8         4B          RW        clicinttrig[30]
+  0x00BC         4B          RW        clicinttrig[31]
+
+
   0x1000+4*i     1B/input    R or RW   clicintip[i]
   0x1001+4*i     1B/input    RW        clicintie[i]
   0x1002+4*i     1B/input    RW        clicintattr[i]
   0x1003+4*i     1B/input    RW        clicintctl[i]
-
   ...
-
   0x4FFC         1B/input    R or RW   clicintip[4095]
   0x4FFD         1B/input    RW        clicintie[4095]
   0x4FFE         1B/input    RW        clicintattr[4095]
@@ -238,7 +245,7 @@ not furnish these fields must hardwire them to zero.
 ----
   cliccfg register layout
 
-  bits    field
+  Bits    Field
   7       reserved (WPRI 0)
   6:5     nmbits[1:0]
   4:1     nlbits[3:0]
@@ -426,8 +433,9 @@ This is a read-only register to show information useful for debugging.
 ----
   clicinfo register layout
 
-  bits    field
-  31:25   reserved (WARL 0)
+  Bits    Field
+  31      reserved (WARL 0)
+  30:25   num_trigger (number of maximum interrupt triggers supported)
   24:21   CLICINTCTLBITS
   20:13   version (for version control)
           20:17 for architecture version, 16:13 for implementation version
@@ -448,6 +456,8 @@ The implemented bits are kept left-justified in the most-significant bits of
 each 8-bit `clicintctl[__i__]` register, with the lower unimplemented bits
 treated as hardwired to 1.
 
+The `num_trigger` field specifies the number of maximum interrupt
+triggers supported in this implementation. Valid values are 0 to 32.
 
 
 === CLIC Interrupt Pending (`clicintip`)
@@ -507,11 +517,13 @@ This is an 8-bit WARL read-write register to specify various attributes for each
 
 [source]
 ----
-        Bits           Field 
-        7:6            mode
-        5:3            reserved (WPRI 0)
-        2:1            trig
-        0              shv
+  clicintattr register layout
+
+  Bits    Field 
+  7:6     mode
+  5:3     reserved (WPRI 0)
+  2:1     trig
+  0       shv
 ----
 
 The 1-bit `shv` field is used for Selective Hardware Vectoring. 
@@ -593,6 +605,41 @@ NOTE: When upgrading an earlier original basic interrupt controller
 that had local interrupts attached directly to bits 16 and above, these
 local interrupts can be now attached as CLIC inputs 16 and above to
 retain the same interrupt IDs.
+
+
+=== CLIC Interrupt Trigger (`clicinttrig`)
+
+Optional interrupt triggers (`clicinttrig[__i__]`) are used to generate
+a breakpoint exception, entry into Debug Mode, or a trace action.
+The actual number of triggers supported is specified in
+`clicinfo.num_trigger`.
+
+Each interrupt trigger is a 32-bit memory-mapped WARL register with the
+following layout:
+
+[source]
+----
+  clicinttrig register layout
+
+  Bits    Field
+  31      enable
+  30:13   reserved (WARL 0)
+  12:0    interrupt_number
+  
+----
+
+The `interrupt_number` field selects which number of interrupt input
+is used as the source for this interrupt trigger.
+
+The `enable` control bit is read-write to enable/disable this
+interrupt trigger.
+
+The detailed behavior of the trigger is defined in the debug spec.
+For example, the trigger only fires if the interrupt is
+actually taken (and not when the interrupt is masked, or not taken).
+In addition, the requested action (e.g., breakpoint or trace) is taken
+just before the first instruction of the interrupt handler is executed.
+
 
 === S-Mode CLIC Regions for M/S/U Harts
 
