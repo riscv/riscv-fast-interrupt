@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20201217
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210107
 
 == Background and Motivation
 
@@ -371,12 +371,12 @@ Examples of `cliccfg` settings:
 ==== Specifying Interrupt Priority
 
 The least-significant bits in `clicintctl[__i__]` that are not
-configured to be part of the level are used to prioritize
-among interrupts pending-and-enabled at the same privilege mode and
-interrupt level. The highest-priority interrupt at a given privilege
-mode and interrupt level is taken first.  In case there are multiple
-pending-and-enabled interrupts at the same highest priority, the
-highest-numbered interrupt is taken first.
+configured to be part of the interrupt level are interrupt priority,
+which are used to prioritize among interrupts pending-and-enabled at
+the same privilege mode and interrupt level. The highest-priority
+interrupt at a given privilege mode and interrupt level is taken first.
+In case there are multiple pending-and-enabled interrupts at the
+same highest priority, the highest-numbered interrupt is taken first.
 
 NOTE: The highest numbered interrupt wins in a tie (when
 privilege mode, level and priority are all identical). This is the same
