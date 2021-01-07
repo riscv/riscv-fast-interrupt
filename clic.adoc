@@ -1114,11 +1114,11 @@ will not be masked by machine-mode threshold setting when running in user mode.
 This is analogous to how mstatus.mie does not mask machine-mode interrupts
 when running in lower privilege modes.
 
-NOTE: This behavior significantly reduces
-the hardware cost because it only needs to select one global maximum interrupt
-and compare with the threshold of the associated mode (while ignoring thresholds
-in other modes). Otherwise, hardware would have to select multiple maximum
-interrupts (one per mode), compare and qualify with their associated thresholds,
+NOTE: This behavior significantly reduces the hardware cost because it only
+needs to select one global maximum interrupt and compare with the threshold
+of the associated privilege mode (while ignoring thresholds in other modes).
+Otherwise, hardware would have to select multiple maximum interrupts (one
+per privilege mode), compare and qualify with their associated thresholds,
 then pick a qualified maximum interrupt with the highest privilege mode.
 
 
@@ -1221,6 +1221,21 @@ clear the mode's global interrupt-enable bit
 ({ie}) to prevent any interrupts with the same privilege mode from
 being taken.
 
+=== Responses to Wait for Interrupt (WFI)
+
+In CLIC, similar to original mode, Wait for Interrupt instruction (WFI) is
+unaffected by the global interrupt-enable bits in `mstatus.xie` but should
+honor `clicintie[__i__]` and {intthresh}.
+
+More specifically, WFI ignores the actual value in the global interrupt-enable
+`mstatus.xie` (by treating as if `mstatus.xie` were always enabled).
+WFI will wake up only if an interrupt is locally enabled with `clicintie[__i__]`
+and at the same time satisfies either of the following critiria: 
+if this interrupt has a different privilege mode, or if this interrupt is
+the same as the current privilege mode and its interrupt level is above or
+equal to the current interrupt-level threshold ({intthresh}). This is because
+threshold is valid only for the current privilege mode (while ignored for
+other privilege modes).
 
 === Synchronous Exception Handling
 
