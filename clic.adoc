@@ -511,6 +511,16 @@ Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
 and occupies one byte in the memory map for ease of access. This control bit is
 read-write to enable/disable the corresponding interrupt.
 
+NOTE: `clicintie[__i__]` is the individual enable bit while `mstatus.xie` is
+the global enable bit for the current privilege mode. Therefore, for an
+interrupt _i_ to be enabled in the current privilege mode, both `clicintie[__i__]`
+and `mstatus.xie` have to be set.
+
+
+NOTE: In contrast, since `mstatus.xie` only takes effect in the current privilege
+mode according to RISC-V convention, an interrupt _i_ from a higher privilege mode
+is enabled as long as `clicintie[__i__]` is set (regardless of the setting
+of `mstatus.xie` in the higher privilege mode).
 
 
 === CLIC Interrupt Attribute (`clicintattr`)
