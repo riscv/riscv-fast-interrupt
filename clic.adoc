@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210107
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210119
 
 == Background and Motivation
 
@@ -1229,7 +1229,7 @@ honor `clicintie[__i__]` and {intthresh}.
 
 More specifically, WFI ignores the actual value in the global interrupt-enable
 `mstatus.xie` (by treating as if `mstatus.xie` were always enabled).
-WFI will wake up only if an interrupt is locally enabled with `clicintie[__i__]`
+WFI will wake up if an interrupt is locally enabled with `clicintie[__i__]`
 and at the same time satisfies either of the following critiria: 
 if this interrupt has a different privilege mode, or if this interrupt is
 the same as the current privilege mode and its interrupt level is above or
