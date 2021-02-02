@@ -35,7 +35,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210119
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210202
 
 == Background and Motivation
 
@@ -1232,8 +1232,8 @@ More specifically, WFI ignores the actual value in the global interrupt-enable
 WFI will wake up if an interrupt is locally enabled with `clicintie[__i__]`
 and at the same time satisfies either of the following critiria: 
 if this interrupt has a different privilege mode, or if this interrupt is
-the same as the current privilege mode and its interrupt level is above or
-equal to the current interrupt-level threshold ({intthresh}). This is because
+the same as the current privilege mode and its interrupt level is greater
+than the current interrupt-level threshold ({intthresh}). This is because
 threshold is valid only for the current privilege mode (while ignored for
 other privilege modes).
 
