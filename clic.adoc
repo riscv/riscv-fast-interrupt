@@ -2025,6 +2025,12 @@ read-modify-write conventions (e.g., swap/set/clear bits) using the
 original {scratch} value as one source operand and the other source
 operand specified as usual in the instruction.
 
+In practice, only the read-modify-write (swap/CSRRW) operation is useful 
+for xscratchcsw/xscratchcswl. In contrast, the “pure read” and “pure write” 
+operations are meaningless and not useful at all. The implementation of the 
+non CSRRW variants (when either rd or rs1 is x0 or when rs1 is an immediate 
+operand) on xscratchcsw is not defined/reserved. 
+
 NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
 operation.
@@ -2180,6 +2186,10 @@ This new CSR operates similarly to {scratchcsw} except that the swap
 condition is true when the interrupter and interruptee are not both
 application tasks or not both interrupt handlers.
 
+Again, only the read-modify-write (swap/CSRRW) operation defined for 
+xscratchcswl. The implementation of the non CSRRW variants (when 
+either rd or rs1 is x0 or when rs1 is an immediate operand)
+on xscratchcsw is not defined/reserved. 
 
 == CLIC Interrupt IDs
 
