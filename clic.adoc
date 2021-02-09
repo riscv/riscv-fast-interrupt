@@ -466,8 +466,10 @@ triggers supported in this implementation. Valid values are 0 to 32.
 
 Each interrupt input has a dedicated interrupt pending bit (`clicintip[__i__]`)
 and occupies one byte in the memory map for ease of access. The actual pending
-bit is located at bit 0 (i.e., the least-significant bit).
-
+bit is located at bit 0 (i.e., the least-significant bit).   
+In case future extensions expand the bit field, from FW perspective 
+clicintip[__i__]=zero means no interrupt pending, and 
+clicintip[__i__]!=0 (not just 1) indicates an interrupt is pending.
 
 `clicintip[__i__]` is a read-write register. Software-based (direct) writes
 to these pending bits have priority over hardware-based writes (triggers).
