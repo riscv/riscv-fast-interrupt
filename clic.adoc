@@ -71,7 +71,7 @@ enabled interrupt from a higher-privilege mode will stop execution at
 the current privilege mode, and enter the handler at the higher
 privilege mode.  Each privilege mode has its own interrupt state
 registers (`mepc`/`mcause` for M-mode, `sepc`/`scause` for S-mode,
-`uepc`/`ucause` for U-mode with N extension) to support preemption, or
+`uepc`/`ucause` for U-mode) to support preemption, or
 generically {epc} for privilege mode ``*_x_*``.  Preemption by a
 higher-privilege-mode interrupt also pushes current privilege mode and
 interrupt enable status onto the ``**__x__**pp`` and ``**__x__**pie``
