@@ -610,9 +610,6 @@ with {cause} Exception Code (`exccode`) values.  To maintain backward
 compatibility, the original basic mode interrupts retain their original
 cause values, while the new interrupts are numbered starting at 16.
 
-To support Non-Maskable Interrupt (NMI), the exccode for NMI is defined
-as 0xFFF with mcause.Interrupt=0.
-
 NOTE: When upgrading an earlier original basic interrupt controller
 that had local interrupts attached directly to bits 16 and above, these
 local interrupts can be now attached as CLIC inputs 16 and above to
