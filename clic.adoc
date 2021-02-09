@@ -1188,8 +1188,8 @@ privilege mode.
 
 The overall behavior is summarized in the following table: the Current
 `p/ie/il` fields represent the current privilege mode `P` (not
-software visible), interrupt enable in {status} `ie` and interrupt
-level `L` in {intstatus}; the CLIC `priv`,`level`, and `id` fields
+software visible), interrupt enable (xstatus.ie & clicintie[i]) `ie` and interrupt
+level `L` max(xintstatus.mil, xintthresh.th); the CLIC `priv`,`level`, and `id` fields
 represent the highest-ranked interrupt currently present in the CLIC
 with `nP` representing the new privilege mode, `nL` representing the
 new interrupt level, and `id` representing the interrupt's id;
