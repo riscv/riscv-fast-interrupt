@@ -2183,8 +2183,12 @@ condition is true when the interrupter and interruptee are not both
 application tasks or not both interrupt handlers.
 
 
-== CLIC Interrupt IDs
+== CLIC Interrupt ID ordering recommendations
 
+There are a few CLIC interrupt ID ordering recommendations
+as part of a profile and are not mandatory in all incarnations of the CLIC.
+
+Original recommendation: 
 The original basic mode interrupts retain their interrupt ID in CLIC mode.
 The `clicintctl` settings are now used to delegate these interrupts as
 required.
@@ -2225,3 +2229,24 @@ ID  Interrupt   Note
 16+ inputs      CLIC external inputs
 ----
 
+M-mode only or M/U mode interrupt map recommendation:
+(in M-only or M/U system without N extension)
+0: M-mode software interrupt
+1: M-mode timer interrupt
+2+: external (including legacy)
+
+M-mode interrupt map in M/S/U system without N extension recommendation:
+0: S-mode software interrupt
+1: S-mode timer interrupt
+2: M-mode software interrupt
+3: M-mode timer interrupt
+4+: external (including legacy)
+
+Interrupt map with PLIC recommendation:
+0: S-mode software interrupt
+1: S-mode timer interrupt
+2: S-mode external (PLIC) interrupt
+3: M-mode software interrupt
+4: M-mode timer interrupt
+5: M-mode external (PLIC) interrupt
+6: external
