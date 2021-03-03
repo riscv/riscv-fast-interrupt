@@ -1190,10 +1190,20 @@ The global interrupt-enable bit of the handler's privilege mode is
 cleared, to prevent preemption by higher-level interrupts in the same
 privilege mode.
 
+To implement a critical section between interrupt handlers at
+different levels in the same privilege mode, an interrupt handler at
+any interrupt level can temporarily raise the interrupt-level threshold
+(`mintthresh.th`) to mask a subset of levels,
+while still allowing higher interrupt levels to preempt.
+Alternatively, although not recommended due to worse system impacts, it can 
+clear the mode's global interrupt-enable bit 
+({ie}) to prevent any interrupts with the same privilege mode from
+being taken.
+
 The overall behavior is summarized in the following table: the Current
 `p/ie/il` fields represent the current privilege mode `P` (not
 software visible), interrupt enable in {status} `ie` and interrupt
-level `L` in {intstatus}; the CLIC `priv`,`level`, and `id` fields
+level `L` = max({intstatus.xil,xintthresh.th}; the CLIC `priv`,`level`, and `id` fields
 represent the highest-ranked interrupt currently present in the CLIC
 with `nP` representing the new privilege mode, `nL` representing the
 new interrupt level, and `id` representing the interrupt's id;
@@ -1207,23 +1217,11 @@ context fields in {cause} and {epc}.
  p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
  P  ?  ?  | nP<P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
  P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
- P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
+ P  1  ?  | nP=P   nL==0    ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
  P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
  P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
- P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
+ P  ?  ?  | nP>P   nL==0    ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
  P  e  L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  e  pc  # Vertical interrupt taken
-
-=== Critical Sections in Interrupt Handlers
-
-To implement a critical section between interrupt handlers at
-different levels in the same privilege mode, an interrupt handler at
-any interrupt level can temporarily raise the interrupt-level threshold
-(`mintthresh.th`) to mask a subset of levels,
-while still allowing higher interrupt levels to preempt.
-Alternatively, although not recommended due to worse system impacts, it can 
-clear the mode's global interrupt-enable bit 
-({ie}) to prevent any interrupts with the same privilege mode from
-being taken.
 
 === Responses to Wait for Interrupt (WFI)
 
@@ -1233,13 +1231,37 @@ honor `clicintie[__i__]` and {intthresh}.
 
 More specifically, WFI ignores the actual value in the global interrupt-enable
 `mstatus.xie` (by treating as if `mstatus.xie` were always enabled).
-WFI will wake up if an interrupt is locally enabled with `clicintie[__i__]`
-and at the same time satisfies either of the following critiria: 
-if this interrupt has a different privilege mode, or if this interrupt is
-the same as the current privilege mode and its interrupt level is greater
-than the current interrupt-level threshold ({intthresh}). This is because
-threshold is valid only for the current privilege mode (while ignored for
-other privilege modes).
+
+The overall WFI behavior is summarized in the following table: the Current
+`p/ie/l` fields represent the current privilege mode `P` (not
+software visible), interrupt enable in {status} `ie` and interrupt
+level `M` = max({intstatus.xil,xintthresh.th}, 'iL' = {intstatus.xil}; 
+the CLIC `priv` and `level` fields
+represent the highest-ranked interrupt currently present in the CLIC
+with `nP` and 'nL' representing the pending privilege mode and interrupt level;
+
+ Current  |      CLIC             |->   
+ p/ie/l   | priv level            |->   
+ P  ?  M  | nP<P   M==0,  nL==0   |-> # no requirement to wake up
+ P  ?  M  | nP<P   M==0,  nL!=0   |-> # WFI must wake up
+ P  ?  iL | nP<P   iL==0, nL!=0   |-> # WFI must wake up
+ P  ?  iL | nP<P   iL!=0          |-> # lower-privilege interrupts masked by interrupt priority reduction tree.
+ P  ?  ?  | nP<P   nL==0          |-> # no requirement to wake up
+ P  ?  ?  | nP=P   nL==0          |-> # no requirement to wake up
+ P  ?  M  | nP=P   0<nL<=M        |-> # no requirement to wake up
+ P  ?  M  | nP=P   M<nL           |-> # WFI must wake up
+ P  ?  ?  | nP>P   nL==0          |-> # no requirement to wake up
+ P  ?  ?  | nP>P   0<nL           |-> # WFI must wake up
+
+Note that a higher-mode threshold setting can cause lower-mode interrupts that are 
+enabled and above the lower-mode threshold to not wake up a WFI in the higher-mode. 
+When a currently pending higher-mode interrupt is below the threshold set in the 
+higher mode, the higher-mode interrupt will effectively mask the lower-mode interrupt 
+in the interrupt priority reduction tree, but will not cause WFI to exit in the 
+higher-mode due to the higher-mode threshold setting. 
+
+When the higher-mode threshold is set to zero, it cannot mask any pending and enabled 
+lower-mode interrupts.
 
 === Synchronous Exception Handling
 
