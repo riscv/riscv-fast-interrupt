@@ -1234,18 +1234,28 @@ being taken.
 === Responses to Wait for Interrupt (WFI)
 
 In CLIC, similar to original mode, Wait for Interrupt instruction (WFI) is
-unaffected by the global interrupt-enable bits in `mstatus.xie` but should
-honor `clicintie[__i__]` and {intthresh}.
+unaffected by the global interrupt-enable bits in {status}.{ie} but should
+honor `clicintie[__i__]` and {intthresh}. In other words, WFI ignores the 
+actual value in the global interrupt-enable {status}.{ie} (by treating as 
+if {status}.{ie} were always enabled).
 
-More specifically, WFI ignores the actual value in the global interrupt-enable
-`mstatus.xie` (by treating as if `mstatus.xie` were always enabled).
-WFI will wake up if an interrupt is locally enabled with `clicintie[__i__]`
-and at the same time satisfies either of the following critiria: 
-if this interrupt has a different privilege mode, or if this interrupt is
-the same as the current privilege mode and its interrupt level is greater
-than the current interrupt-level threshold ({intthresh}). This is because
-threshold is valid only for the current privilege mode (while ignored for
-other privilege modes).
+WFI will always wake up if an interrupt has a higher privilege mode and 
+is locally enabled with `clicintie[__i__]`.
+
+If the current interrupt-level threshold ({intthresh}.`th`) is greater 
+than `0` (activated), enabled interrupts at current privilege mode with 
+interrupt level greater than the current threshold will wake up WFI, but 
+interrupts from lower privilege modes are usually masked/ignored (same 
+as the normal usage of qualifying preemption). On the other hand, 
+if the current interrupt-level threshold is `0` (not activated), this `0` 
+threshold will not mask any interrupt so any enabled interrupts will wake 
+up WFI including those from lower privilege modes.
+
+
+NOTE: WFI can be a NOP and not actually go to sleep. In addition, 
+implementations can wake up WFI for any other reason.
+
+NOTE: WFI should not be placed inside an interrupt handler.
 
 === Synchronous Exception Handling
 
