@@ -24,6 +24,7 @@
 :pie: pass:q[``**__x__**pie``]
 :il: pass:q[``**__x__**il``]
 
+:pil: pass:q[``**__x__**pil``]
 :inhv: pass:q[``**__x__**inhv``]
 
 :ret: pass:q[``**__x__**ret``]
@@ -35,7 +36,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210217
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210311
 
 == Background and Motivation
 
@@ -74,7 +75,7 @@ registers (`mepc`/`mcause` for M-mode, `sepc`/`scause` for S-mode,
 `uepc`/`ucause` for U-mode) to support preemption, or
 generically {epc} for privilege mode ``*_x_*``.  Preemption by a
 higher-privilege-mode interrupt also pushes current privilege mode and
-interrupt enable status onto the ``**__x__**pp`` and ``**__x__**pie``
+interrupt enable status onto the {pp} and {pie}
 stacks in the {status} register of the higher-privilege mode.
 
 The {tvec} register specifies both the interrupt mode and the base
@@ -513,16 +514,16 @@ Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
 and occupies one byte in the memory map for ease of access. This control bit is
 read-write to enable/disable the corresponding interrupt.
 
-NOTE: `clicintie[__i__]` is the individual enable bit while `mstatus.xie` is
+NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
-interrupt _i_ to be enabled in the current privilege mode, both `clicintie[__i__]`
-and `mstatus.xie` have to be set.
+interrupt `_i_` to be enabled in the current privilege mode, both `clicintie[__i__]`
+and {status}.{ie} have to be set.
 
 
-NOTE: In contrast, since `mstatus.xie` only takes effect in the current privilege
-mode according to RISC-V convention, an interrupt _i_ from a higher privilege mode
+NOTE: In contrast, since {status}.{ie} only takes effect in the current privilege 
+mode according to RISC-V convention, an interrupt `_i_` from a higher privilege mode
 is enabled as long as `clicintie[__i__]` is set (regardless of the setting
-of `mstatus.xie` in the higher privilege mode).
+of {status}.{ie} in the higher privilege modes).
 
 
 === CLIC Interrupt Attribute (`clicintattr`)
@@ -765,7 +766,7 @@ additions for CLIC mode described in the following sections.
 
 When in original basic interrupt mode, the {status} register behavior is unchanged
 (i.e., backwards-compatible with original basic mode).  When in CLIC mode,
-the ``**__x__**pp`` and ``**__x__**pie`` in {status} are now accessible
+the {pp} and {pie} in {status} are now accessible
 via fields in the {cause} register.
 
 === Changes to Delegation ({edeleg}/{ideleg}) CSRs
@@ -1025,7 +1026,7 @@ the no-interrupt case.
 If the CSR instruction that acccesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
 operation, while the {cause} register's `exccode` field and the
-{intstatus} register's `**__x__**il` field can also be updated with
+{intstatus} register's {il} field can also be updated with
 the new interrupt id and level respectively.
 
 NOTE: Following the usual convention for CSR instructions, if the CSR
@@ -1103,7 +1104,7 @@ interrupt level to implement a critical section among a subset of levels,
 while still allowing higher interrupt levels to preempt.
 
 The current hart's effective interrupt level would then be:
-    effective_level = max( {intstatus}.`**__x__**il`, {intthresh}.`th` )
+    effective_level = max({intstatus}.{il}, {intthresh}.`th`)
 
 The max is used to prevent a hart from dropping below its original level
 which would break assumptions in design, and also makes it
@@ -1192,8 +1193,10 @@ privilege mode.
 
 The overall behavior is summarized in the following table: the Current
 `p/ie/il` fields represent the current privilege mode `P` (not
-software visible), interrupt enable (xstatus.ie & clicintie[i]) `ie` and interrupt
-level `L` max(xintstatus.mil, xintthresh.th); the CLIC `priv`,`level`, and `id` fields
+software visible), interrupt enable `ie` = 
+({status}.{ie} & `clicintie[__i__]`)  and interrupt
+level `L` = max({intstatus}.{il}, {intthresh}.`th`);
+the CLIC `priv`,`level`, and `id` fields
 represent the highest-ranked interrupt currently present in the CLIC
 with `nP` representing the new privilege mode, `nL` representing the
 new interrupt level, and `id` representing the interrupt's id;
@@ -1203,6 +1206,8 @@ of any hardware vectoring; `cde` represents the {cause} `exccode`
 field; while the Previous `pp/il/ie/epc` columns represent previous
 context fields in {cause} and {epc}.
 
+[%autofit]
+----
  Current  |      CLIC          |->      Current'          Previous
  p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
  P  ?  ?  | nP<P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
@@ -1212,6 +1217,7 @@ context fields in {cause} and {epc}.
  P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
  P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
  P  e  L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  e  pc  # Vertical interrupt taken
+----
 
 === Critical Sections in Interrupt Handlers
 
@@ -1259,15 +1265,15 @@ up if needed.
 
 The regular {ret} instructions are used to return from handlers in
 privilege mode `*_x_*`.  Execution continues at the saved privilege
-mode `**__x__**cause.**__x__**pp`, at PC {epc}, with interrupt level
-`**__x__**cause.**__x__**pil`, and with the global interrupt enable
-for the restored mode as `**__x__**cause.**__x__**pie`.
+mode {cause}.{pp}, at PC {epc}, with interrupt level
+{cause}.{pil}, and with the global interrupt enable
+for the restored mode as {cause}.{pie}.
 
 The {ret} instruction does not modify the
-`**__x__**cause.**__x__**pil` field in {cause}.  The
-`**__x__**cause.**__x__**pp` and `**__x__**cause.**__x__**pie` fields
+{cause}.{pil} field in {cause}.  The
+{cause}.{pp} and {cause}.{pie} fields
 are modified following the behavior previously defined for
-`**__x__**status.**__x__**pp` and `**__x__**status.**__x__**pie`
+{status}.{pp} and {status}.{pie}
 respectively.
 
 == Interrupt Handling Software
@@ -1643,6 +1649,7 @@ the OIC in the case that there is no interrupt to service.
 The following table summarizes the machine state changes that occur at
 the first {nxti}:
 
+[%autofit]
 [source]
 ----
 IC    at entry |->           |       at first nxti (6)
