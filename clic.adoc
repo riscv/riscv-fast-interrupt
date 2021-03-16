@@ -262,17 +262,16 @@ Detailed explanation for each field are described in the following sections.
 
 ==== Specifying Interrupt Privilege Mode
 
-The 2-bit `cliccfg.nmbits` WARL field specifies how many bits of actual
-registers are implemented in `clicintattr[__i__].mode` to
+The 2-bit `cliccfg.nmbits` WARL field specifies how many bits are 
+physically implemented in `clicintattr[__i__].mode` to
 represent an input __i__'s privilege mode. Although `cliccfg.nmbits` field
-is always 2-bit wide, the actual register bits implemented in this field 
+is always 2-bit wide, the physically implemented bits in this field 
 can be fewer than two (depending how many interrupt privilege-modes are supported).
 
 For example, in M-mode-only systems, only M-mode exists so we do not
 need any extra bit to represent the supported privilege-modes. In this case,
-there is no actual registers needed/implemented in the `clicintattr.mode`
-and thus `cliccfg.nmbits` is 0 (i.e., `cliccfg.nmbits` can be hardwired to 0
-without using any register either).
+no physically implemented bits are needed in the `clicintattr.mode`
+and thus `cliccfg.nmbits` is 0 (i.e., `cliccfg.nmbits` can be hardwired to 0).
 
 In M/U-mode systems with user-level interrupts support, `cliccfg.nmbits` can be
 set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
