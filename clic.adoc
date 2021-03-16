@@ -494,12 +494,8 @@ to clear pending bit at all in the service routine.
 
 In contrast, when a non-vectored (common code) interrupt is selected, the hardware
 will not automatically clear the pending bit in edge-triggered mode. Instead,
-hardware will clear the corresponding pending bit only when software uses a
-`csrrsi/csrrci {nxti}` instruction to select this interrupt and return its
-entry address. However, if the CSR instruction does not include write side effects
-(e.g., `csrr t0, {nxti}`), then no state update on any CSR occurs and thus the
-interrupt pending bit is not cleared. This behavior allows software to optimize the
-selection and execution of interrupts using `{nxti}`.
+software is expected to use {xnxti} to clear the pending bit in edge-triggered mode.
+Additional detail on this is described in the {xnxti} section.
 
 NOTE: During normal operation, software does not need to clear pending bits
 because CLIC hardware already supports automatic clearing of pending bits for
@@ -1039,6 +1035,14 @@ The {nxti} CSR is intended to be used inside an interrupt handler
 after an initial interrupt has been taken and {cause} and {epc}
 registers updated with the interrupted context and the id of the
 interrupt.
+
+If the pending interrupt is edge-triggered, hardware will automatically 
+clear the corresponding pending bit only when software uses a
+`csrrsi/csrrci {nxti}` instruction to select this interrupt and return its
+entry address. However, if the CSR instruction does not include write side effects
+(e.g., `csrr t0, {nxti}`), then no state update on any CSR occurs and thus the
+interrupt pending bit is not cleared. This behavior allows software to optimize the
+selection and execution of interrupts using `{nxti}`.
 
 [source]
 --
