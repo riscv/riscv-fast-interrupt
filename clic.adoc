@@ -192,9 +192,10 @@ The CLIC memory map supports up to 4096 total interrupt inputs.
 ----
 M-mode CLIC memory map
   Offset
-  ###   0x0008-0x07FF              reserved    ###
+  ###   0x0008-0x003F              reserved    ###
+  ###   0x00C0-0x07FF              reserved    ###
   ###   0x0800-0x0FFF              custom      ###
-
+  
   0x0000         1B          RW        cliccfg
   0x0004         4B          R         clicinfo
 
