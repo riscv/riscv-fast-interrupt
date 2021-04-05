@@ -256,9 +256,6 @@ not furnish these fields must hardwire them to zero.
     0     nvbits
 ----
 
-The `nmbits` and `nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
-level 255).
-
 Detailed explanation for each field are described in the following sections.
 
 ==== Specifying Interrupt Privilege Mode
@@ -1141,6 +1138,20 @@ the starting address of CLIC memory mapped registers.
 Since the CLIC memory map must be aligned at a 4KiB boundary, the `mclicbase`
 CSR has its 12 least-significant bits hardwired to zero. It is used
 to inform software about the location of CLIC memory mappped registers.
+
+=== CLIC Reset Behavior
+The general model is RISC-vhas been mandatory reset state is minimized but 
+platforms or company policy might add additional reset requirements.  The 
+general privileged architecture states that mstatus.mie is reset to zero, 
+so coming out of reset interrupts will not be enabled.  For an S-mode only 
+execution environment, the EEI should specify that status.sie is also reset 
+on entry (it is then responsibility of EEI implementation to ensure that 
+is true before beginning execution in S-mode). Similarly for other lower-mode 
+execution environments.
+
+==== CLIC mandatory reset state
+`cliccfg.nmbits` and `cliccfg.nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
+level 255).
 
 == CLIC Implementation Parameters
 
