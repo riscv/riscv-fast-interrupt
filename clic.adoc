@@ -794,10 +794,14 @@ In systems that support both original basic and CLIC modes, the state bits in
 === New {tvec} CSR Mode for CLIC
 
 The new CLIC interrupt-handling mode is encoded as a new state in the
-existing {tvec} WARL register, where the low two bits of {tvec} are
+existing {tvec} WARL register, where {tvec.mode} are
 `11`.  In this mode, the trap vector base address held in
 {tvec} is constrained to be aligned on a 64-byte or larger
 power-of-two boundary.
+
+NOTE: Although future CLIC versions may allow privileges to have different 
+{tvec.mode} settings, for now all privilege modes must run in either CLIC mode 
+or all privilege modes must run in non-CLIC mode.
 
 ----
  mtvec   Action on Interrupt
