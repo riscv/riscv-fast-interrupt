@@ -2283,3 +2283,25 @@ Interrupt map with PLIC recommendation:
 4: M-mode timer interrupt
 5: M-mode external (PLIC) interrupt
 6: external
+
+== Appendix
+
+=== Prototype DTS Entry
+Modified from Example at https://elinux.org/Device_Tree_Usage
+/dts-v1/;
+
+/ {
+    ...
+    interrupt-parent = <&intc>;
+    ...
+
+    intc: interrupt-controller@MCLICBASE {
+        compatible = "xxx,xxx";
+        reg = <MCLICBASE 0x5000 >;
+        interrupt-controller;
+        #interrupt-cells = <NUM_INTERRUPT>;
+    };
+    ...
+};
+
+
