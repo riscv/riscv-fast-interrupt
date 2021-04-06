@@ -924,7 +924,7 @@ through the trap handling process.
  mcause
  Bits    Field      Description
  XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  minhv        Hardware vectoring in progress when set
+    30  minhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
  29:28  mpp[1:0]     Previous privilege mode, same as mstatus.mpp
     27  mpie         Previous interrupt enable, same as mstatus.mpie
  26:24  (reserved)   
@@ -967,7 +967,7 @@ from user mode.
  scause
  Bits    Field        Description
  XLEN-1 Interrupt     Interrupt=1, Exception=0
-    30  sinhv         Hardware vectoring in progress when set
+    30  sinhv         Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
     29  (reserved)
     28  spp           Previous privilege mode, same as sstatus.spp
     27  spie          Previous interrupt enable, same as sstatus.spie
@@ -979,7 +979,7 @@ from user mode.
  ucause
  Bits    Field       Description
  XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  uinhv        Hardware vectoring in progress when set
+    30  uinhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
  29:28  (reserved)
     27  upie         Previous interrupt enable, same as ustatus.upie
  26:24  (reserved)
