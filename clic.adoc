@@ -285,7 +285,7 @@ Similarly, in systems that support all M/S/U-mode interrupts, `cliccfg.nmbits`
 can be set to 0, 1, or 2 bits to represent privilege-modes.
 `cliccfg.nmbits` = 0 indicates that all local interrupts are taken in
 M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
-(1) and U-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
+(1) and S-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
 each `clicintattr[__i__].mode` register encode the interrupt's privilege
 mode using the same encoding as the `mstatus.mpp` field.
 
