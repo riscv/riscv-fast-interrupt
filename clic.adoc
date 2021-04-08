@@ -1177,23 +1177,22 @@ honor `clicintie[__i__]` and {intthresh}. In other words, WFI ignores the
 actual value in the global interrupt-enable {status}.{ie} (by treating as 
 if {status}.{ie} were always enabled).
 
-WFI will always wake up if an interrupt has a higher privilege mode and 
-is locally enabled with `clicintie[__i__]`.
-
-If the current interrupt-level threshold ({intthresh}.`th`) is greater 
-than `0` (activated), enabled interrupts at current privilege mode with 
-interrupt level greater than the current threshold will wake up WFI, but 
-interrupts from lower privilege modes are usually masked/ignored (same 
-as the normal usage of qualifying preemption). On the other hand, 
-if the current interrupt-level threshold is `0` (not activated), this `0` 
-threshold will not mask any interrupt so any enabled interrupts will wake 
-up WFI including those from lower privilege modes.
-
-
-NOTE: WFI can be a NOP and not actually go to sleep. In addition, 
+NOTE: WFI can be a NOP and not actually go to sleep. In addition,
 implementations can wake up WFI for any other reason.
 
-NOTE: WFI should not be placed inside an interrupt handler.
+WFI is required to wake up if an interrupt has a higher privilege mode and
+is locally enabled with `clicintie[__i__]` and the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) != 0.
+
+WFI is required to wake up if an interrupt has the same privilege mode and
+is locally enabled with `clicintie[__i__]` and the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) > max({intstatus.xil,xintthresh.th} and no higher privilege mode is locally enabled with `clicintie[__i__]` with the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) == 0.
+
+WFI is required to wake up if an interrupt has a lower privilege mode and
+is locally enabled with `clicintie[__i__]` and the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) > 0 and no same privilege mode is locally enabled with `clicintie[__i__]` with the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) <=  max({intstatus.xil,xintthresh.th} and no higher privilege mode is locally enabled with `clicintie[__i__]` with the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) == 0.
+
+NOTE: It is not recommended to set interrupt levels to 0 because the higher privilege-mode interrupts with level 0 will effectively mask the lower-mode interrupt
+in the interrupt priority reduction tree.  Same privilege mode interrupts locally enabled with `clicintie[__i__]` with the interrupt level (function of CLICINTCTLBITS,nlbits, and `clicintie[__i__]`) <=  max({intstatus.xil,xintthresh.th} will also effectively mask the lower-mode interrupt in the interrupt priority reduction tree.
+
+NOTE: xintthresh only applies to the current privilege mode so lower-mode interrupts that aren't masked due to the interrupt priority reduction tree will cause WFI to wake up but same privilege mode interrupts less than or equal to xintthresh will not.
 
 === Synchronous Exception Handling
 
