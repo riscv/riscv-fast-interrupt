@@ -36,7 +36,7 @@
 
 
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210311
+= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210406
 
 == Background and Motivation
 
@@ -794,13 +794,13 @@ In systems that support both original basic and CLIC modes, the state bits in
 === New {tvec} CSR Mode for CLIC
 
 The new CLIC interrupt-handling mode is encoded as a new state in the
-existing {tvec} WARL register, where {tvec.mode} are
+existing {tvec} WARL register, where {tvec}.`mode` (the least-significant two bits) is
 `11`.  In this mode, the trap vector base address held in
 {tvec} is constrained to be aligned on a 64-byte or larger
 power-of-two boundary.
 
 NOTE: Although future CLIC versions may allow privileges to have different 
-{tvec.mode} settings, for now all privilege modes must run in either CLIC mode 
+{tvec}.`mode` settings, for now all privilege modes must run in either CLIC mode 
 or all privilege modes must run in non-CLIC mode.
 
 ----
