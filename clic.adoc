@@ -176,13 +176,9 @@ interrupt input.
 
 == CLIC Memory-Mapped Registers
 
-=== M-Mode CLIC Memory Map
+=== CLIC Memory Map
 
-Each hart has a separate CLIC accessed by a separate address region.
-When a system has PMP, this region must be made accessible to
-the M-mode software running on the hart.
-
-The base address of M-Mode CLIC memory-mapped registers is specified
+The base address of CLIC memory-mapped registers is specified
 at a new CLIC Base (`mclicbase`) Control and Status Register (CSR).
 
 The CLIC memory map supports up to 4096 total interrupt inputs.
@@ -190,7 +186,7 @@ The CLIC memory map supports up to 4096 total interrupt inputs.
 
 [source]
 ----
-M-mode CLIC memory map
+CLIC memory map
   Offset
   ###   0x0008-0x003F              reserved    ###
   ###   0x00C0-0x07FF              reserved    ###
@@ -226,6 +222,17 @@ If an input _i_ is not present in the hardware, the corresponding
 `clicintctl[__i__]` memory locations appear hardwired to zero.
 
 
+All CLIC-memory mapped registers are visible to M-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctrl[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctrl[__i__]` configured as S-mode interrupts are not acessible to U-mode.
+
+In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
+`clicintctl[__i__]`.
+
+Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears as
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
+`clicintctl[__i__]`.
 
 === CLIC Configuration (`cliccfg`)
 
@@ -647,83 +654,6 @@ For example, the trigger only fires if the interrupt is
 actually taken (and not when the interrupt is masked, or not taken).
 In addition, the requested action (e.g., breakpoint or trace) is taken
 just before the first instruction of the interrupt handler is executed.
-
-
-=== S-Mode CLIC Regions for M/S/U Harts
-
-Supervisor-mode CLIC regions only expose interrupts that have been
-configured to be supervisor-accessible via the M-mode CLIC region.
-System software must configure virtual memory and PMP permissions to
-only allow access to this region from appropriate supervisor-mode
-code.
-
-
-[source]
-----
-Layout of Supervisor-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
-
-----
-
-Any interrupt _i_ that is not accessible to S-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
-
-Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
-are inaccessible to S-mode.
-
-Where `cliccfg.nmbits` = 1, if `clicintattr[__i__].mode` is set to S-mode
-(bit 7 is clear), interrupt _i_ is visible in the S-mode region.
-
-Where `cliccfg.nmbits` = 2, if bit 7 of `clicintattr[__i__].mode` is clear
-(S-mode or U-mode), interrupt _i_ is visible through the S-mode region
-This allows the supervisor region to be
-used to selectively configure the interrupt as S-mode or U-mode.
-
-=== U-Mode CLIC Regions in M/U Harts or M/S/U Harts
-
-User-mode CLIC regions only expose interrupts that have been
-configured to be user-accessible via the M-mode CLIC region.  System
-software must configure virtual memory and PMP permissions to only
-allow access to this region from appropriate user-mode code.
-
-[source]
-----
-Layout of user-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
-----
-
-Any interrupt _i_ that is not accessible to U-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
-
-
-Where `cliccfg.nmbits` = 0, all interrupts are M-mode only, and all
-are inaccessible to U-mode.
-
-In M/U-only harts, where `cliccfg.nmbits` = 1, if `clicintattr[__i__].mode`
-is set to U-mode (bit 7 is clear), then interrupt _i_ is visible in the
-U-mode region.
-
-In M/S/U harts, if `cliccfg.nmbits` {lt} 2 then all interrupts are
-either M-mode or S-mode, and all are inaccessible to U-mode.
-
-In M/S/U harts, where `cliccfg.nmbits` = 2, if `clicintattr[__i__].mode` is
-set to U-mode (bits 6 and 7 are clear), then interrupt _i_ is visible
-in the U-mode region.
-
-=== CLIC Memory Map for Multiple Harts
-
-In a system with multiple harts, the M-mode CLIC regions for all the
-harts are placed contiguously in the memory space, followed by the
-S-mode CLIC regions for all harts.
-
 
 == CLIC CSRs
 
@@ -2287,3 +2217,9 @@ Interrupt map with PLIC recommendation:
 4: M-mode timer interrupt
 5: M-mode external (PLIC) interrupt
 6: external
+
+== CLIC Memory-mapped registers memory map considerations
+
+The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
+For example, it may desired that the bases of each S/U-mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
+
