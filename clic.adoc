@@ -93,7 +93,7 @@ be written.
 NOTE: CLIC mode is enabled using previously reserved values (`*11`)
 in the low two bits of {tvec}.
 
-=== CLIC versus PLIC
+=== CLIC compared to PLIC
 
 The standard RISC-V platform-level interrupt controller (PLIC)
 provides centralized interrupt prioritization and routing for shared
@@ -105,7 +105,7 @@ only a CLIC, while multicore systems might have a CLIC per-core and a
 single shared PLIC.  The PLIC ``**__x__**eip`` signals are treated as
 hart-local interrupt sources by the CLIC at each core.
 
-=== CLIC versus Original Basic Interrupt Controller
+=== CLIC compared to Original Basic Interrupt Controller
 
 The existing original basic interrupt controller was a small unit
 that provided local interrupts based on earlier designs, and managed
@@ -118,6 +118,10 @@ custom fast interrupt signals to be added in bits 16 and up of the
 New settings of {tvec} mode as described below are used to enable CLIC
 modes instead of the original basic interrupt modes.  Platform profiles may
 require either or both of the original basic and CLIC interrupt modes.
+
+=== CLIC compared to Advanced Interrupt Architecture
+
+Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for software tailchaining.
 
 == CLIC Overview
 
