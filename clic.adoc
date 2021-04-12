@@ -267,9 +267,6 @@ not furnish these fields must hardwire them to zero.
     0     nvbits
 ----
 
-The `nmbits` and `nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
-level 255).
-
 Detailed explanation for each field are described in the following sections.
 
 ==== Specifying Interrupt Privilege Mode
@@ -1100,6 +1097,23 @@ CLICXCSW       0-1                             Has xscratchcsw/xscratchcswl
                                                  implemented?
 ----
 
+== CLIC Reset Behavior
+In general in RISC-V, mandatory reset state is minimized but 
+platforms or company policy might add additional reset requirements.  Since the 
+general privileged architecture states that mstatus.mie is reset to zero, 
+interrupts will not be enabled coming out of reset.  For an S-mode only 
+execution environment, the EEI should specify that status.sie is also reset 
+on entry. It is then responsibility of EEI implementation to ensure that 
+is true before beginning execution in S-mode. Similarly for other lower-mode 
+execution environments.
+
+=== CLIC mandatory reset state
+`cliccfg.nmbits` and `cliccfg.nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
+level 255).
+
+{intstatus}.{il} fields reset to 0.  Interrupt level 0 corresponds to regular
+execution outside of an interrupt handler.
+
 == CLIC Interrupt Operation
 
 This section describes the operation of CLIC interrupts.
@@ -1110,8 +1124,7 @@ At any time, a hart is running in some privilege mode with some
 interrupt level.  The hart's privilege mode is held internally in the
 processor but is not visible to software running on a hart (to avoid
 virtualization holes), but the current interrupt level is made visible
-in the {intstatus} register.  Interrupt level 0 corresponds to regular
-execution outside of an interrupt handler.
+in the {intstatus} register.  
 
 Within a privilege mode `*_x_*`, if the associated global
 interrupt-enable {ie} is clear, then no interrupts will be taken in
