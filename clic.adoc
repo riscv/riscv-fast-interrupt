@@ -732,13 +732,14 @@ power-of-two boundary.
 
 NOTE: Although future CLIC versions may allow privileges to have different 
 {tvec}.`mode` settings, for now all privilege modes must run in either CLIC mode 
-or all privilege modes must run in non-CLIC mode.
+or all privilege modes must run in non-CLIC mode.  Only M-mode can select CLIC versus non-CLIC mode.  Lower privilege modes do not have the ability to change between CLIC and non-CLIC modes. 
 
 ----
- mtvec   Action on Interrupt
+         Action on Interrupt
+  xtvec (when mtvec.mode != 11)        
  aaaa00  pc := OBASE                              (original non-vectored basic mode)
  aaaa01  pc := OBASE + 4 * exccode                (original vectored basic mode)
-
+ mtvec
  000011                                           (CLIC mode)
          (non-vectored)
          pc := NBASE                                    if clicintattr[i].shv = 0
@@ -750,9 +751,9 @@ or all privilege modes must run in non-CLIC mode.
  000010                                           Reserved
  xxxx1?  (xxxx!=0000)                             Reserved
 
- OBASE = mtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
- NBASE = mtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
- TBASE = mtvt[XLEN-1:6]<<6    # Trap vector table base is at least 64-byte aligned.
+ OBASE = xtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
+ NBASE = xtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
+ TBASE = xtvt[XLEN-1:6]<<6    # Trap vector table base is at least 64-byte aligned.
 
 ----
 
