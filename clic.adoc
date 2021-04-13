@@ -91,7 +91,7 @@ be attempted to be written but only some supported values will actually
 be written.
 
 NOTE: CLIC mode is enabled using previously reserved values (`*11`)
-in the low two bits of {tvec}.
+in the low two bits of mtvec.
 
 === CLIC compared to PLIC
 
