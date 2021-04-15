@@ -282,7 +282,7 @@ need any extra bit to represent the supported privilege-modes. In this case,
 no physically implemented bits are needed in the `clicintattr.mode`
 and thus `cliccfg.nmbits` is 0 (i.e., `cliccfg.nmbits` can be hardwired to 0).
 
-In M/U-mode systems with user-level interrupts support, `cliccfg.nmbits` can be
+In M/U-mode systems with N-extension user-level interrupts support, `cliccfg.nmbits` can be
 set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
 M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
 the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
@@ -296,6 +296,8 @@ M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
 (1) and S-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
 each `clicintattr[__i__].mode` register encode the interrupt's privilege
 mode using the same encoding as the `mstatus.mpp` field.
+
+NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. Bare S-mode has already been ratified as part of privileged architecture. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. The proposed N-extension would also add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
 
 ----
  Encoding for RISC-V privilege levels (mstatus.mpp)
