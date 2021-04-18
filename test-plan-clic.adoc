@@ -1,6 +1,8 @@
-= RISC-V Fast Interrupt: Architectural Tests Plan
+:sectnums:
+:toc: left
 
-:toc:
+:encoding: utf-8
+= RISC-V Fast Interrupt: Architectural Tests Plan
 
 A plan for developing the riscv architectural tests for the Fast Interrupt
 Extension.
@@ -13,9 +15,7 @@ The point of this test plan is to:
   and for the fast interrupt architecture in particular.
 
 * Act as a starting point for verification engineers writing
-  verification plans. It describes real-world usage patterns of the
-  instructions which constrained random stimulus generation flows can focus
-  on.
+  verification plans. 
 
 Some useful links:
 
@@ -26,13 +26,13 @@ Some useful links:
 == Test bench setup and deterministic sequences
 
 The framework for architectural tests is to load a test (binary) and start a hart, 
-the hart signals finished, results are extraced from memory and verified against signature.
+the hart signals finished, results are extraced from memory and verified against a signature.
 Since interrupts can occur asynchronously it is limiting to create deterministic tests for 
-different implementations with results that can be compared SAIL model results.  For example,
+different implementations with results that can be compared with SAIL model results.  For example,
 with different implementation, a different number of instructions will occur before the pending interrupt bit 
 actually gets set.  Depending on the implementation, the execution pc could be a different value than the SAIL model.
 
-A determanistic sequence is:
+=== One possible determanistic sequence is
 - if implementation only has level interrupts (pending bit cannot be set by testbench), testbench sets interrupts to the asserted position before running the test.  Since mstatus.mie is reset by default, no interrupts will be taken until it is enabled.
 - setup cliccfg
 - setup xthresh
@@ -41,6 +41,7 @@ A determanistic sequence is:
 - fence instruction
 - enable status.mie/sie/uie
 - loop to self
+
 This sequence ensures the xepc value will be the loop to self and implementation signatures should match SAIL model.
 
 == Implemenation parameters needed by the testbench
@@ -53,18 +54,62 @@ This sequence ensures the xepc value will be the loop to self and implementation
 - addresses of new CLIC csr registers.  Until the spec is ratified, the implementation will need to provide the addresses of the new CLIC csr registers for that implementation.
 
 == Test sequences
-- suite of tests to verify interrupt privilege result based on CLICINTCTLBITS, nlbits, clicintctl[i] setting for m, m/u, m/s/u implementations
-- suite of tests to verify interrupt priority encoder implementation
-- hardware vectoring test
-- verify clicinfo csr matches build parameters
-- check clicintattr/ctrl/ip/ie accessibility in s-mode, u-mode
-- check XIE, XIP CSRs apper hardwired 0 in CLIC mode, retain value when switched back to original mode.
-- verify xcause mstatus bits match xstatus.
-- verify xnxti
-- verify xintthresh
-- verify preemption works without losing state
-- verify WFI cases
-- verify clicintie masking works
+
+=== suite of tests to verify interrupt privilege result 
+- based on CLICINTCTLBITS, nlbits, clicintctl[i] setting for m, m/u, m/s/u implementations
+- compare against table in section 3.2.1 Specifying Interrupt Privilege Mode
+- verify xintstatus 
+- verify xscratchsw (conditional scratch swap on priv mode change)
+- check xcause.xpp, xcause.xpie. xcause.xpil, xcause.exccode
+
+=== suite of tests to verify interrupt priority encoder implementation 
+- compare against table in section 7.1 General Interrupt Overview
+- verify xscratchswl (conditional scratch swap on priority level change)
+- check xcause.xpp, xcause.xpie. xcause.xpil, xcause.exccode
+
+=== hardware vectoring test
+- checks xtvt
+- create a pmp violation to check xinhv? if fault check xtval and xepc
+
+=== verify clicinfo csr matches build parameters
+
+=== check clicintattr/ctrl/ip/ie accessibility in s-mode, u-mode
+
+=== verify xcause mstatus bits match xstatus
+
+=== verify xnxti
+- in non-clic mode a read should return 0
+- in interrupt routine, check xnxti when interrupt pending and when not pending to verify conditional behavior
+- interrupt chaining
+
+=== verify xintthresh
+- verify only applies to current privilege mode
+
+=== verify preemption works without losing state
+
+=== verify WFI cases
+
+=== verify clicintie masking works
+
+=== verify mclicbase matches CLICCFG implementation parameter
+
+=== verify xideleg and xedeleg still accessible but have no effect in clic mode
+
+=== check XIE, XIP CSRs appear hardwired 0 in CLIC mode, 
+- retain value when switched back to original mode
+
+=== verify only mtvec, not stvec or utvec can change from clic to non-clic mode
+
+=== byte write of clicintip/ie/ctl/attr vs. 32-bit write
+
+== Coverage Holes
+
+=== async behavior on pipeline
+
+=== only comparing up-to two interrupts at a time
+
+=== clicintattr.trig
+
 
 
 
