@@ -2261,3 +2261,7 @@ Modified from Example at https://elinux.org/Device_Tree_Usage
     ...
     
 };
+
+== Bibliography
+=== Interrupt and interrupt mask register with interrupt address based on interrupt number.  Control Data 3600 Computer System Reference Manual, Chapter IV - Interrupt System http://bitsavers.org/pdf/cdc/3x00/48bit/3600/60021300E_3600_SysRef_Sep64.pdf 
+=== Interrupt preemption, checking pending interrupts before returning, adjusting current priority level (modpc).  Chapter 12. Interrupts http://bitsavers.org/pdf/biin/BiiN_CPU_Architecture_Reference_Man_Jul88.pdf 
