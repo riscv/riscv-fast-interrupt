@@ -1,8 +1,6 @@
 :sectnums:
 :toc: left
 
-:encoding: utf-8
-
 :status: pass:q[``**__x__**status``]
 :edeleg: pass:q[``**__x__**edeleg``]
 :ideleg: pass:q[``**__x__**ideleg``]
@@ -35,8 +33,117 @@
 :gt: &#62;
 
 
+[[riscv-doc-template]]
+= RISC-V Core-Local Interrupt Controller (CLIC)
+:stem: latexmath
+:description: RISC-V Core-Local Interrupt Controller
+:company: RISC-V.org
+:revdate: 04/22/2021
+:revnumber: 0.9
+:revremark: Pre-release version
+:url-riscv: http://riscv.org
+:doctype: book
+//:doctype: report
+:preface-title: Preamble
+:colophon:
+:appendix-caption: Appendix
+:imagesdir: images
+:title-logo-image: image:risc-v_logo.png[pdfwidth=3.25in,align=center]
+//:page-background-image: image:draft.svg[opacity=20%]
+//:title-page-background-image: none
+:back-cover-image: image:circuit.png[opacity=25%]
+// Settings:
+:experimental:
+:reproducible:
+// needs to be changed
+:wavedrom:
 
-= RISC-V Core-Local Interrupt Controller (CLIC) Version 0.9-draft-20210406
+:imagesoutdir: images
+:icons: font
+:lang: en
+:listing-caption: Listing
+:source-highlighter: pygments
+ifdef::backend-pdf[]
+:source-highlighter: coderay
+endif::[]
+:data-uri:
+:hide-uri-scheme:
+:stem:
+:footnote:
+:xrefstyle: short
+
+
+Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
+
+:status: pass:q[``**__x__**status``]
+:edeleg: pass:q[``**__x__**edeleg``]
+:ideleg: pass:q[``**__x__**ideleg``]
+:ie: pass:q[``**__x__**ie``]
+:tvec: pass:q[``**__x__**tvec``]
+:tvt: pass:q[``**__x__**tvt``]
+:scratch: pass:q[``**__x__**scratch``]
+:scratchcsw: pass:q[``**__x__**scratchcsw``]
+:scratchcswl: pass:q[``**__x__**scratchcswl``]
+:epc: pass:q[``**__x__**epc``]
+:cause: pass:q[``**__x__**cause``]
+:tval: pass:q[``**__x__**tval``]
+:ip: pass:q[``**__x__**ip``]
+:nxti: pass:q[``**__x__**nxti``]
+:intstatus: pass:q[``**__x__**intstatus``]
+:intthresh: pass:q[``**__x__**intthresh``]
+
+:pp: pass:q[``**__x__**pp``]
+:pie: pass:q[``**__x__**pie``]
+:il: pass:q[``**__x__**il``]
+
+:pil: pass:q[``**__x__**pil``]
+:inhv: pass:q[``**__x__**inhv``]
+
+:ret: pass:q[``**__x__**ret``]
+
+:le: &#8804;
+:ge: &#8805;
+:lt: &#60;
+:gt: &#62;
+
+== Revision History
+
+[source]
+----
+Date           	Description
+04/22/2021	updated adoc format to align with risc-v template, added revision history
+04/18/2021	Added Bibliography section
+04/15/2021	issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
+04/13/2021	issue #141 - N-extension vs Bare S-mode note added.
+04/13/2021	issue #117,#125 fix - change text to match table in M/S/U system if nmbits==1
+04/12/2021	issue #47 fix - add CLIC reset behavior section
+04/12/2021	issue #26 fix - modify wording that defined micro-architectural behavior of xINHV
+04/12/2021	issue #91 - add DTS entry example
+04/12/2021	added CLIC comparision to Advance Interupt Architecture (AIA)
+04/12/2021	issue #111,#105 fix - For hardware vectoring access exceptions, both {tval} and {epc} holds the faulting address
+04/08/2021	issue #49, #79 - downplay M/S/U memory map requirements
+03/30/2021	issue #29 - updated memory map table reserved section to give room for clicinttrig
+03/30/2021	issue #122 fix - remove wording referring to register
+03/11/2021	issue #120 - update WFI wording
+03/11/2021	typo fixing
+03/11/2021	issue #51 - implementation of non CSRRW variants of xscratchcsw/xscratchcswl explicitly not defined/reserved.
+03/11/2021	issue #58 - xintthresh was missing from table summarizing overall interrupt behavior
+02/17/2021	issue #95 fix - removed N extension reference since not ratified.
+02/17/2021	issue #90 fix - clarified that clicintip!=0 means interrupt pending
+02/17/2021	issue #89 - updated CLIC interrupt ID ordering recommendations
+02/17/2021	ihnv clarification - inhv bit has no effect except when returning from a trap using an {ret} instruction 
+02/17/2021	ihnv clarification - inhv only written by hw during table vector read. can be written by software.
+02/02/2021	WFI wording change
+01/19/2021	WFI wording change
+01/07/2021	WFI section added
+01/07/2021	Notes added clarifying clicintie and mstatus.xie
+01/07/2021	interrupt priority clarification 
+12/17/2020	Added support for interrupt triggers
+10/20/2020	clarified differences between level and priority
+10/20/2020	fixed value range for CLICINTCTLBITS
+10/20/2020	Clarified relationship among interrupt level, cliccfg.nlbits and CLICINTCTLBITS
+09/08/2020	clarified description for interrupt level
+----
 
 == Background and Motivation
 
@@ -2237,6 +2344,7 @@ Interrupt map with PLIC recommendation:
 The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
 For example, it may desired that the bases of each S/U-mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
 
+[appendix]
 == Appendix
 
 === Prototype DTS Entry
@@ -2262,6 +2370,12 @@ Modified from Example at https://elinux.org/Device_Tree_Usage
     
 };
 
+[[bibliography]]
 == Bibliography
-=== Interrupt and interrupt mask register with interrupt address based on interrupt number.  Control Data 3600 Computer System Reference Manual, Chapter IV - Interrupt System http://bitsavers.org/pdf/cdc/3x00/48bit/3600/60021300E_3600_SysRef_Sep64.pdf 
-=== Interrupt preemption, checking pending interrupts before returning, adjusting current priority level (modpc).  Chapter 12. Interrupts http://bitsavers.org/pdf/biin/BiiN_CPU_Architecture_Reference_Man_Jul88.pdf 
+
+[CD3600] Interrupt and interrupt mask register with interrupt address based on interrupt number.  Control Data 3600 Computer System Reference Manual, Chapter IV - Interrupt System http://bitsavers.org/pdf/cdc/3x00/48bit/3600/60021300E_3600_SysRef_Sep64.pdf
+ 
+[BiiN] Interrupt preemption, checking pending interrupts before returning, adjusting current priority level (modpc).  Chapter 12. Interrupts http://bitsavers.org/pdf/biin/BiiN_CPU_Architecture_Reference_Man_Jul88.pdf 
+
+[index]
+== Index
