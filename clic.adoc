@@ -582,42 +582,41 @@ triggers supported in this implementation. Valid values are 0 to 32.
 
 === CLIC Interrupt Pending (`clicintip`)
 
-Each interrupt input has a dedicated interrupt pending bit (`clicintip[__i__]`)
-and occupies one byte in the memory map for ease of access. The actual pending
-bit is located at bit 0 (i.e., the least-significant bit).   
-In case future extensions expand the bit field, from FW perspective 
-clicintip[__i__]=zero means no interrupt pending, and 
-clicintip[__i__]!=0 (not just 1) indicates an interrupt is pending.
+Each interrupt input has a dedicated interrupt pending bit
+(`clicintip[__i__]`) and occupies one byte in the memory map for ease
+of access.  The pending bit is located in bit 0 of the byte.  Software
+should assume `clicintip[__i__]=0` means no interrupt pending, and
+`clicintip[__i__]!=0` indicates an interrupt is pending to accomodate
+possible future expansion of the `clicintip` field.
 
-`clicintip[__i__]` is a read-write register. Software-based (direct) writes
-to these pending bits have priority over hardware-based writes (triggers).
-For edge-triggered interrupts, software writes will set/clear pending bits.
-In contrast, for level-triggered interrupts, software writes to pending bits
-are ignored completely and software should instead clear the interrupt at the source device.
+When the input is configured for level-sensitive input, the
+`clicintip[__i__]` bit reflects the value of an input signal to the
+interrupt controller after any conditional inversion specified by the
+`clicintattr[i]` field, and software writes to the bit are ignored.
+Software clears the interrupt at the source device.
 
-For edge-triggered interrupts, to speed up interrupt processing,
-hardware is designed to help clearing interrupt pending bits.
-Nevertheless, the clearing mechanism and timing are different
-for vectored mode and non-vectored (common code) mode.
-Detailed operations for each case are described below.
+When the input is configured for edge-sensitive input,
+`clicintip[__i__]` is a read-write register that can be updated both
+by hardware interrupt inputs and by software.  The bit is set by
+hardware after an edge of the appropriate polarity is observed on the
+interrupt input, as determined by the `clicintattr[i]` field.
+Hardware clears the associated interrupt pending bit when an
+interrupt is serviced in vectored mode.  Software writes can set or
+clear edge-triggered pending bits, either directly by writes to the
+memory-mapped register or by accessing the {nxti} CSR.
 
-When a vectored interrupt is
-selected and serviced, the hardware will automatically clear the corresponding
-pending bit in edge-triggered mode. In this case, software does not need
-to clear pending bit at all in the service routine.
+NOTE: To improve performance, when a vectored interrupt is selected
+and serviced, the hardware will automatically clear a corresponding
+edge-triggered pending bit, so software doesn't need to clear the
+pending bit in the service routine.
 
-In contrast, when a non-vectored (common code) interrupt is selected, the hardware
-will not automatically clear the pending bit in edge-triggered mode. Instead,
-software is expected to use {xnxti} to clear the pending bit in edge-triggered mode.
-Additional detail on this is described in the {xnxti} section.
+In contrast, when a non-vectored (common code) interrupt is selected,
+the hardware will not automatically clear an edge-triggered pending
+bit.
 
-NOTE: During normal operation, software does not need to clear pending bits
-because CLIC hardware already supports automatic clearing of pending bits for
-edge-triggered interrupts. As for level-triggered interrupts, they should be
-cleared at interrupt sources (devices) so no need to clear the pending bits.
-Therefore, software usually only needs to modify pending bits in the
-initialization process or testing.
-
+NOTE: Software is expected to use an access to the {nxti} CSR to clear
+an edge-triggered pending bit in non-vectored mode.  Additional detail
+on this is described in the {nxti} section.
 
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
