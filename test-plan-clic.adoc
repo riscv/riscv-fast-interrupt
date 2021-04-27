@@ -58,18 +58,35 @@ This sequence ensures the xepc value will be the loop to self and implementation
 === suite of tests to verify interrupt privilege result 
 - based on CLICINTCTLBITS, nlbits, clicintctl[i] setting for m, m/u, m/s/u implementations
 - compare against table in section 3.2.1 Specifying Interrupt Privilege Mode
-- verify xintstatus 
-- verify xscratchsw (conditional scratch swap on priv mode change)
-- check xcause.xpp, xcause.xpie. xcause.xpil, xcause.exccode
+
+==== Signatures
+- xie
+- xip
+- xcause
+- xstatus
+- xepc
+- xtval
+- xintstatus
+- xscratchcsw
+- xscratchcswl
 
 === suite of tests to verify interrupt priority encoder implementation 
 - compare against table in section 7.1 General Interrupt Overview
-- verify xscratchswl (conditional scratch swap on priority level change)
-- check xcause.xpp, xcause.xpie. xcause.xpil, xcause.exccode
+
+==== Signatures
+- xie
+- xip
+- xcause
+- xstatus
+- xepc
+- xtval
+- xintstatus
+- xscratchcsw
+- xscratchcswl
 
 === hardware vectoring test
 - checks xtvt
-- create a pmp violation to check xinhv? if fault check xtval and xepc
+- create a pmp violation to check xinhv? if fault xtval and xepc tested
 
 === verify clicinfo csr matches build parameters
 
