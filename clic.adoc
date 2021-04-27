@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+04/27/2021  clicintip[i] state is undefined when switching from level to edge triggered mode
 04/22/2021	updated adoc format to align with risc-v template, added revision history
 04/18/2021	Added Bibliography section
 04/15/2021	issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
@@ -617,6 +618,13 @@ bit.
 NOTE: Software is expected to use an access to the {nxti} CSR to clear
 an edge-triggered pending bit in non-vectored mode.  Additional detail
 on this is described in the {nxti} section.
+
+The value in the `clicintip[__i__]` is undefined when switching from
+level-sensitive mode to edge-triggered mode in `clicintattr[__i__]`.
+
+NOTE: Software cannot rely on the underlying `clicintip[__i__]`
+register bits used in edge-triggered mode to hold state while in
+level-sensitive mode.
 
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
