@@ -593,10 +593,7 @@ clicintip[__i__]!=0 (not just 1) indicates an interrupt is pending.
 to these pending bits have priority over hardware-based writes (triggers).
 For edge-triggered interrupts, software writes will set/clear pending bits.
 In contrast, for level-triggered interrupts, software writes to pending bits
-are ignored completely
-
-For level-triggered interrupts, users should not clear the pending bits
-directly but instead should clear the interrupt sources (devices).
+are ignored completely and software should instead clear the interrupt at the source device.
 
 For edge-triggered interrupts, to speed up interrupt processing,
 hardware is designed to help clearing interrupt pending bits.
