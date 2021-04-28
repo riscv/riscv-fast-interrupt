@@ -92,7 +92,7 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
-  li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  li    t2, 0xFF000000 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
   fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
