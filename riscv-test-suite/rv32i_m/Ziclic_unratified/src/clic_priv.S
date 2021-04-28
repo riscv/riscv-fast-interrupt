@@ -62,23 +62,24 @@ RVTEST_SIGBASE( a2,signature_a2_s) // a2 will point to signature_a2_s label in t
 RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in the signature region - u-mode
 
 // priv-modes nmbits clicintattr[i].mode  Interpretation
-//        M      0       xx               M-mode interrupt
+//        M      0       xx               M-mode interrupt 1A
 // 
-//      M/U      0       xx               M-mode interrupt
-//      M/U      1       0x               U-mode interrupt
-//      M/U      1       1x               M-mode interrupt
+//      M/U      0       xx               M-mode interrupt 2A
+//      M/U      1       0x               U-mode interrupt 2B
+//      M/U      1       1x               M-mode interrupt 2C
 // 
-//    M/S/U      0       xx               M-mode interrupt
-//    M/S/U      1       0x               S-mode interrupt
-//    M/S/U      1       1x               M-mode interrupt
-//    M/S/U      2       00               U-mode interrupt
-//    M/S/U      2       01               S-mode interrupt
-//    M/S/U      2       10               Reserved (or extended S-mode)
-//    M/S/U      2       11               M-mode interrupt
+//    M/S/U      0       xx               M-mode interrupt 3A
+//    M/S/U      1       0x               S-mode interrupt 3B
+//    M/S/U      1       1x               M-mode interrupt 3C
+//    M/S/U      2       00               U-mode interrupt 3D
+//    M/S/U      2       01               S-mode interrupt 3E
+//    M/S/U      2       11               M-mode interrupt 3F
 
   li    t0, MSTATUS_MPIE | MSTATUS_SPIE | MSTATUS_UPIE | MSTATUS_MIE | MSTATUS_SIE | MSTATUS_UIE
   csrrc x0, mstatus, t0; //  Disable mstatus.xpie, mstatus.xie
 
+  li    t0, MSTATUS_SPP
+  csrrs x0, mstatus, t0; //  initialize mstatus.spp
   
 
 #ifdef TEST_CASE_1A
@@ -91,6 +92,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -106,6 +110,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -121,6 +128,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -136,6 +146,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -144,13 +157,16 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   #define CLIC_SMODE_INT
   RVTEST_CASE(3A,"//check ISA:=regex(.*32.*); check ISA:=regex(.*I.*S.*clic.*); def TEST_CASE_3A=True",priv_msu_nmbits0_clicintattrmode0)
   // priv-modes nmbits clicintattr[i].mode  Interpretation
-  //      M/U      0       xx               M-mode interrupt
+  //    M/S/U      0       xx               M-mode interrupt 
 
   li    t1, CLICCFG
   li    t2, 0x00 | 0x0 << 5       ; //  set cliccfg.nmbits, 0bits for int level
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -159,13 +175,16 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   #define CLIC_SMODE_INT
   RVTEST_CASE(3B,"//check ISA:=regex(.*32.*); check ISA:=regex(.*I.*S.*clic.*); def TEST_CASE_3B=True",priv_msu_nmbits1_clicintattrmode1)
   // priv-modes nmbits clicintattr[i].mode  Interpretation
-  //      M/U      1       0x               U-mode interrupt
+  //    M/S/U      1       0x               S-mode interrupt 
 
   li    t1, CLICCFG
   li    t2, 0x00 | 0x1 << 5       ; //  set cliccfg.nmbits, 0bits for int level
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x1 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x1 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -174,13 +193,16 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   #define CLIC_SMODE_INT
   RVTEST_CASE(3C,"//check ISA:=regex(.*32.*); check ISA:=regex(.*I.*S.*clic.*); def TEST_CASE_3C=True",priv_msu_nmbits1_clicintattrmode3)
   // priv-modes nmbits clicintattr[i].mode  Interpretation
-  //      M/U      1       1x               M-mode interrupt
+  //    M/S/U      1       1x               M-mode interrupt 
 
   li    t1, CLICCFG
   li    t2, 0x00 | 0x1 << 5       ; //  set cliccfg.nmbits, 0bits for int level
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -190,13 +212,16 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   #define CLIC_UMODE_INT
   RVTEST_CASE(3D,"//check ISA:=regex(.*32.*); check ISA:=regex(.*I.*N.*S.*clic.*); def TEST_CASE_3D=True",priv_msu_nmbits2_clicintattrmode0)
   // priv-modes nmbits clicintattr[i].mode  Interpretation
-  //    M/S/U      2       00               U-mode interrupt
+  //    M/S/U      2       00               U-mode interrupt 
 
   li    t1, CLICCFG
   li    t2, 0x00 | 0x2 << 5       ; //  set cliccfg.nmbits, 0bits for int level
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x0 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -212,6 +237,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x1 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip 
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x1 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
@@ -226,6 +254,9 @@ RVTEST_SIGBASE( a3,signature_a3_u) // a3 will point to signature_a3_u label in t
   sw    t2, 0(t1)                 ; //  Setup cliccfg
  
   li    t1, CLICCFG + 0x1000 + 4*INTERRUPT1_NUM
+  li    t2, 0xFF000000 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
+  sw    t2, 0(t1);                                       // setting attr before setting ie/ip
+  fence;                                                 // ensure attr is set before setting ie/ip
   li    t2, 0xFF000101 | 0x3 <<22 | NEG <<18 | EDGE<<17; // {clicintctl,clicintattr,clicintie,clicintip}          
   sw    t2, 0(t1); 
 #endif
