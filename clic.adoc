@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 04/22/2021
+:revdate: 04/29/2021
 :revnumber: 0.9
 :revremark: Pre-release version
 :url-riscv: http://riscv.org
