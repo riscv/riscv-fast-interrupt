@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 04/29/2021
+:revdate: 05/11/2021
 :revnumber: 0.9
 :revremark: Pre-release version
 :url-riscv: http://riscv.org
@@ -111,7 +111,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
-04/27/2021  clicintip[i] state is undefined when switching from level to edge triggered mode
+05/11/2021      #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
+04/27/2021      clicintip[i] state is undefined when switching from level to edge triggered mode
 04/22/2021	updated adoc format to align with risc-v template, added revision history
 04/18/2021	Added Bibliography section
 04/15/2021	issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
@@ -2392,3 +2393,4 @@ Modified from Example at https://elinux.org/Device_Tree_Usage
 
 [index]
 == Index
+
