@@ -918,10 +918,19 @@ function pointers.
 NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
 traps on fetches to the trap vector table.
 
-The inhv bits are only written by hardware during the table vector read 
-operation. The inhv bits can be written by software, including when 
-hardware vectoring is not in effect. The inhv bit has no effect except 
-when returning from a trap using an {ret} instruction.
+The inhv bits are only written by hardware during the table vector
+read operation. The inhv bits can be written by software, including
+when hardware vectoring is not in effect. The inhv bit has no effect
+except when returning from a trap using an {ret} instruction.  When
+returning from an {ret} instruction, the {inhv} bit modifies behavior
+as follow:
+
+----
+if (xinhv)
+    pc := M[xepc]
+else
+    pc := xepc
+----
 
 Implementations might support only one of original basic or CLIC mode.
 If only basic mode is supported, writes to bit 1 are ignored and it is
