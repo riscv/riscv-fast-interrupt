@@ -111,8 +111,10 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
-05/11/2021      #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
-04/27/2021      clicintip[i] state is undefined when switching from level to edge triggered mode
+05/25/2021  issue #149 - added text that 32-bit writes are legal but effects are not defined.
+05/25/2021  issue #142 - added text that MPRV and SUM are obeyed on vector table accesses.
+05/11/2021  issue #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
+04/27/2021  clicintip[i] state is undefined when switching from level to edge triggered mode
 04/22/2021	updated adoc format to align with risc-v template, added revision history
 04/18/2021	Added Bibliography section
 04/15/2021	issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
@@ -329,11 +331,11 @@ CLIC memory map
   0x4FFF         1B/input    RW        clicintctl[4095]
 
 ----
+A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
 `clicintctl[__i__]` memory locations appear hardwired to zero.
-
 
 All CLIC-memory mapped registers are visible to M-mode.
 Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctrl[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
