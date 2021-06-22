@@ -293,7 +293,11 @@ interrupt input.
 
 === CLIC Memory Map
 
-The base address of CLIC memory-mapped registers is specified
+Each hart has a separate CLIC accessed by a separate address region.
+When a system has PMP, the M-mode CLIC memory map region must be made accessible to
+the M-mode software running on the hart.
+
+The base address of M-mode CLIC memory-mapped registers is specified
 at a new CLIC Base (`mclicbase`) Control and Status Register (CSR).
 
 The CLIC memory map supports up to 4096 total interrupt inputs.
@@ -301,7 +305,7 @@ The CLIC memory map supports up to 4096 total interrupt inputs.
 
 [source]
 ----
-CLIC memory map
+M-mode CLIC memory map
   Offset
   ###   0x0008-0x003F              reserved    ###
   ###   0x00C0-0x07FF              reserved    ###
@@ -331,6 +335,31 @@ CLIC memory map
   0x4FFF         1B/input    RW        clicintctl[4095]
 
 ----
+
+Supervisor-mode CLIC regions only expose interrupts that have been
+configured to be supervisor-accessible via the M-mode CLIC region.
+
+[source]
+----
+Layout of Supervisor-mode CLIC regions
+0x000+4*i   1B/input    R or RW   clicintip[i]
+0x001+4*i   1B/input    RW        clicintie[i]
+0x002+4*i   1B/input    RW        clicintattr[i]
+0x003+4*i   1B/input    RW        clicintctl[i]
+----
+
+User-mode CLIC regions only expose interrupts that have been
+configured to be user-accessible via the M-mode CLIC region.  
+
+[source]
+----
+Layout of user-mode CLIC regions
+0x000+4*i   1B/input    R or RW   clicintip[i]
+0x001+4*i   1B/input    RW        clicintie[i]
+0x002+4*i   1B/input    RW        clicintattr[i]
+0x003+4*i   1B/input    RW        clicintctl[i]
+----
+
 A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
 
 If an input _i_ is not present in the hardware, the corresponding
@@ -348,6 +377,19 @@ hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`
 Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears as
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
 `clicintctl[__i__]`.
+
+The privilege mode of an interrupt is controlled by both `cliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
+
+It is not intended that the memory mapped interrupt regions be required to carry the privilege mode of the initiator.  A possible implementation of the CLIC memory map would be to alias the same physical CLIC memory mapped registers to different address ranges with modified privilege accessibility.  Interrupts configured as M-mode interrupts appear as hard-wired zeros in the S-mode address range.  Likewise interrupts configured as M-mode or S-mode would appear as hard-wired zeros in the U-mode address range.
+
+The intent is that only the necessary address regions are made accessible
+to each privilege mode using the system's standard memory protection
+mechanisms. This can be done either using PMPs in microcontroller
+systems, or page tables (and/or PMPs) in processors with virtual
+memory support. 
+
+The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
+For example, it may desired that the bases of each S/U-mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
 
 === CLIC Configuration (`cliccfg`)
 
@@ -2354,11 +2396,6 @@ Interrupt map with PLIC recommendation:
 4: M-mode timer interrupt
 5: M-mode external (PLIC) interrupt
 6: external
-
-== CLIC Memory-mapped registers memory map considerations
-
-The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
-For example, it may desired that the bases of each S/U-mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
 
 [appendix]
 == Appendix
