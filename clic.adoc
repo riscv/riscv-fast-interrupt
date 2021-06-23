@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+06/22/2021  issue #156 - reverted text and added clarification on CLIC memory mapped privilege regions.
 05/25/2021  issue #149 - added text that 32-bit writes are legal but effects are not defined.
 05/25/2021  issue #142 - added text that MPRV and SUM are obeyed on vector table accesses.
 05/11/2021  issue #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
@@ -380,7 +381,7 @@ hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`
 
 The privilege mode of an interrupt is controlled by both `cliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
 
-It is not intended that the memory mapped interrupt regions be required to carry the privilege mode of the initiator.  A possible implementation of the CLIC memory map would be to alias the same physical CLIC memory mapped registers to different address ranges with modified privilege accessibility.  Interrupts configured as M-mode interrupts appear as hard-wired zeros in the S-mode address range.  Likewise interrupts configured as M-mode or S-mode would appear as hard-wired zeros in the U-mode address range.
+It is not intended that the interconnect to the CLIC memory mapped interrupt regions be required to carry the privilege mode of the initiator.  A possible implementation of the CLIC memory map would be to alias the same physical CLIC memory mapped registers to different address ranges with modified privilege accessibility.  Interrupts configured as M-mode interrupts appear as hard-wired zeros in the S-mode address range.  Likewise interrupts configured as M-mode or S-mode would appear as hard-wired zeros in the U-mode address range.
 
 The intent is that only the necessary address regions are made accessible
 to each privilege mode using the system's standard memory protection
