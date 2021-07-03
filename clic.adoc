@@ -40,7 +40,7 @@
 :company: RISC-V.org
 :revdate: 06/22/2021
 :revnumber: 0.9
-:revremark: Pre-release version
+:revremark: This document is in the Development state. Assume anything can change.
 :url-riscv: http://riscv.org
 :doctype: book
 //:doctype: report
