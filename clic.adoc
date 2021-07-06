@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 06/22/2021
+:revdate: 07/06/2021
 :revnumber: 0.9
 :revremark: This document is in the Development state. Assume anything can change.
 :url-riscv: http://riscv.org
@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+07/06/2021  issue #156,#77,#79 - more CLIC memory mapped text clarifications, clicintctl typo fixes
 06/22/2021  issue #156 - reverted text and added clarification on CLIC memory mapped privilege regions.
 05/25/2021  issue #149 - added text that 32-bit writes are legal but effects are not defined.
 05/25/2021  issue #142 - added text that MPRV and SUM are obeyed on vector table accesses.
@@ -380,8 +381,8 @@ If an input _i_ is not present in the hardware, the corresponding
 `clicintctl[__i__]` memory locations appear hardwired to zero.
 
 All CLIC-memory mapped registers are visible to M-mode.
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctrl[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctrl[__i__]` configured as S-mode interrupts are not acessible to U-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as S-mode interrupts are not acessible to U-mode.
 
 In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
