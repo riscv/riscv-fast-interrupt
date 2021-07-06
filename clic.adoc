@@ -1240,7 +1240,7 @@ Since the CLIC memory map must be aligned at a 4KiB boundary, the `mclicbase`
 CSR has its 12 least-significant bits hardwired to zero. It is used
 to inform software about the location of CLIC memory mappped registers.
 
-== CLIC Implementation Parameters
+== CLIC Parameters
 
 [source]
 ----
