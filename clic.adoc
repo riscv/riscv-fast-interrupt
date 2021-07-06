@@ -295,14 +295,19 @@ interrupt input.
 === CLIC Memory Map
 
 Each hart has a separate CLIC accessed by a separate address region.
-When a system has PMP, the M-mode CLIC memory map region must be made accessible to
+The M-mode CLIC memory map region must be made accessible to
 the M-mode software running on the hart.
+
+NOTE: A bus memory map or locked PMP entries could prevent M-mode
+software on a particular hart from reaching the CLIC memory map.
 
 The base address of M-mode CLIC memory-mapped registers is specified
 at a new CLIC Base (`mclicbase`) Control and Status Register (CSR).
 
-The CLIC memory map supports up to 4096 total interrupt inputs.
+NOTE: The `mclicbase` register is likely to be replaced by the general
+discovery mechanism that is in development.
 
+The CLIC memory map supports up to 4096 total interrupt inputs.
 
 [source]
 ----
@@ -352,6 +357,13 @@ Layout of Supervisor-mode CLIC regions
 User-mode CLIC regions only expose interrupts that have been
 configured to be user-accessible via the M-mode CLIC region.  
 
+The location of the S-mode and U-mode CLIC regions are independent of
+the location of the M-mode CLIC region, and their base addresses are
+specified by the platform specification and made visible via the
+discovery mechanism for that platform.
+
+NOTE: Discovery mechanisms are still in development.
+
 [source]
 ----
 Layout of user-mode CLIC regions
@@ -381,7 +393,15 @@ hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`
 
 The privilege mode of an interrupt is controlled by both `cliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
 
-It is not intended that the interconnect to the CLIC memory mapped interrupt regions be required to carry the privilege mode of the initiator.  A possible implementation of the CLIC memory map would be to alias the same physical CLIC memory mapped registers to different address ranges with modified privilege accessibility.  Interrupts configured as M-mode interrupts appear as hard-wired zeros in the S-mode address range.  Likewise interrupts configured as M-mode or S-mode would appear as hard-wired zeros in the U-mode address range.
+It is not intended that the interconnect to the CLIC memory-mapped
+interrupt regions be required to carry the privilege mode of the
+initiator.  A possible implementation of the CLIC memory map would be
+to alias the same physical CLIC memory-mapped registers to different
+address ranges, with each address range given different permissions
+for each privilege mode.  Interrupts configured as M-mode interrupts
+appear as hard-wired zeros in the S-mode address range.  Likewise
+interrupts configured as M-mode or S-mode would appear as hard-wired
+zeros in the U-mode address range.
 
 The intent is that only the necessary address regions are made accessible
 to each privilege mode using the system's standard memory protection
