@@ -1121,7 +1121,7 @@ the full cost of an interrupt pipeline flush and context save/restore.
 The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
 instructions, where the value read is a pointer to an entry in the
 trap handler table and the write back updates the interrupt-enable
-status. In addition, accesses to the {nxti} have side-effects that
+status. In addition, writes to the {nxti} have side-effects that
 update the interrupt context state.
 
 NOTE: This is different than a regular CSR instruction as the value
