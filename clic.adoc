@@ -1207,11 +1207,9 @@ implementations can wake up WFI for any other reason.
 * the interrupt priority reduction tree selects interrupt i as the maximum across all pending-and-enabled interrupts and 
 * the interrupt i level is not equal to 0.
 
-NOTE: Interrupt i level is a function of CLICINTCTLBITS, cliccfg.nlbits, and `clicintctl[__i__]`
+NOTE: Interrupt i level is a function of CLICINTCTLBITS, `cliccfg.nlbits`, and `clicintctl[__i__]`.  If CLICINTCTLBITS is 8 and `cliccfg.nlbits` = 8, it is possible to set `clicintctl[__i__]` to 0.  Level 0 will behave as a locally disabled interrupt but can still mask lower-mode interrupts.  For example, if there is a non-zero level supervisor interrupt pending and a level-zero machine interrupt pending, the machine interrupt will be the global maximum across all pending-and-enabled interrupts but interrupt level 0 implies no interrupt. So programming `clicintctl[__i__]` to 0 should not be used to disable interrupts.  `clicintie[__i__]` should be used instead.
 
 NOTE: {intthresh} only applies to the current privilege mode.  There is a proposal to add a new WFMI instruction ("wait for mode's interrupts") to the privilege specification. This instruction only has to wakeup for pending-and-enabled interrupts in the current mode, and is not required to wakeup for pending-and-enabled interrupts in lower privilege modes. Pending-enabled higher privilege-mode interrupts will interrupt/wakeup as usual. 
-
-NOTE: If there is a non-zero level supervisor interrupt pending and a level-zero machine interrupt pending, the machine interrupt will be the global maximum across all pending-and-enabled interrupts but interrupt level 0 implies no interrupt. So a level-zero pending machine interrupt will mask any lower privilege interrupts.  For this reason, it is not recommended to set interrupt levels to 0.
 
 === Synchronous Exception Handling
 
