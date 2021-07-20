@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 07/06/2021
+:revdate: 07/20/2021
 :revnumber: 0.9
 :revremark: This document is in the Development state. Assume anything can change.
 :url-riscv: http://riscv.org
@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+07/20/2021  pull #161 - spec clarification that only writes to xnxti have side effects.
 07/06/2021  issue #156,#77,#79 - more CLIC memory mapped text clarifications, clicintctl typo fixes
 06/22/2021  issue #156 - reverted text and added clarification on CLIC memory mapped privilege regions.
 05/25/2021  issue #149 - added text that 32-bit writes are legal but effects are not defined.
