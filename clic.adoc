@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+08/17/2021  pull #163 - spec clarification that clicintie is held in bit 0 of byte.
 07/20/2021  pull #161 - spec clarification that only writes to xnxti have side effects.
 07/06/2021  issue #156,#77,#79 - more CLIC memory mapped text clarifications, clicintctl typo fixes
 06/22/2021  issue #156 - reverted text and added clarification on CLIC memory mapped privilege regions.
