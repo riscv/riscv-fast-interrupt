@@ -697,7 +697,7 @@ level-sensitive mode.
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
 and occupies one byte in the memory map for ease of access. This control bit is
-read-write to enable/disable the corresponding interrupt.
+read-write to enable/disable the corresponding interrupt.  The enable bit is located in bit 0 of the byte. Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled to accomodate possible future expansion of the clicintie field.
 
 NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
