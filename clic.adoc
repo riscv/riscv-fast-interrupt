@@ -513,7 +513,7 @@ priv-modes nmbits clicintattr[i].mode  Interpretation
 
 The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits
 in `clicintctl[__i__]` are assigned to encode the interrupt level.
-Valid values are 0--8.
+Only 0 or 8 level bits currently supported (other values are reserved).
 
 Although the interrupt level is an 8-bit unsigned integer, the number
 of bits actually assigned or implemented can be fewer than 8.
