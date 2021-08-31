@@ -755,8 +755,7 @@ values (WARL).
 
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
 operates in. This field uses the same encoding as the `mstatus.mpp`
-(11: machine mode, 01: supervisor mode, 00 user mode). The default value
-for `clicintattr.mode` is 11 to represent machine mode. The valid length of
+(11: machine mode, 01: supervisor mode, 00 user mode). The valid length of
 this field can be programmed with `cliccfg.nmbits`.
 
 NOTE: For security purpose, the `mode` field can only be set to a privilege level that is equal to or lower than the currently running privilege level.
@@ -1301,6 +1300,8 @@ execution environments.
 === CLIC mandatory reset state
 `cliccfg.nmbits` and `cliccfg.nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
 level 255).
+
+The default value for `clicintattr.mode` is 11 to represent machine mode. 
 
 {intstatus}.{il} fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
