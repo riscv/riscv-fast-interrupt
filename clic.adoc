@@ -1301,7 +1301,7 @@ execution environments.
 `cliccfg.nmbits` and `cliccfg.nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
 level 255).
 
-The default value for `clicintattr.mode` is 11 to represent machine mode. 
+The `clicintattr.mode` field is reset to 11 (i.e., machine mode). 
 
 {intstatus}.{il} fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
