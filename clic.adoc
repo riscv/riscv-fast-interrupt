@@ -1131,6 +1131,10 @@ NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
 operation.
 
+NOTE: All CSR instructions may be used with {nxti}.  The operation will
+be the same as the corresponding CSR instruction used with xstatus.  The
+value read and the side-effects will be as specified in this section.
+
 A read of the {nxti} CSR returns either zero, indicating there is no
 suitable interrupt to service or that the highest ranked interrupt is
 SHV or that the system is not in a CLIC mode, or returns a non-zero
@@ -1143,9 +1147,10 @@ the no-interrupt case.
 
 If the CSR instruction that acccesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
-operation, while the {cause} register's `exccode` field and the
-{intstatus} register's {il} field can also be updated with
-the new interrupt id and level respectively.
+operation, while the {cause} register's `exccode` field, the
+{intstatus} register's {il} field and the pending bit of the accepted
+interrupt can also be updated with the new interrupt id, level, and 
+clear respectively.
 
 NOTE: Following the usual convention for CSR instructions, if the CSR
 instruction does not include write side effects (e.g., `csrr t0,
@@ -1159,9 +1164,8 @@ registers updated with the interrupted context and the id of the
 interrupt.
 
 If the pending interrupt is edge-triggered, hardware will automatically 
-clear the corresponding pending bit only when software uses a
-`csrrsi/csrrci {nxti}` instruction to select this interrupt and return its
-entry address. However, if the CSR instruction does not include write side effects
+clear the corresponding pending bit when the CSR instruction that accesses
+{nxti} includes a write. However, if the CSR instruction does not include write side effects
 (e.g., `csrr t0, {nxti}`), then no state update on any CSR occurs and thus the
 interrupt pending bit is not cleared. This behavior allows software to optimize the
 selection and execution of interrupts using `{nxti}`.
@@ -1186,6 +1190,11 @@ selection and execution of interrupts using `{nxti}`.
    // No interrupt, or a selectively hardware vectored interrupt, or in non-CLIC mode.
    rd = 0;
  }
+ // When a different CSR instruction is used, the update of mstatus and the test
+ // for whether side-effects should occur are modified accordingly.
+ // When a different privileges xnxti CSR is accessed then clic.priv is compared with
+ // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
+ // corresponding privileges CSRs.
 --
 
 NOTE: Vertical interrupts to different privilege modes will be taken
