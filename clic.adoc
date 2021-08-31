@@ -1170,10 +1170,15 @@ selection and execution of interrupts using `{nxti}`.
  mstatus |= uimm[4:0]; // Performed regardless of interrupt readiness.
  if (clic.priv==M && clic.level > mcause.pil && clic.level > mintthresh.th
      && (cliccfg.nvbits==0 || clicintattr.shv==0) ) {
-   // The CLIC interrupt should be serviced before returning to the saved context,
-   // unless it's a selectively hardware vectored interupt.
-   mintstatus.mil = clic.level; // Update hart's interrupt level.
-   mcause.exccode = clic.id;   // Update interrupt id.
+   // There is an available, non-hardware-vectored interrupt.
+   if (uimm[4:0] != 0) {  // Side-effects should occur.
+     // Commit to servicing the available interrupt.
+     mintstatus.mil = clic.level; // Update hart's interrupt level.
+     mcause.exccode = clic.id;   // Update interrupt id in mcause.
+     if (clicintattr[clic.id][1] == 1) { // If edge interrupt,
+       clicintip[clic.id] = 0;           // clear edge interrupt
+     }
+   }
    rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
  } else {
    // No interrupt, or a selectively hardware vectored interrupt, or in non-CLIC mode.
