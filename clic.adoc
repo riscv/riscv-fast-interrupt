@@ -511,21 +511,20 @@ priv-modes nmbits clicintattr[i].mode  Interpretation
 
 The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits
 in `clicintctl[__i__]` are assigned to encode the interrupt level.
-Valid values are 0--8.
+Valid values are either 0 or 8.
+`cliccfg.nlbits` == 0 means all bits of `clicintctl[__i__]` represent priority and all interrupts are treated as level 255.
+`cliccfg.nlbits` == 8 means all bits of `clicintctl[__i__]` represent interrupt level.  
 
-Although the interrupt level is an 8-bit unsigned integer, the number
-of bits actually assigned or implemented can be fewer than 8.
-As described above, the number of bits assigned is specified in
-`cliccfg.nlbits`. The number of bits actually implemented can be derived
-from `cliccfg.nlbits` and a fixed parameter `clicinfo.CLICINTCTLBITS`
-(with value between 0 to 8) which specifies bits implemented for both
-interrupt level and priority.
+Although `clicintctl[__i__]` is an 8-bit unsigned integer, the number
+of bits actually implemented can be fewer than 8.
+The number of bits actually implemented can be determined from a fixed parameter `clicinfo.CLICINTCTLBITS`
+(with value between 0 to 8).
 
-If the actual bits assigned or implemented are fewer than 8, then these bits
+If the actual bits implemented are fewer than 8, then these bits
 are left-justified and appended with 1's for the lower missing bits.
 For example, if the `nlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
 the 8-bit interrupt level are assumed to be all 1s.  Similarly,
-if `nlbits` {lt} 8, then the lower bits of the 8-bit interrupt level are
+if `nlbits` is equal to 0, then the bits of the 8-bit interrupt level are
 assumed to be all 1s. The following table shows how levels are encoded
 for these cases.
 
@@ -541,16 +540,16 @@ for these cases.
  "." bits are non-existent bits for level encoding, assumed to be 1
 ----
 
-If `nlbits` = 0, then all interrupts are treated as level 255.
+
 
 Examples of `cliccfg` settings:
 
  CLICINTCTLBITS nlbits clicintctl[i] interrupt levels
-       0         2      ........     255
-       1         2      l.......     127,255
-       2         2      ll......     63,127,191,255
-       3         3      lll.....     31,63,95,127,159,191,223,255
-       4         1      lppp....     127,255
+       0         8      ........     255
+       1         8      l.......     127,255
+       2         8      ll......     63,127,191,255
+       3         8      lll.....     31,63,95,127,159,191,223,255
+       4         0      pppp....     255
 
  "." bits are non-existent bits for level encoding, assumed to be 1
  "l" bits are available variable bits in level specification
@@ -558,8 +557,7 @@ Examples of `cliccfg` settings:
 
 ==== Specifying Interrupt Priority
 
-The least-significant bits in `clicintctl[__i__]` that are not
-configured to be part of the interrupt level are interrupt priority,
+If `cliccfg.nlbits` is set to 0, all the bits in `clicintctl[__i__]` represent interrupt priority,
 which are used to prioritize among interrupts pending-and-enabled at
 the same privilege mode and interrupt level. The highest-priority
 interrupt at a given privilege mode and interrupt level is taken first.
@@ -570,8 +568,8 @@ NOTE: The highest numbered interrupt wins in a tie (when
 privilege mode, level and priority are all identical). This is the same
 as the original basic interrupt mode, but different than the PLIC.
 
-Notice that the 8-bit interrupt level is used to determine preemption
-(for nesting interrupts). In contrast, the 8-bit interrupt priority
+Notice that when `cliccfg.nlbits` is set to 8, the 8-bit interrupt level is used to determine preemption
+(for nesting interrupts). In contrast, when `cliccfg.nlbits` is set to 0, the 8-bit interrupt priority
 does not affect preemption but is only used as a tie-breaker
 when there are multiple pending interrupts with the same interrupt level.
 
