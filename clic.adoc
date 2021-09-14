@@ -1227,7 +1227,8 @@ support both modes.
 
 The interrupt-level threshold ({intthresh}) is a new read-write CSR,
 which holds an 8-bit field (`th`) for the threshold level of the
-associated privilege mode. 
+associated privilege mode.  The `th` field is held in the least-significant
+8 bits of the CSR, and zero should be written to the upper bits.
 
 A typical usage of the interrupt-level threshold is for implementing
 critical sections. The current handler can temporarily raise its effective
