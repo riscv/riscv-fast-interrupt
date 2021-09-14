@@ -511,9 +511,15 @@ priv-modes nmbits clicintattr[i].mode  Interpretation
 
 ==== Specifying Interrupt Level
 
-The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits
-in `clicintctl[__i__]` are assigned to encode the interrupt level.
-Only 0 or 8 level bits currently supported (other values are reserved).
+The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits in
+`clicintctl[__i__]` are assigned to encode the interrupt level.
+
+Only 0 or 8 level bits are currently supported, with other values
+currently reserved.
+
+NOTE: In effect, this switches the control bits from being used only
+for level or only for priority.  The design supports a wider range of
+level-bit settings but this is not currently being standardized.
 
 Although the interrupt level is an 8-bit unsigned integer, the number
 of bits actually assigned or implemented can be fewer than 8.
@@ -522,6 +528,9 @@ As described above, the number of bits assigned is specified in
 from `cliccfg.nlbits` and a fixed parameter `clicinfo.CLICINTCTLBITS`
 (with value between 0 to 8) which specifies bits implemented for both
 interrupt level and priority.
+
+NOTE: The number of available level bits can be determined by subtracting
+the number of mode bits from CLICINTCTLBITS.
 
 If the actual bits assigned or implemented are fewer than 8, then these bits
 are left-justified and appended with 1's for the lower missing bits.
