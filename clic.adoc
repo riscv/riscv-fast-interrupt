@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 08/31/2021
+:revdate: 09/16/2021
 :revnumber: 0.9
 :revremark: This document is in the Development state. Assume anything can change.
 :url-riscv: http://riscv.org
@@ -111,6 +111,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+09/14/2021  pull #169 - nxti clarification
+09/14/2021  pull #168 - only 0 or 8 level bits currently supported (other values reserved)
+09/14/2021  issue #170 - clarified position of intthresh in CSR
 08/31/2021  issue #86/#165 - Update mnxti pseudo-code to handle side-effects correctly.
 08/31/2021  pull #164 - moved clicintattr.mode reset value to reset section of spec
 08/17/2021  pull #163 - spec clarification that clicintie is held in bit 0 of byte.
