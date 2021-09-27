@@ -325,7 +325,7 @@ M-mode CLIC memory map
   ###   0x00C0-0x07FF              reserved    ###
   ###   0x0800-0x0FFF              custom      ###
   
-  0x0000         1B          RW        cliccfg
+  0x0000         1B          RW        mcliccfg
   0x0004         4B          R         clicinfo
 
 
@@ -356,10 +356,11 @@ configured to be supervisor-accessible via the M-mode CLIC region.
 [source]
 ----
 Layout of Supervisor-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0002       1B          RW        scliccfg
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 User-mode CLIC regions only expose interrupts that have been
@@ -375,10 +376,10 @@ NOTE: Discovery mechanisms are still in development.
 [source]
 ----
 Layout of user-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0003       1B          RW        ucliccfg
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
