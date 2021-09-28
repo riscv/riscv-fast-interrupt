@@ -960,14 +960,13 @@ vectoring feature is not implemented (`cliccfg.nvbits` is `0`),
 all interrupts are non-vectored and behave the same.
 
 On the other hand, writing `1` to `clicintattr[__i__].shv`
-sets interrupt `i` to vectored. In this case, the processor
-switches to the handler's privilege mode and sets the hardware
-vectoring bit {inhv} in {cause}, then fetches an XLEN-bit handler
-address from the in-memory table whose base address (TBASE) is in
+sets interrupt `i` to vectored. When these interrupts are taken, the processor
+switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears mstatus.{ie}, and then fetches an XLEN-bit handler
+address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
 `TBASE+XLEN/8*exccode`.  If the fetch is successful, the processor
 clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause}.  The overall effect
+address, then clears the {inhv} bit in {cause} of the handler privilege mode.  The overall effect
 is:
 
      pc := M[TBASE + XLEN/8 * exccode] & ~1
@@ -999,19 +998,23 @@ function pointers.
 NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
 traps on fetches to the trap vector table.
 
-The inhv bits are only written by hardware during the table vector
-read operation. The inhv bits can be written by software, including
-when hardware vectoring is not in effect. The inhv bit has no effect
-except when returning from a trap using an {ret} instruction.  When
+The {inhv} bits are only written by hardware during the table vector
+read operation. The {inhv} bits can be written by software, including
+when hardware vectoring is not in effect. The {inhv} bit has no effect
+except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} should consider {epc} as an address instead of an instruction.
+
+When
 returning from an {ret} instruction, the {inhv} bit modifies behavior
-as follow:
+as follows:
 
 ----
-if (xinhv)
+if (xcause.inhv) //xcause here refers to the cause CSR of the previous privilege mode
     pc := M[xepc]
 else
     pc := xepc
 ----
+
+NOTE: Horizontal traps (same privilege level) are unrecoverable. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults on vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run) However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are written with the faulting address.
 
 Implementations might support only one of original basic or CLIC mode.
 If only basic mode is supported, writes to bit 1 are ignored and it is
@@ -1024,8 +1027,6 @@ For permissions-checking purposes, the memory access to retrieve the
 function pointer for vectoring is treated as a load with the privilege
 mode (also obeying MPRV and SUM bits) and interrupt level of the interrupt handler.
 If there is an access exception on the table load, both {tval} and {epc} holds the faulting address.
-
-NOTE: Horizontal traps (same privilege level) are unrecoverable. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults on vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run) However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are written with the faulting address.
 
 In CLIC mode, synchronous exception traps always jump to NBASE.
 
