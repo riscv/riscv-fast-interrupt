@@ -375,6 +375,7 @@ NOTE: Discovery mechanisms are still in development.
 [source]
 ----
 Layout of user-mode CLIC regions
+0x000+4*i   1B/input    R or RW   clicintip[i]
 0x001+4*i   1B/input    RW        clicintie[i]
 0x002+4*i   1B/input    RW        clicintattr[i]
 0x003+4*i   1B/input    RW        clicintctl[i]
