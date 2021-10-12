@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+10/12/2021  issue #177 - Reduced mandatory reset requirements
 09/29/2021  Added link to development states definition on top page
 09/14/2021  pull #169 - nxti clarification
 09/14/2021  pull #168 - only 0 or 8 level bits currently supported (other values reserved)
@@ -1318,23 +1319,24 @@ CLICXCSW       0-1                             Has xscratchcsw/xscratchcswl
 ----
 
 == CLIC Reset Behavior
-In general in RISC-V, mandatory reset state is minimized but 
-platforms or company policy might add additional reset requirements.  Since the 
-general privileged architecture states that mstatus.mie is reset to zero, 
-interrupts will not be enabled coming out of reset.  For an S-mode only 
-execution environment, the EEI should specify that status.sie is also reset 
-on entry. It is then responsibility of EEI implementation to ensure that 
-is true before beginning execution in S-mode. Similarly for other lower-mode 
-execution environments.
+
+In general in RISC-V, mandatory reset state is minimized but platform
+specifications or company policy might add additional reset
+requirements.  Since the general privileged architecture states that
+mstatus.mie is reset to zero, interrupts will not be enabled coming
+out of reset.
+
+NOTE: For an S-mode execution environment, the EEI should specify
+that status.sie is also reset on entry. It is then responsibility of
+the execution environment to ensure that is true before beginning execution
+in S-mode. Similarly for other lower-mode execution environments.
 
 === CLIC mandatory reset state
-`cliccfg.nmbits` and `cliccfg.nlbits` fields reset to 0 (i.e., all interrupts are M-mode at
-level 255).
-
-The `clicintattr.mode` field is reset to 11 (i.e., machine mode). 
 
 {intstatus}.{il} fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
+
+The reset behavior of other fields is platform-specific.
 
 == CLIC Interrupt Operation
 
