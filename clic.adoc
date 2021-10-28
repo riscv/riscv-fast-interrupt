@@ -1414,23 +1414,27 @@ honor `clicintie[__i__]` and {intthresh}. In other words, WFI ignores the
 actual value in the global interrupt-enable {status}.{ie} (by treating as 
 if {status}.{ie} were always enabled).
 
-WFI will always wake up if an interrupt has a higher privilege mode and 
-is locally enabled with `clicintie[__i__]`.
-
-If the current interrupt-level threshold ({intthresh}.`th`) is greater 
-than `0` (activated), enabled interrupts at current privilege mode with 
-interrupt level greater than the current threshold will wake up WFI, but 
-interrupts from lower privilege modes are usually masked/ignored (same 
-as the normal usage of qualifying preemption). On the other hand, 
-if the current interrupt-level threshold is `0` (not activated), this `0` 
-threshold will not mask any interrupt so any enabled interrupts will wake 
-up WFI including those from lower privilege modes.
-
-
-NOTE: WFI can be a NOP and not actually go to sleep. In addition, 
+NOTE: WFI can be a NOP and not actually go to sleep. In addition,
 implementations can wake up WFI for any other reason.
 
-NOTE: WFI should not be placed inside an interrupt handler.
+.WFI is required to wake up due to an interrupt i if interrupt i 
+* has a higher privilege mode than the current privilege mode and 
+* the interrupt priority reduction tree selects interrupt i as the maximum across all pending-and-enabled interrupts and 
+* the interrupt i level is not equal to 0.
+
+.WFI is required to wake up due to an interrupt i if interrupt i
+* has the same privilege mode as the current privilege mode and
+* the interrupt priority reduction tree selects interrupt i as the maximum across all pending-and-enabled interrupts and 
+* the interrupt i level is greater than max({intstatus}.{il}, {intthresh}.`th` )
+
+.WFI is required to wake up due to an interrupt i if interrupt i 
+* has a lower privilege mode than the current privilege mode and
+* the interrupt priority reduction tree selects interrupt i as the maximum across all pending-and-enabled interrupts and 
+* the interrupt i level is not equal to 0.
+
+NOTE: Interrupt i level is a function of CLICINTCTLBITS, `cliccfg.nlbits`, and `clicintctl[__i__]`.  If CLICINTCTLBITS is 8 and `cliccfg.nlbits` = 8, it is possible to set `clicintctl[__i__]` to 0.  Level 0 will behave as a locally disabled interrupt but can still mask lower-mode interrupts.  For example, if there is a non-zero level supervisor interrupt pending and a level-zero machine interrupt pending, the machine interrupt will be the global maximum across all pending-and-enabled interrupts but interrupt level 0 implies no interrupt. So programming `clicintctl[__i__]` to 0 should not be used to disable interrupts.  `clicintie[__i__]` should be used instead.
+
+NOTE: {intthresh} only applies to the current privilege mode.  There is a proposal to add a new WFMI instruction ("wait for mode's interrupts") to the privilege specification. This instruction only has to wakeup for pending-and-enabled interrupts in the current mode, and is not required to wakeup for pending-and-enabled interrupts in lower privilege modes. Pending-enabled higher privilege-mode interrupts will interrupt/wakeup as usual. 
 
 === Synchronous Exception Handling
 
