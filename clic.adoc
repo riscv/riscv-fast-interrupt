@@ -689,9 +689,9 @@ by hardware interrupt inputs and by software.  The bit is set by
 hardware after an edge of the appropriate polarity is observed on the
 interrupt input, as determined by the `clicintattr[i]` field.
 Hardware clears the associated interrupt pending bit when an
-interrupt is serviced in vectored mode.  Software writes can set or
-clear edge-triggered pending bits, either directly by writes to the
-memory-mapped register or by accessing the {nxti} CSR.
+interrupt is serviced in vectored mode.  See additional detail on hardware clearing in the {tvec} section. Software writes can set or
+clear edge-triggered pending bits directly by writes to the
+memory-mapped register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
 
 NOTE: To improve performance, when a vectored interrupt is selected
 and serviced, the hardware will automatically clear a corresponding
@@ -702,7 +702,7 @@ In contrast, when a non-vectored (common code) interrupt is selected,
 the hardware will not automatically clear an edge-triggered pending
 bit.
 
-NOTE: Software is expected to use an access to the {nxti} CSR to clear
+NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
 an edge-triggered pending bit in non-vectored mode.  Additional detail
 on this is described in the {nxti} section.
 
@@ -971,8 +971,8 @@ address with permissions corresponding to the handler's mode from the in-memory 
 {tvt}.  The trap handler function address is fetched from
 `TBASE+XLEN/8*exccode`.  If the fetch is successful, the processor
 clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause} of the handler privilege mode.  The overall effect
-is:
+address, then clears the {inhv} bit in {cause} of the handler privilege mode.  At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. 
+The overall effect is:
 
      pc := M[TBASE + XLEN/8 * exccode] & ~1
 
