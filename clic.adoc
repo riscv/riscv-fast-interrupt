@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+11/09/2021  issue #48 - indicate when edge-triggered interrupts are cleared
 11/09/2021  issue #179 - set interrupt bit during nxti access
 10/28/2021  issue #154 - inhv clarification
 10/28/2021  issue #31/#120 - wfi clarification
@@ -967,12 +968,12 @@ all interrupts are non-vectored and behave the same.
 
 On the other hand, writing `1` to `clicintattr[__i__].shv`
 sets interrupt `i` to vectored. When these interrupts are taken, the processor
-switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears mstatus.{ie}, and then fetches an XLEN-bit handler
+switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears {status}.{ie}.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The processor then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
 `TBASE+XLEN/8*exccode`.  If the fetch is successful, the processor
 clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause} of the handler privilege mode.  At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. 
+address, then clears the {inhv} bit in {cause} of the handler privilege mode.
 The overall effect is:
 
      pc := M[TBASE + XLEN/8 * exccode] & ~1
