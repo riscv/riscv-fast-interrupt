@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+11/09/2021  issue #179 - set interrupt bit during nxti access
 10/28/2021  issue #154 - inhv clarification
 10/28/2021  issue #31/#120 - wfi clarification
 10/12/2021  issue #177 - Reduced mandatory reset requirements
