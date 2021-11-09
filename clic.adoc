@@ -318,7 +318,7 @@ software on a particular hart from reaching the CLIC memory map.
 The base address of M-mode CLIC memory-mapped registers is specified
 at a new CLIC Base (`mclicbase`) Control and Status Register (CSR).
 
-NOTE: The `mclicbase` register is likely to be replaced by the general
+NOTE: The `mclicbase` register and `clicinfo` are likely to be replaced by the general
 discovery mechanism that is in development.
 
 The CLIC memory map supports up to 4096 total interrupt inputs.
@@ -638,6 +638,8 @@ CSR.
 === CLIC Information (`clicinfo`)
 
 This is a read-only register to show information useful for debugging.
+NOTE: `clicinfo` is likely to be replaced by the general
+discovery mechanism that is in development.
 
 [source]
 ----
@@ -1299,6 +1301,9 @@ Since the CLIC memory map must be aligned at a 4KiB boundary, the `mclicbase`
 CSR has its 12 least-significant bits hardwired to zero. It is used
 to inform software about the location of CLIC memory mappped registers.
 
+NOTE: The `mclicbase` register is likely to be replaced by the general
+discovery mechanism that is in development.
+
 == CLIC Parameters
 
 [source]
@@ -1323,6 +1328,8 @@ CLICXNXTI      0-1                             Has xnxti CSR implemented?
 CLICXCSW       0-1                             Has xscratchcsw/xscratchcswl
                                                  implemented?
 ----
+NOTE: These parameters are likely to be available by the general
+discovery mechanism that is in development.
 
 == CLIC Reset Behavior
 
