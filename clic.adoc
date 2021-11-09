@@ -1198,6 +1198,7 @@ selection and execution of interrupts using `{nxti}`.
      // Commit to servicing the available interrupt.
      mintstatus.mil = clic.level; // Update hart's interrupt level.
      mcause.exccode = clic.id;   // Update interrupt id in mcause.
+     mcause.interrupt = 1;       // Set interrupt bit in mcause.
      if (clicintattr[clic.id][1] == 1) { // If edge interrupt,
        clicintip[clic.id] = 0;           // clear edge interrupt
      }
