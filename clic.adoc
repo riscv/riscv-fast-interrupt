@@ -2471,6 +2471,230 @@ Interrupt map with PLIC recommendation:
 5: M-mode external (PLIC) interrupt
 6: external
 
+== CLIC Hypervisor Extension
+
+This is an initial proposal to discuss possible CLIC hypervisor support but will likely be as a future enchancement and not part of 1.0 ratification. 
+Possible hypervisor directions for fast interrupts for embedded include: 1) a minimal CLIC extension that adds HS mode as another privilege layer in the stack, so the hypervisor could optionally receive interrupts and optionally enable/hide interrupts from lower privilege modes. This would allow the 2-stage translation and other features of the hypervisor to be used in a CLIC-based system, but would not support sending interrupts directly to descheduled guest OS contexts (have to route via hypervisor interrupt). 2) support multiple descheduled CLIC contexts to which interrupts could be sent directly while they were sleeping, which would be a much bigger project. 3) add an extension to AIA (instead of working on CLIC) to somehow reduce interrupt latency using the standard hypervisor stack.
+ 
+To support the Hypervisor Extension, additional CSRs and memory mapped registers are provided.
+
+=== Changes to hstatus CSR
+
+hstatus.vgein is ignored in CLIC mode.
+
+=== Changes to Delegation hideleg CSR
+
+The hideleg CSR ceases to have effect in CLIC mode.  The hideleg CSR is still accessible and state bits retain their values when switching between CLIC and original basic interrupt modes.
+
+=== Changes to hvip/hip/hie/hgeip/hgeie/vsip/vsie CSRs
+
+The hie/hgeie/vsie CSRs appear hardwired to zero in CLIC mode, replaced by separate
+memory-mapped interrupt enables.
+
+The hvip/hip/vsip CSRs appear hardwired to zero in CLIC mode, replaced by
+separate memory-mapped interrupt pendings.
+
+Writes to hvip/hip/hie/hgeip/hgeie/vsip/vsie will be ignored and will not trap (i.e., no access faults).
+hvip/hip/hie/hgeip/hgeie/vsip/vsie always appear to be zero in CLIC mode.
+
+In systems that support both original basic and CLIC modes, the state bits in
+hvip/hip/hie/hgeip/hgeie/vsip/vsie retain their value when switching between modes.
+
+hstatus.vgein is not used.
+hideleg, hvip, hip, hie, hgeip, hgeie, vsip, vsie not used
+
+=== Changes to vscause
+Changes to vscause mirror changes to scause for CLIC mode.
+
+----
+vscause
+ Bits    Field        Description
+ XLEN-1 Interrupt     Interrupt=1, Exception=0
+    30  vsinhv         Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    29  (reserved)
+    28  vspp           Previous privilege mode, same as vsstatus.vspp
+    27  vspie          Previous interrupt enable, same as vsstatus.vspie
+ 26:24  (reserved)
+ 23:16  vspil[7:0]     Previous interrupt level
+ 15:12  (reserved)
+ 11:0   exccode[11:0] Exception/interrupt code
+----
+
+=== VS-mode CSR changes and additional VS-mode CSRs
+
+vstvec, vstvt, vsscratch, vsepc, vstval, vsnxti, vsintstatus, 
+vsintthresh, vsscratchsw, vsscratchcwl are added and behave as described in the CLIC CSRs chapter above.
+
+=== Changes to CLIC Interrupt Attribute (`clicintattr`)
+
+The privileged specification adds a virtualization mode, denoted V, that is useds in conjunction with the privilege mode to determine which of the 5 possible privilege modes (U-mode, HS-mode, M-mode, VU-mode, VS-mode) the hart is operating in.  To support identifying HS-mode interrupts vs. S-mode interrupts, a V field is added to clicintattr.
+
+[source]
+----
+  clicintattr register layout
+
+  Bits    Field 
+  7:6     mode
+  5       v
+  4:3     reserved (WPRI 0)
+  2:1     trig
+  0       shv
+----
+
+The 2-bit mode WARL field along with the 1-bit v field specifies which privilege mode this interrupt operates in.
+
+----
+ Encoding for RISC-V privilege levels (V, Nominal Privilege)
+
+        V P      Name                                  Abbreviation
+        1 00     Virtual user mode                     VU-mode
+        1 01     Virtual supervisor mode               VS-mode 
+        0 00     User mode                             U-mode
+        0 01     Hypervisor-extended supervisor mode   HS-mode
+        0 11     Machine mode                          M-mode
+
+
+----
+
+
+----
+priv-modes nmbits clicintattr[i].mode V  Interpretation
+       M      0       xx              x  M-mode interrupt
+
+     M/U      0       xx              x  M-mode interrupt
+     M/U      1       0x              x  U-mode interrupt
+     M/U      1       1x              x  M-mode interrupt
+
+   M/S/U      0       xx              x  M-mode interrupt
+   M/S/U      1       0x              x  S-mode interrupt
+   M/S/U      1       1x              x  M-mode interrupt
+   M/S/U      2       00              x  U-mode interrupt
+   M/S/U      2       01              x  S-mode interrupt
+   M/S/U      2       10              x  Reserved 
+   M/S/U      2       11              x  M-mode interrupt
+
+   M/S/U      3       00              0  Reserved (U-mode interrupt)
+   M/S/U      3       01              0  HS-mode interrupt
+   M/S/U      3       11              0  M-mode interrupt
+   M/S/U      3       00              1  VS-mode interrupt
+   M/S/U      3       01              1  Reserved (VU-mode interrupt)
+----
+
+Note: The Hypervisor extension of the RISC-V priviledged specification does not currently consider the possibility of U-mode or VU-mode interrupts. 
+
+=== VS-mode CLIC Memory-Mapped Registers
+
+VS-mode CLIC Memory-Mapped Registers behave differently than the m/s/u CLIC Memory-Mapped Registers and cannot be implemented as an alias of the m/s/u physical CLIC memory-mapped registers to a different address range.   
+
+M/S/U-mode CLIC Memory-Mapped Registers are not visible to VS-mode and appear hardwired to zero.
+
+An implementation defined number of VS-mode Memory-Mapped registers are available.   
+
+VS-translation memory mapped registers are visible to M/HS-mode and appear as hard-wired zeros in VS/U-modes.
+
+VS-mode CLIC-memory mapped registers are visible to M/HS/VS-modes and appear as hard-wired zeros in U-mode.  Not present VS-mode registers appear hardwired to zero.
+
+The base address of the VS-translation register region is specified by the platform specification.
+
+[source]
+----
+Layout of CLIC VS-translation register region in M/HS-mode
+0x000+8*i       1B/input    RW   vsclictrans[i]
+...
+----
+
+[source]
+----
+  vsclictrans register layout
+
+  Bits    Field
+  63:46   reserved (WPRI 0)
+  45:32   vmid[13:0]
+  31:24   vsclicintctrl[7:0]
+  23      vsshv     
+  22      hgeie
+  21      vsie
+  20      vsip
+  19:10   vscause_exccode
+   9:0    vgein
+----
+
+vmid specifies the virtual machine identifier this vs-mode interrupt is associated with.  The number and behavior of implemented vmid bits matches hgatp.vmid bit field behavior as described in the priviledge specification.
+
+vsclicintctrl specifies interrupt level and interrupt priority of vs-mode interrupt.
+
+vsshv is used for selective hardware vectoring.
+
+hgeie and vgein are used to pass s-mode interrupts directly to vs-mode. When mstatus.MPV is 1, vmid matches hgatp.vmid, the exccode of a pending s-mode interrupt matches vgein, and hgeie is 1, vsclicintip[vscause_exccode] is asserted.
+
+vsie is the individual vs-mode interrupt enable bit.
+
+vsip is the individual vs-mode interrupt pending bit.  When hgeie is 1, vsip is read-only.  When hgeie is 0, vsip is a read-write register bit that can be updated both by hardware clearing and by software writes.
+
+vscause_exccode is used to translate an s-mode interrupt to a different virtual address and exccode value. 
+
+In VS-mode, the address of vsclicintip/ie/attr/ctl registers is based on the vsclictrans.vscause_exccode value when vsclictrans.vmid matches hgatp.vmid.  
+The VS-mode base address of the VS-mode CLIC region is specified by the platform specification.
+
+[source]
+i = vsclictrans.vscause_exccode
+----
+Layout of VS-mode CLIC regions in VS-mode
+0x000+4*i   1B/input    R or RW   vsclicintip[i]
+0x001+4*i   1B/input    RW        vsclicintie[i]
+0x002+4*i   1B/input    RW        vsclicintattr[i]
+0x003+4*i   1B/input    RW        vsclicintctl[i]
+...
+----
+
+The pending bit of vsclicintip is located in bit 0 of the byte and is an alias of vsclictrans.vsip.  It is read-only when vsclictrans.hgeie is 1 and is RW when vsclictrans.hgeie is 0.
+
+The enable bit of vsclicintie is located in bit 0 of the byte and is an alias of vsclictrans.vsie.
+
+[source]
+----
+  vsclicintattr register layout
+
+  Bits    Field 
+  7:6     mode - hardcoded to 01 - supervisor mode
+  5:3     reserved (WPRI 0)
+  2       hardcoded to positive-edge
+  1       edge (~vsclicint.hgeie)
+  0       shv    RW
+----
+
+vsclicintattr.edge is hardcoded to 1 when vsclictrans.hgeie is 0 indicating that software or hardware clearing needs to clear the pending interrupt.  
+vsclicintattr.edge is hardcoded to 0 when vsclictrans.hgeie is 1 indicating that software needs clear the pending interrupt elsewhere.
+
+vsclicintattr.shv is used for selective hardware vectoring.
+
+vsclicintctl specifies vs-mode interrupt level and interrupt priority of vs-mode interrupts.
+
+=== CLIC Hypervisor Interrupt Operation
+This section describes the operation of CLIC hypervisor interrupts.
+
+==== Hypervisor Interrupt Overview
+As per the Hypervisor extension in the RISC-V priviledged specification, VS-mode interrupts are globally disabled when executing in U-mode.
+
+VS-mode interrupts with vsclictrans.vmid matching hgatp.vmid are routed to a separate VS-mode priority encoding tree that uses vsclicintattr.mode, vsclicintctrl, vsclictrans.vscause_exccode to determine priority.  This allows VS-mode to control VS-mode priority.
+
+VS-mode interrupts with vsclictrans.vmid not matching hgatp.vmid or VMIDLEN = 0 are treated as standard S/HS-mode interrupts with the priority determined by sclicintattr.mode,sclicintctrl, and interrupt number i.  This routes descheduled CLIC context interrupts to HS-mode with a priority controlled by HS-mode. 
+
+==== Context switching
+vsclicint.vmid reduces the number of CLIC memory mapped registers that the hypervisor needs program when changing virtual machines.  Without this field, on each context switch the hypervisor would need to save and restore all implemented vsclictrans registers.
+
+These VS CSRs need to be saved and restored on context switches.
+vsstatus
+vstvec
+vsscratch
+vsepc
+vscause
+vstval
+vsatp
+vstvt, 
+vsintstatus, 
+vsintthresh
+
 [appendix]
 == Appendix
 
