@@ -924,24 +924,34 @@ existing {tvec} WARL register, where {tvec}.`mode` (the least-significant two bi
 {tvec} is constrained to be aligned on a 64-byte or larger
 power-of-two boundary.
 
+[source]
+----
+  xtvec register layout
+
+  Bits          Field 
+  MXLEN-1:6     base (WARL)
+  5:0           mode (WARL)
+----
+
 NOTE: Although future CLIC versions may allow privileges to have different 
 {tvec}.`mode` settings, for now all privilege modes must run in either CLIC mode 
 or all privilege modes must run in non-CLIC mode.  In the current spec, if both CLIC and CLINT are supported, then bits[5:2] must be zero for both (i.e., the original basic interrupt model *tvec must also be 64-byte aligned). Other settings of bits[5:2] are reserved. Bit 1 of {tvec} is controlled by bit 1 of mtvec (i.e., lower privilege modes see this bit as read-only. Bit 0 and bits[XLEN-1:6] of lower-privilege mode's {tvec} are unaffected by changes to corresponding bits of mtvec. These constraints might change if there are future additions to the CLIC or other new interrupt controller specs.
 
 ----
- xtvec   Action on Interrupt
- 000000  pc := OBASE                              (original non-vectored basic mode)
- 000001  pc := OBASE + 4 * exccode                (original vectored basic mode)
+ (xtvec[5:0])  
+ mode        Action on Interrupt
+ 000000      pc := OBASE                              (original non-vectored basic mode)
+ 000001      pc := OBASE + 4 * exccode                (original vectored basic mode)
 
- 00001?                                           (CLIC mode)
-         (non-vectored)
-         pc := NBASE                                    if clicintattr[i].shv = 0
-                                                        || if cliccfg.nvbits = 0
-                                                           (vector not supported)     
-         (vectored)                                                    
-         pc := M[TBASE + XLEN/8 * exccode)] & ~1        if clicintattr[i].shv = 1
+ 00001?                                               (CLIC mode)
+             (non-vectored)
+             pc := NBASE                                    if clicintattr[i].shv = 0
+                                                            || if cliccfg.nvbits = 0
+                                                               (vector not supported)     
+             (vectored)                                                    
+             pc := M[TBASE + XLEN/8 * exccode)] & ~1        if clicintattr[i].shv = 1
                                                              
- xxxx1?  (xxxx!=0000)                             Reserved
+ xxxx1?      (xxxx!=0000)                             Reserved
 
  OBASE = xtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
  NBASE = xtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
