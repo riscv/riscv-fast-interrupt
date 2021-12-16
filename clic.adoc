@@ -34,7 +34,7 @@
 
 
 [[riscv-doc-template]]
-= RISC-V Core-Local Interrupt Controller (CLIC)
+= "Smclic" Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extension 
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
@@ -166,7 +166,7 @@ Date           	Description
 
 == Background and Motivation
 
-The Core-Local Interrupt Controller (CLIC) is designed to provide
+The "Smclic" Core-Local Interrupt Controller (CLIC) Privileged Architecture Extension is designed to provide
 low-latency, vectored, pre-emptive
 interrupts for RISC-V systems.  When activated the CLIC subsumes and
 replaces the original RISC-V basic local interrupt scheme.  The CLIC
