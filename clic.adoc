@@ -2576,8 +2576,8 @@ priv-modes nmbits clicintattr[i].mode V  Interpretation
    M/S/U      3       00              0  Reserved (U-mode interrupt)
    M/S/U      3       01              0  HS-mode interrupt
    M/S/U      3       11              0  M-mode interrupt
-   M/S/U      3       00              1  VS-mode interrupt
-   M/S/U      3       01              1  Reserved (VU-mode interrupt)
+   M/S/U      3       00              1  Reserved (VU-mode interrupt)
+   M/S/U      3       01              1  VS-mode interrupt
 ----
 
 Note: The Hypervisor extension of the RISC-V priviledged specification does not currently consider the possibility of U-mode or VU-mode interrupts. 
@@ -2599,7 +2599,7 @@ The base address of the VS-translation register region is specified by the platf
 [source]
 ----
 Layout of CLIC VS-translation register region in M/HS-mode
-0x000+8*i       1B/input    RW   vsclictrans[i]
+0x000+8*i       8B/input    RW   vsclictrans[i]
 ...
 ----
 
@@ -2681,7 +2681,7 @@ VS-mode interrupts with vsclictrans.vmid matching hgatp.vmid are routed to a sep
 VS-mode interrupts with vsclictrans.vmid not matching hgatp.vmid or VMIDLEN = 0 are treated as standard S/HS-mode interrupts with the priority determined by sclicintattr.mode,sclicintctrl, and interrupt number i.  This routes descheduled CLIC context interrupts to HS-mode with a priority controlled by HS-mode. 
 
 ==== Context switching
-vsclicint.vmid reduces the number of CLIC memory mapped registers that the hypervisor needs program when changing virtual machines.  Without this field, on each context switch the hypervisor would need to save and restore all implemented vsclictrans registers.
+vsclictrans.vmid reduces the number of CLIC memory mapped registers that the hypervisor needs program when changing virtual machines.  Without this field, on each context switch the hypervisor would need to save and restore all implemented vsclictrans registers.
 
 These VS CSRs need to be saved and restored on context switches.
 vsstatus
