@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 11/9/2021
+:revdate: 12/21/2021
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -111,6 +111,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+12/21/2021  issue #109 - add smclic arch string to spec 
+12/21/2021  issue #180 - change processor references to hart
 11/09/2021  issue #48 - indicate when edge-triggered interrupts are cleared
 11/09/2021  issue #179 - set interrupt bit during nxti access
 10/28/2021  issue #154 - inhv clarification
