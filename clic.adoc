@@ -174,7 +174,7 @@ has a base design that requires minimal hardware, but supports
 additional extensions to provide hardware acceleration.  The goal of
 the CLIC is to provide support for a variety of software ABI
 and interrupt models, without complex hardware that can impact
-high-performance processor implementations.
+high-performance implementations.
 
 The CLIC also supports a new Selective Hardware Vectoring feature that
 allow users to optimize each interrupt for either faster response or
@@ -253,7 +253,7 @@ Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs
 
 This section gives an overview for the Core-Local Interrupt
 Controller (CLIC) that receives interrupt signals and presents the next
-interrupt to be processed to the processor.
+interrupt to be processed by the hart.
 
 The CLIC supports up to 4096 interrupt inputs per hart.
 Each interrupt input _i_ has four 8-bit memory-mapped control
@@ -420,7 +420,7 @@ zeros in the U-mode address range.
 The intent is that only the necessary address regions are made accessible
 to each privilege mode using the system's standard memory protection
 mechanisms. This can be done either using PMPs in microcontroller
-systems, or page tables (and/or PMPs) in processors with virtual
+systems, or page tables (and/or PMPs) in harts with virtual
 memory support. 
 
 The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
@@ -961,7 +961,7 @@ or all privilege modes must run in non-CLIC mode.
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
 sets interrupt `i` to non-vectored,
-where the processor jumps to the
+where the hart jumps to the
 trap handler address held in the upper XLEN-6 bits of
 {tvec} for all exceptions and interrupts in privilege mode
 `**__x__**`. Similarly, if the selective hardware
@@ -969,11 +969,11 @@ vectoring feature is not implemented (`cliccfg.nvbits` is `0`),
 all interrupts are non-vectored and behave the same.
 
 On the other hand, writing `1` to `clicintattr[__i__].shv`
-sets interrupt `i` to vectored. When these interrupts are taken, the processor
-switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears {status}.{ie}.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The processor then fetches an XLEN-bit handler
+sets interrupt `i` to vectored. When these interrupts are taken, the hart
+switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears {status}.{ie}.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
-`TBASE+XLEN/8*exccode`.  If the fetch is successful, the processor
+`TBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler privilege mode.
 The overall effect is:
@@ -1358,8 +1358,7 @@ This section describes the operation of CLIC interrupts.
 === General Interrupt Overview
 
 At any time, a hart is running in some privilege mode with some
-interrupt level.  The hart's privilege mode is held internally in the
-processor but is not visible to software running on a hart (to avoid
+interrupt level.  The hart's privilege mode is held internally but is not visible to software running on a hart (to avoid
 virtualization holes), but the current interrupt level is made visible
 in the {intstatus} register.  
 
@@ -1780,7 +1779,7 @@ with a lower or equal interrupt level.
 * The II has been superceded by a higher-level SHV interrupt.  In this
 case, the {il} and `exccode` are not updated, and 0 is returned by
 {nxti}.  Once interrupts are reenabled for the following instruction,
-the processor will preempt the current handler and execute the vectored
+the hart will preempt the current handler and execute the vectored
 interrupt at a higher interrupt level using the function pointer
 stored in the vector table.
 
@@ -1890,7 +1889,7 @@ There are several cases to consider for the worst-case latency for a
 C-ABI higher-level interrupt handler that preempts lower-level code.
 
 If an interrupt arrives while interrupts are enabled, either inside or
-outside of a current handler, the processor will jump directly to
+outside of a current handler, the hart will jump directly to
 `irq_enter` at the new interrupt level.  The system must flush the
 execution pipeline and then execute 18 instructions, the last of which
 is the `jalr` that calls the handler function.  These 18 instructions
@@ -1921,12 +1920,12 @@ a preempting C-ABI interrupt handler.
 
 For many embedded systems, after initialization, essentially all code
 is run in response to an interrupt, interrupt levels are used to
-prioritize execution of different tasks, and the processor should
+prioritize execution of different tasks, and the hart should
 sleep inbetween interrupt events to save energy.
 
 The following code can be used as the background code that runs at
 interrupt level 0 and which when there is no active work to do, puts
-the processor to sleep with no active context, waiting for an
+the hart to sleep with no active context, waiting for an
 interrupt using the `wfi` instruction.  The code is entered at the
 `enter_loop` location and never returns directly.
 
@@ -1935,7 +1934,7 @@ interrupt using the `wfi` instruction.  The code is entered at the
     # Source code for interrupt-driven model background code.
 sleep:
     csrrci x0, mstatus, MIE # Disable interrupts.  <1>
-    wfi                     # Processor waits for next interrupt event.
+    wfi                     # Hart waits for next interrupt event.
     csrrsi a0, mnxti, MIE   # Gather interrupt details, and enable interrupts. <2>
     beqz a0, sleep          # Go back to sleep if no interrupt (will be preempted if SHV). <3>
 
@@ -1958,10 +1957,10 @@ enter_sleep: <5>
     #--- Interrupts enabled
 ----
 
-<1> The `sleep` loop is used to stall the processor while waiting for
+<1> The `sleep` loop is used to stall the hart while waiting for
 work and is always entered at interrupt level 0.  Interrupts are
 disabled, then a `wfi` is executed.  The `wfi` will stall the
-processor until some event occurs.  When an event, including an
+hart until some event occurs.  When an event, including an
 interrupt occurs, the `wfi` retires.  Because interrupts are disabled,
 the hart does not jump to an interrupt handler but instead executes
 the next instruction, avoiding context save/restore overhead.
