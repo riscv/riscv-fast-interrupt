@@ -1081,6 +1081,8 @@ The `mcause.mpp` and `mcause.mpie` fields mirror the `mstatus.mpp` and
 `mstatus.mpie` fields, and are aliased into `mcause` to reduce context
 save/restore code.
 
+Note: In a straightforward implementation, reading or writing mstatus fields mpp/mpie in mcause is equivalent to reading or writing the homonymous field in mstatus.
+
 If the hart is currently running at some privilege mode (`pp`) at some
 interrupt level (`pil`) and an enabled interrupt becomes pending at
 any interrupt level in a higher privilege mode or if an interrupt at a
