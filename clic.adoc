@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 12/21/2021
+:revdate: 1/4/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -111,6 +111,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+01/04/2022  issue #45 - remove new alignment constraint on CLINT mode when CLIC added
+01/04/2022  issue #188 - clarification that writes to xcause affect xstatus
 12/21/2021  issue #109 - add smclic arch string to spec 
 12/21/2021  issue #180 - change processor references to hart
 11/09/2021  issue #48 - indicate when edge-triggered interrupts are cleared
@@ -944,17 +946,27 @@ power-of-two boundary.
   5:0           mode (WARL)
 ----
 
-NOTE: Although future CLIC versions may allow privileges to have different 
-{tvec}.`mode` settings, for now all privilege modes must run in either CLIC mode 
-or all privilege modes must run in non-CLIC mode.  In the current spec, if both CLIC and CLINT are supported, then bits[5:2] must be zero for both (i.e., the original basic interrupt model *tvec must also be 64-byte aligned). Other settings of bits[5:2] are reserved. Bit 1 of {tvec} is controlled by bit 1 of mtvec (i.e., lower privilege modes see this bit as read-only. Bit 0 and bits[XLEN-1:6] of lower-privilege mode's {tvec} are unaffected by changes to corresponding bits of mtvec. These constraints might change if there are future additions to the CLIC or other new interrupt controller specs.
+NOTE: Systems implementing both CLIC and CLINT mode may, but are not
+required to, limit alignment of `mtvec` to 64-byte boundaries in both
+modes.
+
+NOTE: Although future CLIC versions may allow privileges to have
+different {tvec}.`mode` settings, for now all privilege modes must run
+in either CLIC mode or all privilege modes must run in non-CLIC mode.
+Bit 1 of {tvec} is controlled by bit 1 of mtvec (i.e., lower privilege
+modes see this bit as read-only. Bit 0 and bits[XLEN-1:6] of
+lower-privilege mode's {tvec} are unaffected by changes to
+corresponding bits of mtvec. These constraints might change if there
+are future additions to the CLIC or other new interrupt controller
+specs.
 
 ----
  (xtvec[5:0])  
  mode        Action on Interrupt
- 000000      pc := OBASE                              (original non-vectored basic mode)
- 000001      pc := OBASE + 4 * exccode                (original vectored basic mode)
+ aaaa00      pc := OBASE                       (original non-vectored basic mode)
+ aaaa01      pc := OBASE + 4 * exccode         (original vectored basic mode)
 
- 00001?                                               (CLIC mode)
+ 00001?                                        (CLIC mode)
              (non-vectored)
              pc := NBASE                                    if clicintattr[i].shv = 0
                                                             || if cliccfg.nvbits = 0
