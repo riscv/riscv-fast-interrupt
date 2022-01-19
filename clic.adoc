@@ -1045,6 +1045,7 @@ if (xcause.inhv) //xcause here refers to the cause CSR of the previous privilege
 else
     pc := xepc
 ----
+NOTE: The inhv bit when set at xRET informs hardware to repeat the table load using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
 
 NOTE: Horizontal traps (same privilege level) are unrecoverable. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults on vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run) However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are written with the faulting address.
 
