@@ -1445,31 +1445,29 @@ being taken.
 === CLIC events that cause the hart to resume execution after Wait for Interrupt (WFI) Instruction
 As described in the privileged specification, the Wait for Interrupt instruction (WFI) provides a hint to the implementation that the current hart can be stalled.  The hart may optionally resume execution anytime.  This section describes CLIC events that cause the hart to resume execution. 
 
-As in the privileged specification, if a CLIC event that causes an interrupt to be taken (events described in the General Interrupt Overview section) while the hart is stalled, the interrupt
+As in the privileged specification, if an interrupt is taken while the hart is stalled, the interrupt
 trap will be taken on the following instruction, i.e., execution resumes in the trap handler and mepc
-= pc + 4.  If the CLIC event that causes the hart to resume execution does not cause an interrupt to be taken,
+= pc + 4.  If the event that causes the hart to resume execution does not cause an interrupt to be taken,
 execution will resume at pc + 4.    
 
-In CLIC, similar to original mode, required execution resumption (wake up) after a Wait for Interrupt instruction (WFI) is
+In CLIC, similar to original mode, CLIC events causing the hart to resume execution after a Wait for Interrupt instruction (WFI) are
 unaffected by the global interrupt-enable bits in {status}.{ie} but should
-honor `clicintie[__i__]` and {intthresh}. In other words, WFI ignores the 
-actual value in the global interrupt-enable {status}.{ie} (by treating as 
-if {status}.{ie} were always enabled).
+honor `clicintie[__i__]` and {intthresh}. 
 
 NOTE: WFI can be a NOP and not actually go to sleep. In addition,
 implementations can wake up WFI for any other reason.
 
-.WFI is required to wake up due to a pending-and-enabled interrupt _i_ if interrupt _i_
+.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
 * has a higher privilege mode than the current privilege mode and 
 * the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and 
 * the interrupt _i_ level is not equal to 0.
 
-.WFI is required to wake up due to a pending-and-enabled interrupt _i_ if interrupt _i_
+.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
 * has the same privilege mode as the current privilege mode and
 * the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and 
 * the interrupt _i_ level is greater than max({intstatus}.{il}, {intthresh}.`th` )
 
-.WFI is required to wake up due to a pending-and-enabled interrupt _i_ if interrupt _i_ 
+.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_ 
 * has a lower privilege mode than the current privilege mode and
 * the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and 
 * the interrupt _i_ level is not equal to 0.
