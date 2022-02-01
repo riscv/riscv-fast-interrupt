@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+02/01/2022  issue #193 - xret/inhv text clarification
 01/04/2022  issue #45 - remove new alignment constraint on CLINT mode when CLIC added
 01/04/2022  issue #188 - clarification that writes to xcause affect xstatus
 12/21/2021  issue #109 - add smclic arch string to spec 
