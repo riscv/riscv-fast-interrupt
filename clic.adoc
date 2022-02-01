@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 1/4/2022
+:revdate: 2/1/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -1040,7 +1040,7 @@ as follows:
 
 If the {inhv} bit of the previous privilege mode is set, the hart resumes the trap handler memory access to retrieve the
 function pointer for vectoring with permissions corresponding to the previous privilege mode.
-The trap handler function address is fetched from the current privilege mode
+The trap handler function address is fetched from the current privilege mode's
 `xepc`.  If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler privilege mode.
