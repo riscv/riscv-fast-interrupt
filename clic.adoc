@@ -1290,7 +1290,7 @@ support both modes.
 === New Interrupt-Level Threshold ({intthresh}) CSRs
 
 The interrupt-level threshold ({intthresh}) is a new read-write CSR,
-which holds an 8-bit field (`th`) for the threshold level of the
+which holds an 8-bit WARL field (`th`) for the threshold level of the
 associated privilege mode.  The `th` field is held in the least-significant
 8 bits of the CSR, and zero should be written to the upper bits.
 
