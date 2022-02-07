@@ -195,15 +195,14 @@ or HIC).
 The existing RISC-V interrupt system already supports interrupt
 preemption, but only based on privilege mode.  At any point in time, a
 RISC-V hart is running with a current privilege mode.  The global
-interrupt enable bits, MIE/SIE/UIE, held in the
-`mstatus`/`sstatus`/`ustatus` registers respectively, control whether
+interrupt enable bits, MIE/SIE, held in the
+`mstatus`/`sstatus` registers respectively, control whether
 interrupts can be taken for the current or higher privilege modes;
 interrupts are always disabled for lower-privileged modes.  Any
 enabled interrupt from a higher-privilege mode will stop execution at
 the current privilege mode, and enter the handler at the higher
 privilege mode.  Each privilege mode has its own interrupt state
-registers (`mepc`/`mcause` for M-mode, `sepc`/`scause` for S-mode,
-`uepc`/`ucause` for U-mode) to support preemption, or
+registers (`mepc`/`mcause` for M-mode, `sepc`/`scause` for S-mode) to support preemption, or
 generically {epc} for privilege mode ``*_x_*``.  Preemption by a
 higher-privilege-mode interrupt also pushes current privilege mode and
 interrupt enable status onto the {pp} and {pie}
@@ -229,7 +228,7 @@ in the low two bits of mtvec.
 The standard RISC-V platform-level interrupt controller (PLIC)
 provides centralized interrupt prioritization and routing for shared
 platform-level interrupts, and sends only a single external interrupt
-signal per privilege mode (`meip`/`seip`/`ueip`) to each hart.
+signal per privilege mode (`meip`/`seip`) to each hart.
 
 The CLIC complements the PLIC.  Smaller single-core systems might have
 only a CLIC, while multicore systems might have a CLIC per-core and a
@@ -297,9 +296,9 @@ The CLIC subsumes the functionality of the basic local interrupts
 previously provided in bits 16 and up of {ip}/{ie}, so these are no
 longer visible in {ip}/{ie}.
 
-The existing timer (`mtip`/`stip`/`utip`), software
-(`msip`/`ssip`/`usip`), and external interrupt inputs
-(`meip`/`seip`/`ueip`) are treated as additional local interrupt
+The existing timer (`mtip`/`stip`), software
+(`msip`/`ssip`), and external interrupt inputs
+(`meip`/`seip`) are treated as additional local interrupt
 sources, where the privilege mode, interrupt level, and priority can
 be altered using memory-mapped `clicintattr[__i__]` and
 `clicintctl[__i__]` registers.
@@ -373,24 +372,12 @@ Layout of Supervisor-mode CLIC regions
 0x003+4*i   1B/input    RW        clicintctl[i]
 ----
 
-User-mode CLIC regions only expose interrupts that have been
-configured to be user-accessible via the M-mode CLIC region.  
-
-The location of the S-mode and U-mode CLIC regions are independent of
+The location of the S-mode CLIC region is independent of
 the location of the M-mode CLIC region, and their base addresses are
 specified by the platform specification and made visible via the
 discovery mechanism for that platform.
 
 NOTE: Discovery mechanisms are still in development.
-
-[source]
-----
-Layout of user-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
-----
 
 A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
 
@@ -428,8 +415,8 @@ mechanisms. This can be done either using PMPs in microcontroller
 systems, or page tables (and/or PMPs) in harts with virtual
 memory support. 
 
-The CLIC specification does not dictate how CLIC memory-mapped registers are split between M/S/U regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
-For example, it may desired that the bases of each S/U-mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
+The CLIC specification does not dictate how CLIC memory-mapped registers are split between privilege mode regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
+For example, it may desired that the bases of each privilege mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
 
 === CLIC Configuration (`cliccfg`)
 
@@ -475,22 +462,12 @@ need any extra bit to represent the supported privilege-modes. In this case,
 no physically implemented bits are needed in the `clicintattr.mode`
 and thus `cliccfg.nmbits` is 0 (i.e., `cliccfg.nmbits` can be hardwired to 0).
 
-In M/U-mode systems with N-extension user-level interrupts support, `cliccfg.nmbits` can be
-set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
-M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
-the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
-indicates that interrupt intput is taken in M-mode,
-while a value of 0 indicates that interrupt is taken in U-mode.
-
-Similarly, in systems that support all M/S/U-mode interrupts, `cliccfg.nmbits`
-can be set to 0, 1, or 2 bits to represent privilege-modes.
+Similarly, in systems that support M/S interrupts, `cliccfg.nmbits`
+can be set to 0 or 1 bits to represent privilege-modes.
 `cliccfg.nmbits` = 0 indicates that all local interrupts are taken in
 M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
-(1) and S-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
-each `clicintattr[__i__].mode` register encode the interrupt's privilege
-mode using the same encoding as the `mstatus.mpp` field.
-
-NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. Bare S-mode has already been ratified as part of privileged architecture. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. The proposed N-extension would also add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
+(1) and S-mode (0).  
+NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. 
 
 ----
  Encoding for RISC-V privilege levels (mstatus.mpp)
@@ -508,19 +485,9 @@ NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hard
 priv-modes nmbits clicintattr[i].mode  Interpretation
        M      0       xx               M-mode interrupt
 
-     M/U      0       xx               M-mode interrupt
-     M/U      1       0x               U-mode interrupt
-     M/U      1       1x               M-mode interrupt
-
-   M/S/U      0       xx               M-mode interrupt
-   M/S/U      1       0x               S-mode interrupt
-   M/S/U      1       1x               M-mode interrupt
-   M/S/U      2       00               U-mode interrupt
-   M/S/U      2       01               S-mode interrupt
-   M/S/U      2       10               Reserved (or extended S-mode)
-   M/S/U      2       11               M-mode interrupt
-
-   M/S/U      3       xx               Reserved
+     M/S      0       xx               M-mode interrupt
+     M/S      1       0x               S-mode interrupt
+     M/S      1       1x               M-mode interrupt
 ----
 
 ==== Specifying Interrupt Level
@@ -781,8 +748,7 @@ types are supported. In this case, these bits become hard-wired to fixed
 values (WARL).
 
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
-operates in. This field uses the same encoding as the `mstatus.mpp`
-(11: machine mode, 01: supervisor mode, 00 user mode). The valid length of
+operates in. This field uses the same encoding as the `mstatus.mpp`. The valid length of
 this field can be programmed with `cliccfg.nmbits`.
 
 NOTE: For security purpose, the `mode` field can only be set to a privilege level that is equal to or lower than the currently running privilege level.
@@ -1151,17 +1117,6 @@ from user mode.
  23:16  spil[7:0]     Previous interrupt level
  15:12  (reserved)
  11:0   exccode[11:0] Exception/interrupt code
-
- ucause
- Bits    Field       Description
- XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  uinhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
- 29:28  (reserved)
-    27  upie         Previous interrupt enable, same as ustatus.upie
- 26:24  (reserved)
- 23:16  upil[7:0]    Previous interrupt level
- 15:12  (reserved)
- 11:0  exccode[11:0] Exception/interrupt code
 ----
 
 For exceptions, in CLIC mode, the `mcause` has the new CLIC format.
@@ -1270,19 +1225,15 @@ primary reason to expose these fields is to support debug.
  31:24 mil
  23:16 (reserved) # To follow pattern of others.
  15: 8 sil
-  7: 0 uil
+  7: 0 (reserved)
 
-Corresponding supervisor mode, `sintstatus`, and user, `uintstatus`,
-provide restricted views of mintstatus.
+Corresponding supervisor mode, `sintstatus`,
+provides a restricted views of mintstatus.
 
  sintstatus fields
  31:16 (reserved)
  15: 8 sil
-  7: 0 uil
-
- uintstatus fields
- 31: 8 (reserved)
-  7: 0 uil
+  7: 0 (reserved)
 
 The {intstatus} registers are accessible in original basic mode for system that
 support both modes.
@@ -1343,8 +1294,6 @@ discovery mechanism that is in development.
 ----
 Name           Value Range                     Description
 CLICANDBASIC   0-1                             Implements original basic mode also?
-CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U,
-                                                                       3=M/S/U
 CLICLEVELS     2-256                           Number of interrupt levels including 0
 NUM_INTERRUPT  4-4096                          Always has MSIP, MTIP, MEIP, CSIP
 CLICMAXID      12-4095                         Largest interrupt ID
@@ -2458,17 +2407,17 @@ CLIC.
 ----
 ID  Interrupt   Note
 
- 0  usip        User software Interrupt
+ 0  reserved    
  1  ssip        Supervisor software Interrupt
  2  reserved
  3  msip        Machine software interrupt
 
- 4  utip        User timer interrupt
+ 4  reserved    
  5  stip        Supervisor timer interrupt
  6  reserved
  7  mtip        Machine timer interrupt
 
- 8  ueip        User external (PLIC) interrupt
+ 8  reserved    
  9  seip        Supervisor external (PLIC) interrupt
 10  reserved
 11  meip        Machine external (PLIC) interrupt
@@ -2482,12 +2431,12 @@ ID  Interrupt   Note
 ----
 
 M-mode only or M/U mode interrupt map recommendation:
-(in M-only or M/U system without N extension)
+(in M-only or M/U system only supporting m-mode interrupts)
 0: M-mode software interrupt
 1: M-mode timer interrupt
 2+: external (including legacy)
 
-M-mode interrupt map in M/S/U system without N extension recommendation:
+M-mode interrupt map in M/S/U system only supporting m-mode and s-mode interrupts recommendation:
 0: S-mode software interrupt
 1: S-mode timer interrupt
 2: M-mode software interrupt
@@ -2502,6 +2451,173 @@ Interrupt map with PLIC recommendation:
 4: M-mode timer interrupt
 5: M-mode external (PLIC) interrupt
 6: external
+
+== User-Level Interrupts
+Software implementations that spend significant time processing interrupts may wish to supported untrusted interrupt handling as a way for example of limiting the scope of software bugs to affect system integrity.
+
+Systems intending to support untrusted interrupt handling in microcontrollers that do not need virtual memory or MMU do not need the user-level interrupt option.  They can instead run trusted code in M-mode and untrusted code in S-mode with SATP CSR hardwired to 0.
+
+Systems supporting hypervisor could also implement a M/HS/VS/U system with VSATP hardiwred to 0 to support untrusted interrupt handling but hypervisor context switches may considerably affect interrupt latency.
+
+For systems supporting virtual memory without hypervisor, a user-level interrupt option could allow systems to prevent user interrupt handlers from accidentily modifying supervisor virtual page tables.
+
+=== Additional CSRs
+New user-visible CSRs are added to support user-level interrupts
+
+==== User Status Register (ustatus)
+The ustatus register is a UXLEN-bit read/write register. The
+ustatus register keeps track of and controls the hart’s current operating state.
+
+[source]
+----
+  ustatus register layout
+
+  Bits          Field 
+  MXLEN-1:5     WPRI
+  4             UPIE
+  3:1           WPRI
+  0             UIE
+----
+
+The user interrupt-enable bit UIE disables user-level interrupts when clear. The value of UIE is
+copied into UPIE when a user-level trap is taken, and the value of UIE is set to zero to provide
+atomicity for the user-level trap handler.
+The UIE and UPIE bits are mirrored in the mstatus and sstatus registers in the same bit positions.
+
+NOTE: There is no UPP bit to hold the previous privilege mode as it can only be user mode.
+
+A new instruction, URET, is used to return from traps in U-mode. URET copies UPIE into UIE,
+then sets UPIE, before copying uepc to the pc.
+
+NOTE: UPIE is set after the UPIE/UIE stack is popped to enable interrupts and help catch coding
+errors.
+
+==== Other CSRs
+The uscratch, uepc, ucause, utvec, and utval CSRs are defined analogously to the mscratch,
+mepc, mcause, mtvec, and mtval CSRs.  utvt, unxti, uintstatus, uintthresh, uscratchcsw, uscratchcswl are defined analogously to mtvt, mnxti, mintstatus, mintthresh, mscratchcsw, mscratchcswl.  
+
+===== User Cause (ucause) CSR
+----
+ ucause
+ Bits    Field       Description
+ XLEN-1 Interrupt    Interrupt=1, Exception=0
+    30  uinhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+ 29:28  (reserved)
+    27  upie         Previous interrupt enable, same as ustatus.upie
+ 26:24  (reserved)
+ 23:16  upil[7:0]    Previous interrupt level
+ 15:12  (reserved)
+ 11:0  exccode[11:0] Exception/interrupt code
+----
+
+===== Interrupt Status ({intstatus}) CSRs
+
+The active interrupt level for user interrupts are added to the {intstatus} CSRs.
+These fields are read-only.
+
+----
+ mintstatus fields
+ 31:24 mil
+ 23:16 (reserved) # To follow pattern of others.
+ 15: 8 sil
+  7: 0 uil
+----
+
+Corresponding supervisor mode, `sintstatus`, and user, `uintstatus`,
+provide restricted views of mintstatus.
+----
+ sintstatus fields
+ 31:16 (reserved)
+ 15: 8 sil
+  7: 0 uil
+
+ uintstatus fields
+ 31: 8 (reserved)
+  7: 0 uil
+----
+
+=== User interrupt instructions
+The URET instruction is added to perform the analogous function to MRET and SRET.
+
+=== Reducing Context-Swap Overhead
+The user-level interrupt-handling registers add considerable state to the user-level context, yet will
+usually rarely be active in normal use. In particular, uepc, ucause, and utval are only valid during
+execution of a trap handler.
+An NS field can be added to mstatus and sstatus following the format of the FS and XS fields
+to reduce context-switch overhead when the values are not live. Execution of URET will place the
+uepc, ucause, and utval back into initial state.
+
+=== CLIC User Interrupt Memory Map
+
+[source]
+----
+Layout of user-mode CLIC regions
+0x000+4*i   1B/input    R or RW   clicintip[i]
+0x001+4*i   1B/input    RW        clicintie[i]
+0x002+4*i   1B/input    RW        clicintattr[i]
+0x003+4*i   1B/input    RW        clicintctl[i]
+----
+
+User-mode CLIC regions only expose interrupts that have been
+configured to be user-accessible via the M-mode or S-mode CLIC region.  
+
+The location of the U-mode CLIC regions are independent of
+the location of the M-mode or S-mode CLIC regions, and their base addresses are
+specified by the platform specification and made visible via the
+discovery mechanism for that platform.
+
+=== Specifying Interrupt Privilege Mode
+
+In M/U-mode systems with user-level interrupts support, `cliccfg.nmbits` can be
+set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
+M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
+the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
+indicates that interrupt intput is taken in M-mode,
+while a value of 0 indicates that interrupt is taken in U-mode.
+
+Similarly, in systems that support all M/S/U-mode interrupts, `cliccfg.nmbits`
+can be set to 0, 1, or 2 bits to represent privilege-modes.
+`cliccfg.nmbits` = 0 indicates that all local interrupts are taken in
+M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
+(1) and S-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
+each `clicintattr[__i__].mode` register encode the interrupt's privilege
+mode using the same encoding as the `mstatus.mpp` field.
+
+----
+ Encoding for RISC-V privilege levels (mstatus.mpp)
+
+ Level  Encoding Name              Abbreviation
+ 0      00       User/Application  U
+ 1      01       Supervisor        S
+ 2      10       Reserved
+ 3      11       Machine           M
+
+----
+
+
+----
+priv-modes nmbits clicintattr[i].mode  Interpretation
+       M      0       xx               M-mode interrupt
+
+     M/U      0       xx               M-mode interrupt
+     M/U      1       0x               U-mode interrupt
+     M/U      1       1x               M-mode interrupt
+ 
+     M/S      0       xx               M-mode interrupt
+     M/S      1       0x               S-mode interrupt
+     M/S      1       1x               M-mode interrupt
+
+   M/S/U      0       xx               M-mode interrupt
+   M/S/U      1       0x               S-mode interrupt
+   M/S/U      1       1x               M-mode interrupt
+   M/S/U      2       00               U-mode interrupt
+   M/S/U      2       01               S-mode interrupt
+   M/S/U      2       10               Reserved (or extended S-mode)
+   M/S/U      2       11               M-mode interrupt
+
+   M/S/U      3       xx               Reserved
+----
+
 
 [appendix]
 == Appendix
