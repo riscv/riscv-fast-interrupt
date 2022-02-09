@@ -392,7 +392,7 @@ Layout of user-mode CLIC regions
 0x003+4*i   1B/input    RW        clicintctl[i]
 ----
 
-A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
+Larger than byte size writes to {clicintctl,clicintattr,clicintie,clicintip} are legal. However, there is no specified order in which the effects of the individual byte updates take effect.
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
