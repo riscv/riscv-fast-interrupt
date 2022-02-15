@@ -1451,7 +1451,10 @@ clear the mode's global interrupt-enable bit
 being taken.
 
 === CLIC events that cause the hart to resume execution after Wait for Interrupt (WFI) Instruction
-As described in the privileged specification, the Wait for Interrupt instruction (WFI) provides a hint to the implementation that the current hart can be stalled.  The hart may optionally resume execution anytime.  This section describes CLIC events that cause the hart to resume execution. 
+As described in the privileged specification, the Wait for Interrupt instruction (WFI) provides a hint to the implementation that the current hart can be stalled.  The hart may optionally resume execution anytime.  This section describes CLIC events that must cause the hart to resume execution. 
+
+NOTE: WFI can be a NOP and not actually pause hart execution. In addition,
+implementations can resume execution after a WFI for any other reason.
 
 As in the privileged specification, if an interrupt is taken while the hart is stalled, the interrupt
 trap will be taken on the following instruction, i.e., execution resumes in the trap handler and mepc
@@ -1461,9 +1464,6 @@ execution will resume at pc + 4.
 In CLIC, similar to original mode, CLIC events causing the hart to resume execution after a Wait for Interrupt instruction (WFI) are
 unaffected by the global interrupt-enable bits in {status}.{ie} but should
 honor `clicintie[__i__]` and {intthresh}. 
-
-NOTE: WFI can be a NOP and not actually go to sleep. In addition,
-implementations can wake up WFI for any other reason.
 
 .A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
 * has a higher privilege mode than the current privilege mode and 
