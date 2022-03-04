@@ -1069,6 +1069,8 @@ function pointer for vectoring is treated as a load with the privilege
 mode (also obeying MPRV and SUM bits) and interrupt level of the interrupt handler.
 If there is an access exception on the table load, both {tval} and {epc} holds the faulting address.
 
+NOTE: For complex designs with separate structures for caching table entries in I-fetch pipeline, a FENCE.I (or later Zjid equivalent) will be needed to ensure software writes to the table or to permissions structures are made visible to the instruction fetch pipeline, so the I-cache in the fetch pipeline does not need to be hardware cache-coherent with data memory.
+
 In CLIC mode, synchronous exception traps always jump to NBASE.
 
 === New {tvt} CSRs
