@@ -1035,7 +1035,8 @@ traps on fetches to the trap vector table.
 The {inhv} bits are only written by hardware during the table vector
 read operation. The {inhv} bits can be written by software, including
 when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} should consider {epc} as an address instead of an instruction.
+except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} 
+should consider the address stored in {epc} as an address pointing to a trap handler function address instead of the address of the next instruction to be executed. 
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
