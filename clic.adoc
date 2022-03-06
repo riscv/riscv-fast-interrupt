@@ -995,7 +995,7 @@ all interrupts are non-vectored and behave the same.
 
 On the other hand, writing `1` to `clicintattr[__i__].shv`
 sets interrupt `i` to vectored. When these interrupts are taken, the hart
-switches to the handler's privilege mode, sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode, and clears {status}.{ie}.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
+switches to the handler's privilege mode, and besides the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {cause}, {status} fields including clearing {status}.{ie}), also sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
 `TBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
