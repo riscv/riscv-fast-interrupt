@@ -410,7 +410,7 @@ Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears 
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
 `clicintctl[__i__]`.
 
-The privilege mode of an interrupt is controlled by both `mcliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
+The privilege mode of an interrupt is controlled by both `xcliccfg.xlpmode` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
 
 It is not intended that the interconnect to the CLIC memory-mapped
 interrupt regions be required to carry the privilege mode of the
@@ -438,7 +438,7 @@ registers, `xcliccfg`, that defines how many privilege modes are supported,
 how the `clicintctl[__i__]` registers are subdivided into level and
 priority fields, and whether selective hardware vectoring is supported.
 
-The `xcliccfg` register has three WARL fields, a 2-bit `nmbits` field,
+The `mcliccfg` register has four WARL fields, a 1-bit `mlpmode` field,  a 1-bit `slpmode` field,
 a 4-bit `nlbits` field, and a 1-bit `nvbits` field, plus a reserved
 bit WPRI-hardwired to zero in current spec.
 
@@ -455,7 +455,8 @@ not furnish these fields must hardwire them to zero.
 
   Bits    Field
   7       reserved (WPRI 0)
-  6:5     nmbits[1:0]
+  6       mlpmode
+  5       slpmode
   4:1     nlbits[3:0]
     0     nvbits
 ----
@@ -465,10 +466,13 @@ not furnish these fields must hardwire them to zero.
   scliccfg register layout
 
   Bits    Field
-  7:5     reserved (WPRI 0)
+  7:6     reserved (WPRI 0)
+  5       slpmode
   4:1     nlbits[3:0]
     0     nvbits
 ----
+
+Restricted view of the mcliccfg.slpmode bit appears as the scliccfg.slpmode bit for supervisor level.
 
 [source]
 ----
@@ -483,30 +487,39 @@ Detailed explanation for each field are described in the following sections.
 
 ==== Specifying Interrupt Privilege Mode
 
-The 2-bit `mcliccfg.nmbits` WARL field specifies how many bits are 
-physically implemented in `clicintattr[__i__].mode` to
-represent an input __i__'s privilege mode. Although `mcliccfg.nmbits` field
-is always 2-bit wide, the physically implemented bits in this field 
-can be fewer than two (depending how many interrupt privilege-modes are supported).
+The 1-bit `xcliccfg.xlpmode` WARL lower privilege mode interrupts field can be set to 0 or 1.  
+If `xcliccfg.xlpmode` = 1, then lower privilege mode interrupts are supported.
+If `xcliccfg.xlpmode` = 0, then lower privilege mode interrupts are not supported.
+This can allow implementations to physically implement fewer `clicintattr[__i__].mode` bits.
 
 For example, in M-mode-only systems, only M-mode exists so we do not
-need any extra bit to represent the supported privilege-modes. In this case,
+need any extra bit to represent the supported privilege-mode interrupts. In this case,
 no physically implemented bits are needed in the `clicintattr.mode`
-and thus `mcliccfg.nmbits` is 0 (i.e., `mcliccfg.nmbits` can be hardwired to 0).
+and thus `mcliccfg.xlpmode` is 0 (i.e., both `mcliccfg.mlpmode` and `mcliccfg.slpmode` can be hardwired to 0).
 
-In M/U-mode systems with N-extension user-level interrupts support, `mcliccfg.nmbits` can be
-set to 0 or 1.  If `mcliccfg.nmbits` = 0, then all interrupts are treated as
-M-mode interrupts.  If the `mcliccfg.nmbits` = 1, then a value of 1 in
+In M/U-mode systems with N-extension user-level interrupts support, `mcliccfg.mlpmode` can be
+set to 0 or 1 and `mcliccfg.slpmode` is read-only 0.  
+If `mcliccfg.mlpmode` = 0, then all interrupts are treated as
+M-mode interrupts.  If the `mcliccfg.mlpmode` = 1, then a value of 1 in
 the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
 indicates that interrupt intput is taken in M-mode,
 while a value of 0 indicates that interrupt is taken in U-mode.
 
-Similarly, in systems that support all M/S/U-mode interrupts, `mcliccfg.nmbits`
-can be set to 0, 1, or 2 bits to represent privilege-modes.
-`mcliccfg.nmbits` = 0 indicates that all local interrupts are taken in
-M-mode.  `mcliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
-(1) and S-mode (0).  `mcliccfg.nmbits` = 2 indicates that the two MSBs of
-each `clicintattr[__i__].mode` register encode the interrupt's privilege
+Similarly, in M/S-mode systems, `mcliccfg.mlpmode` can be
+set to 0 or 1 and `mcliccfg.slpmode` is read-only 0.
+If `mcliccfg.mlpmode` = 0, then all interrupts are treated as
+M-mode interrupts.  If the `mcliccfg.mlpmode` = 1, then a value of 1 in
+the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
+indicates that interrupt intput is taken in M-mode,
+while a value of 0 indicates that interrupt is taken in S-mode.
+
+In systems that support all M/S/U-mode interrupts, `mcliccfg.mlpmode` and `mcliccfg.slpmode`
+can be set to represent supported privilege-mode interrupts.
+`mcliccfg.mlpmode` = 0 indicates that all local interrupts are taken in
+M-mode.  `mcliccfg.mlpmode` = 1 and `mcliccfg.slpmode` = 0 indicates that only M and S-mode interrupts are supported so 
+the `clicintattr[__i__].mode` MSB selects between M-mode
+(1) and S-mode (0).  `mcliccfg.mlpmode` = 1 and `mcliccfg.slpmode` = 1 indicates that M, S, and U-mode interrupts are supported so
+the two MSBs of each `clicintattr[__i__].mode` register encode the interrupt's privilege
 mode using the same encoding as the `mstatus.mpp` field.
 
 NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. Bare S-mode has already been ratified as part of privileged architecture. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. The proposed N-extension would also add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
@@ -524,22 +537,25 @@ NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hard
 
 
 ----
-priv-modes nmbits clicintattr[i].mode  Interpretation
-       M      0       xx               M-mode interrupt
+priv-modes {mlpmode,slpmode} clicintattr[i].mode  Interpretation
+       M      0x                 xx               M-mode interrupt
 
-     M/U      0       xx               M-mode interrupt
-     M/U      1       0x               U-mode interrupt
-     M/U      1       1x               M-mode interrupt
+     M/U      00                 xx               M-mode interrupt
+     M/U      10                 0x               U-mode interrupt
+     M/U      10                 1x               M-mode interrupt
 
-   M/S/U      0       xx               M-mode interrupt
-   M/S/U      1       0x               S-mode interrupt
-   M/S/U      1       1x               M-mode interrupt
-   M/S/U      2       00               U-mode interrupt
-   M/S/U      2       01               S-mode interrupt
-   M/S/U      2       10               Reserved (or extended S-mode)
-   M/S/U      2       11               M-mode interrupt
+     M/S      00                 xx               M-mode interrupt
+     M/S      10                 0x               S-mode interrupt
+     M/S      10                 1x               M-mode interrupt
 
-   M/S/U      3       xx               Reserved
+   M/S/U      0x                 xx               M-mode interrupt
+   M/S/U      10                 0x               S-mode interrupt
+   M/S/U      10                 1x               M-mode interrupt
+   M/S/U      11                 00               U-mode interrupt
+   M/S/U      11                 01               S-mode interrupt
+   M/S/U      11                 10               Reserved
+   M/S/U      11                 11               M-mode interrupt
+
 ----
 
 ==== Specifying Interrupt Level
@@ -801,8 +817,7 @@ values (WARL).
 
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
 operates in. This field uses the same encoding as the `mstatus.mpp`
-(11: machine mode, 01: supervisor mode, 00 user mode). The valid length of
-this field can be programmed with `mcliccfg.nmbits`.
+(11: machine mode, 01: supervisor mode, 00 user mode). 
 
 NOTE: For security purpose, the `mode` field can only be set to a privilege level that is equal to or lower than the currently running privilege level.
 
@@ -1364,7 +1379,7 @@ CLICMAXID      12-4095                         Largest interrupt ID
 CLICINTCTLBITS 0-8                             Number of bits implemented in
                                                  clicintctl[i]
 CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for
-                                                 mcliccfg.nmbits
+                                                 clicintattr.mode
 CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
                                                  xcliccfg.nlbits
 CLICSELHVEC    0-1                             Selective hardware vectoring supported?
