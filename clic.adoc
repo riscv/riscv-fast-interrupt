@@ -2291,16 +2291,30 @@ instructions set both `rs1` = `sp` and `rd` = `sp`.
 
 [source]
 ----
-  csrrw rd, mscratchcsw, rs1
+csrrw rd, sscratchcsw, rs1
 
-  // Pseudocode operation.
-  if (mcause.mpp!=M-mode) then {
-      t = rs1; rd = mscratch; mscratch = t;
-  } else {
-      rd = rs1; // mscratch unchanged.
-  }
+match cur_privilege {  
+  Supervisor => if sstatus.SPP() then {
+                  rd = rs1; // sscratch unchanged.   
+                } else {
+                  t = rs1; rd = sscratch; sscratch = t;
+                }  
+  Machine    => if sstatus.SPP() then {
+                  rd = rs1; // sscratch unchanged.   
+                } else {
+                  t = rs1; rd = sscratch; sscratch = t;
+                } 
+----
 
-  // Usual use: csrrw sp, mscratchcsw, sp
+----
+csrrw rd, mscratchcsw, rs1
+
+match cur_privilege {  
+  Machine => match mstatus.MPP() {
+               User       => t = rs1; rd = mscratch; mscratch = t;
+               Supervisor => t = rs1; rd = mscratch; mscratch = t;
+               Machine    => rd = rs1; // mscratch unchanged.
+             }
 ----
 
 NOTE: To avoid virtualization holes, software cannot directly read the
