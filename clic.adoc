@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+03/15/2022  issue #207 - further xret/inhv text clarification
 02/15/2022  WFI text clarification
 02/01/2022  issue #193 - xret/inhv text clarification
 01/04/2022  issue #45 - remove new alignment constraint on CLINT mode when CLIC added
@@ -1035,7 +1036,7 @@ traps on fetches to the trap vector table.
 The {inhv} bits are only written by hardware during the table vector
 read operation. The {inhv} bits can be written by software, including
 when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} should consider {epc} as an address instead of an instruction.
+except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} will treat {epc} as the address of a table entry instead of the address of an instruction.
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
