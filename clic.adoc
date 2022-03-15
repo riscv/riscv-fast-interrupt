@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 2/15/2022
+:revdate: 3/15/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -112,6 +112,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 ----
 Date           	Description
 03/15/2022  issue #207 - further xret/inhv text clarification
+03/06/2022  issue #210 - hw vector trap text clarification
 02/15/2022  WFI text clarification
 02/01/2022  issue #193 - xret/inhv text clarification
 01/04/2022  issue #45 - remove new alignment constraint on CLINT mode when CLIC added
