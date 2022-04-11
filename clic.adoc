@@ -1294,7 +1294,8 @@ The interrupt-level threshold ({intthresh}) is a new read-write WARL CSR,
 which holds an 8-bit field (`th`) for the threshold level of the
 associated privilege mode.  The `th` field is held in the least-significant
 8 bits of the CSR, and zero should be written to the upper bits.
-If the number of bits actually implemented in this register is less than 8 (e.g. `CLICINTCTLBITS`), the implemented bits are kept left-justified in the most-significant bits of the 8-bit field, with the lower unimplemented bits treated as hardwired to 0 (to allow {intthresh} to be programmed less than `clicintctl[__i__]` values if `CLICINTCTLBITS` < 8). 
+If the number of bits actually implemented in the `th` field is less than 8 (e.g. an implementation option when `CLICINTCTLBITS` is less than 8), the number of implemented bits `INTTHRESHBITS` must be greater than `CLICINTCTLBITS` and the implemented bits should be kept left-justified in the most-significant bits of the 8-bit field, with the lower unimplemented bits treated as hardwired to 1.  
+For example, if `CLICINTCTLBITS` is 1 and `INTTHRESHBITS` is 2, interrupts can be set to level 127 or 255 and {intthresh}.`th` can be set to 63, 127, 191, or 255.
 
 A typical usage of the interrupt-level threshold is for implementing
 critical sections. The current handler can temporarily raise its effective
@@ -1352,6 +1353,7 @@ NUM_INTERRUPT  4-4096                          Always has MSIP, MTIP, MEIP, CSIP
 CLICMAXID      12-4095                         Largest interrupt ID
 CLICINTCTLBITS 0-8                             Number of bits implemented in
                                                  clicintctl[i]
+INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
 CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for
                                                  cliccfg.nmbits
 CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
