@@ -1067,9 +1067,10 @@ mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
 extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
-function pointer for vectoring is treated as a load with the privilege
-mode (also obeying MPRV and SUM bits) and interrupt level of the interrupt handler.
-If there is an access exception on the table load, both {tval} and {epc} holds the faulting address.
+function pointer for vectoring is an _implicit_ read at the interrupt level of the interrupt handler, and requires
+execute permission; read permission is irrelevant.  If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
+
+Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
 
 In CLIC mode, synchronous exception traps always jump to NBASE.
 
@@ -1086,7 +1087,7 @@ still accessible in basic mode (but does not have any effect).
 === Changes to {epc} CSRs
 
 The {epc} CSRs behave the same in both modes, capturing the PC at
-which execution was interrupted.
+which execution was interrupted.  In CLIC mode, the {epc} CSR additionally may hold the faulting address if there is an access exception on the table fetch during hardware vectoring.
 
 === Changes to {cause} CSRs
 
