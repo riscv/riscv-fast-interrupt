@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 3/15/2022
+:revdate: 4/26/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -111,6 +111,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+04/26/2022  issue #191 - hw vector fetch permission changed to implicit read with execute permission required.
+04/26/2022  issue #223/224 - mtval=0 allowed, hw vect xepc difference noted.
 03/15/2022  issue #207 - further xret/inhv text clarification
 03/06/2022  issue #210 - hw vector trap text clarification
 02/15/2022  WFI text clarification
@@ -2551,4 +2553,3 @@ Modified from Example at https://elinux.org/Device_Tree_Usage
 
 [index]
 == Index
-
