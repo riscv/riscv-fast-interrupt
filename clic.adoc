@@ -1145,6 +1145,9 @@ basic mode is written to {tvec}, the new {cause} state fields
 `mpp` and `mpie`, appear as zero in the {cause} CSR but the corresponding
 state bits in the `mstatus` register are not cleared.
 
+In CLIC mode, when a trap is taken, {cause} has the new CLIC format and the {cause} fields are updated.
+On the other hand, when not in CLIC mode, {cause} has the original format.
+
 The supervisor `scause` register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from `sstatus.spp`, while the user
 `ucause` register has no `upp` bit as interrupts can only have come
@@ -1174,10 +1177,6 @@ from user mode.
  15:12  (reserved)
  11:0  exccode[11:0] Exception/interrupt code
 ----
-
-For exceptions, in CLIC mode, the `mcause` has the new CLIC format.
-On the other hand, in other modes, the `mcause` has the original format.
-
 
 === Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
 
