@@ -1237,6 +1237,7 @@ selection and execution of interrupts using `{nxti}`.
 [source]
 --
  // Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode.
+ // clic.priv, clic.level, clic.id represent the highest-ranked interrupt currently present in the CLIC
  mstatus |= uimm[4:0]; // Performed regardless of interrupt readiness.
  if (clic.priv==M && clic.level > mcause.pil && clic.level > mintthresh.th
      && (cliccfg.nvbits==0 || clicintattr.shv==0) ) {
