@@ -691,6 +691,9 @@ should assume `clicintip[__i__]=0` means no interrupt pending, and
 `clicintip[__i__]!=0` indicates an interrupt is pending to accomodate
 possible future expansion of the `clicintip` field.
 
+The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
+from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the MIP/MIE CSRs, there is no requirement that clicintie or clicintip are evaluated immediately following an explicit write to `clicintip` or `clicintie`.
+
 When the input is configured for level-sensitive input, the
 `clicintip[__i__]` bit reflects the value of an input signal to the
 interrupt controller after any conditional inversion specified by the
