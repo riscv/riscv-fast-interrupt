@@ -2310,7 +2310,7 @@ instructions set both `rs1` = `sp` and `rd` = `sp`.
   csrrw rd, mscratchcsw, rs1
 
   // Pseudocode operation.
-  if (mcause.mpp!=M-mode) then {
+  if (mstatus.mpp!=M-mode) then {
       t = rs1; rd = mscratch; mscratch = t;
   } else {
       rd = rs1; // mscratch unchanged.
