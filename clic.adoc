@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 5/10/2022
+:revdate: 6/1/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+06/01/2022  Wording change in comparison with AIA features.  Added reference to Bibliography.
 05/10/2022  issue #235 - change “exception” to “trap” to match priv spec wording.
 05/10/2022  issue #233 - mnxti pseudo-code clarification (added meaning of clic.priv,clic.level,clic.id) 
 05/10/2022  issue #225 - bounded time to respond to interrupts
@@ -260,7 +261,7 @@ require either or both of the original basic and CLIC interrupt modes.
 
 === CLIC compared to Advanced Interrupt Architecture
 
-Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for software tailchaining.
+Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for reduced context switching with back to back interrupts.
 
 == CLIC Overview
 
@@ -2556,6 +2557,8 @@ Modified from Example at https://elinux.org/Device_Tree_Usage
 [CD3600] Interrupt and interrupt mask register with interrupt address based on interrupt number.  Control Data 3600 Computer System Reference Manual, Chapter IV - Interrupt System http://bitsavers.org/pdf/cdc/3x00/48bit/3600/60021300E_3600_SysRef_Sep64.pdf
  
 [BiiN] Interrupt preemption, checking pending interrupts before returning, adjusting current priority level (modpc).  Chapter 12. Interrupts http://bitsavers.org/pdf/biin/BiiN_CPU_Architecture_Reference_Man_Jul88.pdf 
+
+[WE_32100] Intermediate context switching.  Chapter 4.4.1 Context Switching Strategy http://www.bitsavers.org/pdf/westernElectric/WE_32100_Microprocessor_Information_Manual_Jan85.pdf
 
 [index]
 == Index
