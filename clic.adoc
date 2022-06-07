@@ -870,11 +870,9 @@ is used as the source for this interrupt trigger.
 The `enable` control bit is read-write to enable/disable this
 interrupt trigger.
 
-The detailed behavior of the trigger is defined in the debug spec.
-For example, the trigger only fires if the interrupt is
-actually taken (and not when the interrupt is masked, or not taken).
-In addition, the requested action (e.g., breakpoint or trace) is taken
-just before the first instruction of the interrupt handler is executed.
+This logic is intended to be used with tmexttrigger.intctl as described in the RISC-V debug specification.
+
+A trigger is signaled to the debug module if an interrupt is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.enable is set.
 
 == CLIC CSRs
 
