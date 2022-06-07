@@ -2464,7 +2464,7 @@ as part of a profile and are not mandatory in all incarnations of the CLIC.
 
 Original recommendation: 
 The original basic mode interrupts retain their interrupt ID in CLIC mode.
-The `clicintctl` settings are now used to delegate these interrupts as
+The `clicintattr` settings are now used to delegate these interrupts as
 required.
 
 An additional CLIC software interrupt bit (csip) is provided.  This is
