@@ -1047,6 +1047,7 @@ clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler privilege mode.
 
 ----
+/* get inhv value of previous privilege mode */
 match cur_privilege {
   User => prev_inhv = ucause.INHV();
   Supervisor => if sstatus.SPP() then {
@@ -1060,13 +1061,15 @@ match cur_privilege {
                Machine    => prev_inhv = mcause.INHV();
              }
 
-match (ctl) {
+/* is instruction URET, SRET or MRET */
+match (ctl) { 
   CTL_URET => xepc = uepc;
   CTL_SRET => xepc = sepc;
   CTL_MRET => xepc = mepc;
 }
 
 if prev_inhv then {
+  /* {epc} treated as an address instead of as an instruction */
   set_next_pc(mem_read(xepc) & ~1)
 } else {
   set_next_pc(xepc)
