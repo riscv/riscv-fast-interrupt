@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 6/1/2022
+:revdate: 6/7/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -111,6 +111,10 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh 
+06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
+06/07/2022  issue #212/pull#216 - fixed paramter value ranges for NUM_INTERRUPT and CLICMTVECALIGN
+06/07/2022  Pull #218 - typo fix. clicintattr regs are used to delegate interrupts
 06/01/2022  Wording change in comparison with AIA features.  Added reference to Bibliography.
 05/10/2022  issue #235 - change “exception” to “trap” to match priv spec wording.
 05/10/2022  issue #233 - mnxti pseudo-code clarification (added meaning of clic.priv,clic.level,clic.id) 
