@@ -2299,11 +2299,13 @@ match cur_privilege {
                 } else {
                   t = rs1; rd = sscratch; sscratch = t;
                 }  
-  Machine    => if sstatus.SPP() then {
-                  rd = rs1; // sscratch unchanged.   
-                } else {
-                  t = rs1; rd = sscratch; sscratch = t;
-                } 
+/* Although machine-mode access to sscratchcsw is not expected to be the normal usage, */
+/* it is specified in a way that simplifies hardware. */              
+  Machine    => match mstatus.MPP() {
+               User       => t = rs1; rd = sscratch; sscratch = t;
+               Supervisor => t = rs1; rd = sscratch; sscratch = t;
+               Machine    => rd = rs1; // sscratch unchanged.
+             } 
 ----
 
 ----
