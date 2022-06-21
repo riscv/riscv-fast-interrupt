@@ -1086,7 +1086,7 @@ match (ctl) {
 }
 
 if prev_inhv then {
-  /* {epc} treated as an address instead of as an instruction */
+  /* pc set from table entry pointed to by {epc}, not by value of {epc} */
   set_next_pc(mem_read(xepc) & ~1)
 } else {
   set_next_pc(xepc)
