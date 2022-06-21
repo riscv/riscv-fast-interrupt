@@ -1248,10 +1248,9 @@ the no-interrupt case.
 
 If the CSR instruction that acccesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
-operation, while the {cause} register's `exccode` field, the
-{intstatus} register's {il} field and the pending bit of the accepted
-interrupt can also be updated with the new interrupt id, level, and 
-clear respectively.
+operation, while the {cause} register's `exccode` field and the
+{intstatus} register's {il} field can also be updated with the new interrupt id and level.
+If the interrupt is edge-triggered, then the pending bit is also zeroed.
 
 NOTE: Following the usual convention for CSR instructions, if the CSR
 instruction does not include write side effects (e.g., `csrr t0,
@@ -1268,7 +1267,7 @@ If the pending interrupt is edge-triggered, hardware will automatically
 clear the corresponding pending bit when the CSR instruction that accesses
 {nxti} includes a write. However, if the CSR instruction does not include write side effects
 (e.g., `csrr t0, {nxti}`), then no state update on any CSR occurs and thus the
-interrupt pending bit is not cleared. This behavior allows software to optimize the
+interrupt pending bit is not zeroed. This behavior allows software to optimize the
 selection and execution of interrupts using `{nxti}`.
 
 [source]
