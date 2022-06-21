@@ -335,6 +335,8 @@ the M-mode software running on the hart.
 NOTE: A bus memory map or locked PMP entries could prevent M-mode
 software on a particular hart from reaching the CLIC memory map.
 
+NOTE: For reserved memory regions, specific trap behavior is not specified. Depending on system bus architecture, the system can ignore the access (e.g., read zero/write ignored) or cause a bus error (usually imprecise interrupt), or some other platform-specific behavior. The "reserved" annotation here implies that future standards might place additional standard registers in that space, and so using the space for non-standard features is inadvisable.
+
 The base address of M-mode CLIC memory-mapped registers is specified
 at a new CLIC Base (`mclicbase`) Control and Status Register (CSR).
 
