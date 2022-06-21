@@ -111,6 +111,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+
+06/21/2022  Made clear that mtvec[5:0]=000010 is still reserved
 06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh 
 06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
 06/07/2022  issue #212/pull#216 - fixed paramter value ranges for NUM_INTERRUPT and CLICMTVECALIGN
@@ -948,7 +950,7 @@ In systems that support both original basic and CLIC modes, the state bits in
 
 The new CLIC interrupt-handling mode is encoded as a new state in the
 existing {tvec} WARL register, where {tvec}.`mode` (the least-significant six bits) is
-`00001?`.  In this mode, the trap vector base address held in
+`000011`.  In this mode, the trap vector base address held in
 {tvec} is constrained to be aligned on a 64-byte or larger
 power-of-two boundary.
 
@@ -981,7 +983,7 @@ specs.
  aaaa00      pc := OBASE                       (original non-vectored basic mode)
  aaaa01      pc := OBASE + 4 * exccode         (original vectored basic mode)
 
- 00001?                                        (CLIC mode)
+ 000011                                        (CLIC mode)
              (non-vectored)
              pc := NBASE                                    if clicintattr[i].shv = 0
                                                             || if cliccfg.nvbits = 0
@@ -989,7 +991,8 @@ specs.
              (vectored)                                                    
              pc := M[TBASE + XLEN/8 * exccode)] & ~1        if clicintattr[i].shv = 1
                                                              
- xxxx1?      (xxxx!=0000)                             Reserved
+ 000010                                        Reserved
+ xxxx1?      (xxxx!=0000)                      Reserved
 
  OBASE = xtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
  NBASE = xtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
