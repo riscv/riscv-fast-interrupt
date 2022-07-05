@@ -112,6 +112,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 ----
 Date           	Description
 
+07/05/2022  Specified that xtvec.mode bits are writeable but hidden when in CLINT mode
 06/21/2022  Made clear that mtvec[5:0]=000010 is still reserved
 06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh 
 06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
@@ -951,10 +952,10 @@ In systems that support both original basic and CLIC modes, the state bits in
 === New {tvec} CSR Mode for CLIC
 
 The new CLIC interrupt-handling mode is encoded as a new state in the
-existing {tvec} WARL register, where {tvec}.`mode` (the least-significant six bits) is
-`000011`.  In this mode, the trap vector base address held in
-{tvec} is constrained to be aligned on a 64-byte or larger
-power-of-two boundary.
+existing {tvec} WARL register, where {tvec}.`mode` (the
+least-significant six bits) is `000011`.  In this mode, the trap
+vector base address held in {tvec} is constrained to be aligned on a
+64-byte or larger power-of-two boundary.
 
 [source]
 ----
@@ -969,15 +970,18 @@ NOTE: Systems implementing both CLIC and CLINT mode may, but are not
 required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
 
+If a system supports both modes, when `mtvec.mode` is set to CLIC
+mode, then the {tvec}`.mode` of lower-privilege modes is set read-only
+to `000011`.  In CLIC mode, {tvec}`.mode` in lower privilege modes
+is writeable but appears to be `000011` when read in that mode.  When
+`mtvec.mode` is set to a CLINT mode, {tvec} operates as before where
+each privilege mode can set the CLINT mode independently.
+
 NOTE: Although future CLIC versions may allow privileges to have
 different {tvec}.`mode` settings, for now all privilege modes must run
 in either CLIC mode or all privilege modes must run in non-CLIC mode.
-Bit 1 of {tvec} is controlled by bit 1 of mtvec (i.e., lower privilege
-modes see this bit as read-only. Bit 0 and bits[XLEN-1:6] of
-lower-privilege mode's {tvec} are unaffected by changes to
-corresponding bits of mtvec. These constraints might change if there
-are future additions to the CLIC or other new interrupt controller
-specs.
+These constraints might change if there are future additions to the
+CLIC or other new interrupt controller specs.
 
 ----
  (xtvec[5:0])  
