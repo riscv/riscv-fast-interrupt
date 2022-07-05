@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 6/7/2022
+:revdate: 7/5/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -113,6 +113,10 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 Date           	Description
 
 07/05/2022  Specified that xtvec.mode bits are writeable but hidden when in CLINT mode
+06/21/2022  clarified "cleared" means set to 0 for interrupt pending bit
+06/21/2022  issue #220 - reserved address space clarification (pull #243)
+06/21/2022  issue #214 - xscratch pseudocode clarification (pull #215)
+06/21/2022  issue #197 - Clarified xinhv pseudocode (pull #198)
 06/21/2022  Made clear that mtvec[5:0]=000010 is still reserved
 06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh 
 06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
