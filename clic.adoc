@@ -51,7 +51,6 @@
 :title-logo-image: image:risc-v_logo.png[pdfwidth=3.25in,align=center]
 //:page-background-image: image:draft.svg[opacity=20%]
 //:title-page-background-image: none
-:back-cover-image: image:circuit.png[opacity=25%]
 // Settings:
 :experimental:
 :reproducible:
