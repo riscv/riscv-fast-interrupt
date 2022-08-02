@@ -111,6 +111,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 ----
 Date           	Description
 
+08/02/2022  Clarified that not all specified CSRs are available in all privilege modes
 07/05/2022  Specified that xtvec.mode bits are writeable but hidden when in CLINT mode
 06/21/2022  clarified "cleared" means set to 0 for interrupt pending bit
 06/21/2022  issue #220 - reserved address space clarification (pull #243)
@@ -917,6 +918,7 @@ additions for CLIC mode described in the following sections.
  (NEW) 0x3??   mclicbase    Base address for CLIC memory mapped registers
 
          m is the nibble encoding the privilege mode (M=0x3, S=0x1, U=0x0)
+         NOTE: Not all registers exist in all modes
 ----
 
 === Changes to {status} CSRs
