@@ -955,18 +955,21 @@ In systems that support both original basic and CLIC modes, the state bits in
 === New {tvec} CSR Mode for CLIC
 
 The new CLIC interrupt-handling mode is encoded as a new state in the
-existing {tvec} WARL register, where {tvec}.`mode` (the
-least-significant six bits) is `000011`.  In this mode, the trap
-vector base address held in {tvec} is constrained to be aligned on a
-64-byte or larger power-of-two boundary.
+existing {tvec} WARL register, where {tvec}.`mode` (the two
+least-significant bits) is `11`, and bits {tvec}[5:2]
+({tvec}.`submode`) are zero. The other encodings of {tvec}.`submode`
+are reserved for future use.  The trap vector base address is
+specified as the upper XLEN-6 bits of {tvec} (`base`) with six
+lower zero bits appended, which constrains alignment on a 64-byte or
+larger power-of-two boundary.
 
 [source]
 ----
  CLIC mode xtvec register layout
 
   Bits          Field 
-  MXLEN-1:6     base (WARL)
-  5:2           alignment (WARL)
+  XLEN-1:6      base (WARL)
+  5:2           submode (WARL)
   1:0           mode (WARL)
 ----
 
@@ -974,12 +977,14 @@ NOTE: Systems implementing both CLIC and CLINT mode may, but are not
 required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
 
-If a system supports both modes, when `mtvec.mode` is set to CLIC
-mode, then the {tvec}`.alignment` and {tvec}`.mode` of lower-privilege modes is set read-only
-to `000011`.  In CLIC mode, {tvec}`.alignment` and {tvec}`.mode` in lower privilege modes
-is writeable but appears to be `000011` when read in that mode.  When
-`mtvec.mode` is set to a CLINT mode, {tvec} operates as before where
-each privilege mode can set the CLINT mode independently.
+If a system supports both modes, when set to CLIC mode the
+{tvec}.`submode` and {tvec}.`mode` of lower-privilege modes are set
+read-only to `0000` and `11` respectively.  In CLIC mode,
+{tvec}.`submode` and {tvec}.`mode` in lower privilege modes are
+writeable but appear to be `0000` and `11` respectively when read in
+that mode.  When `mtvec.mode` is set to a CLINT mode, {tvec} operates
+as before where each privilege mode can set the CLINT mode
+independently.
 
 NOTE: Although future CLIC versions may allow privileges to have
 different {tvec}.`mode` settings, for now all privilege modes must run
@@ -989,20 +994,21 @@ CLIC or other new interrupt controller specs.
 
 ----
  (xtvec[5:0])  
- {alignment,mode}  Action on Interrupt
- aaaa00      pc := OBASE                       (original non-vectored basic mode)
- aaaa01      pc := OBASE + 4 * exccode         (original vectored basic mode)
+ submode mode  Action on Interrupt
+    aaaa 00    pc := OBASE                       (original non-vectored basic mode)
+    aaaa 01    pc := OBASE + 4 * exccode         (original vectored basic mode)
 
- 000011                                        (CLIC mode)
-             (non-vectored)
-             pc := NBASE                                    if clicintattr[i].shv = 0
-                                                            || if cliccfg.nvbits = 0
-                                                               (vector not supported)     
-             (vectored)                                                    
-             pc := M[TBASE + XLEN/8 * exccode)] & ~1        if clicintattr[i].shv = 1
+    0000 11                                      (CLIC mode)
+               (non-vectored)
+               pc := NBASE                              if clicintattr[i].shv = 0
+                                                        || if cliccfg.nvbits = 0
+                                                           (vector not supported)     
+
+               (vectored)                                                    
+               pc := M[TBASE + XLEN/8 * exccode)] & ~1  if clicintattr[i].shv = 1
                                                              
- 000010                                        Reserved
- xxxx1?      (xxxx!=0000)                      Reserved
+    0000 10                                      Reserved
+    xxxx 1?    (xxxx!=0000)                      Reserved
 
  OBASE = xtvec[XLEN-1:2]<<2   # Original vector base was at least 4-byte aligned.
  NBASE = xtvec[XLEN-1:6]<<6   # New vector base is at least 64-byte aligned.
