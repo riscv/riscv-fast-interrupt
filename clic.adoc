@@ -1277,6 +1277,8 @@ clear the corresponding pending bit when the CSR instruction that accesses
 interrupt pending bit is not zeroed. This behavior allows software to optimize the
 selection and execution of interrupts using `{nxti}`.
 
+Note: Use of xnxti with non-zero uimm values for bits 0, 2, and 4 are reserved for future use.
+
 [source]
 --
  // Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode.
