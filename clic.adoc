@@ -966,7 +966,8 @@ vector base address held in {tvec} is constrained to be aligned on a
 
   Bits          Field 
   MXLEN-1:6     base (WARL)
-  5:0           mode (WARL)
+  5:2           alignment (WARL)
+  1:0           mode (WARL)
 ----
 
 NOTE: Systems implementing both CLIC and CLINT mode may, but are not
@@ -974,8 +975,8 @@ required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
 
 If a system supports both modes, when `mtvec.mode` is set to CLIC
-mode, then the {tvec}`.mode` of lower-privilege modes is set read-only
-to `000011`.  In CLIC mode, {tvec}`.mode` in lower privilege modes
+mode, then the {tvec}`.alignment` and {tvec}`.mode` of lower-privilege modes is set read-only
+to `000011`.  In CLIC mode, {tvec}`.alignment` and {tvec}`.mode` in lower privilege modes
 is writeable but appears to be `000011` when read in that mode.  When
 `mtvec.mode` is set to a CLINT mode, {tvec} operates as before where
 each privilege mode can set the CLINT mode independently.
@@ -988,7 +989,7 @@ CLIC or other new interrupt controller specs.
 
 ----
  (xtvec[5:0])  
- mode        Action on Interrupt
+ {alignment,mode}  Action on Interrupt
  aaaa00      pc := OBASE                       (original non-vectored basic mode)
  aaaa01      pc := OBASE + 4 * exccode         (original vectored basic mode)
 
