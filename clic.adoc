@@ -400,13 +400,6 @@ Layout of Supervisor-mode CLIC regions
 User-mode CLIC regions only expose interrupts that have been
 configured to be user-accessible via the M-mode CLIC region.  
 
-The location of the S-mode and U-mode CLIC regions are independent of
-the location of the M-mode CLIC region, and their base addresses are
-specified by the platform specification and made visible via the
-discovery mechanism for that platform.
-
-NOTE: Discovery mechanisms are still in development.
-
 [source]
 ----
 Layout of user-mode CLIC regions
@@ -416,7 +409,15 @@ Layout of user-mode CLIC regions
 0x003+4*i   1B/input    RW        clicintctl[i]
 ----
 
-A 32-bit write to {clicintctl,clicintattr,clicintie,clicintip} is legal. However, there is no specified order in which the effects of the individual byte updates take effect.
+The location of the S-mode and U-mode CLIC regions are independent of
+the location of the M-mode CLIC region, and their base addresses are
+specified by the platform specification and made visible via the
+discovery mechanism for that platform.  The base addresses of these CLIC regions must begin on naturally aligned 4KiB boundaries.
+
+NOTE: Discovery mechanisms are still in development.
+
+8b, 16b, and 32b stores to CLIC memory-mapped registers are atomic, however, there is no specified order in which the effects of the individual field updates take effect.  For RV64, naturally aligned 64-bit memory accesses to the CLIC memory-mapped registers are
+additionally supported but 64b accesses can be broken into two 32b accesses in any order.
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
