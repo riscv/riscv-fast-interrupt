@@ -253,6 +253,8 @@ provides centralized interrupt prioritization and routing for shared
 platform-level interrupts, and sends only a single external interrupt
 signal per privilege mode (`meip`/`seip`/`ueip`) to each hart.
 
+On the PLIC, if a level-sensitive interrupt source deasserts the interrupt after the PLIC core accepts the request and before the interrupt is serviced, the interrupt request remains present in the IP bit of the PLIC core and will be serviced by a handler, which will then have to determine that the interrupt device no longer requires service.  On the CLIC a level-sensitive IP bit reflects the value of an input signal to the interrupt controller after any conditional inversion.
+
 The CLIC complements the PLIC.  Smaller single-core systems might have
 only a CLIC, while multicore systems might have a CLIC per-core and a
 single shared PLIC.  The PLIC ``**__x__**eip`` signals are treated as
@@ -275,6 +277,8 @@ require either or both of the original basic and CLIC interrupt modes.
 === CLIC compared to Advanced Interrupt Architecture
 
 Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for reduced context switching with back to back interrupts.
+
+On the APLIC, in direct delivery mode, like the CLIC, the pending bit for a level-sensitive source is always just a copy of the retified input value.  On the APLIC when level-sensitive interrupts are forwarded by MSI, special handling is required to avoid dropping a continued interrupt.
 
 == CLIC Overview
 
