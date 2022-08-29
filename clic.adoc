@@ -530,6 +530,7 @@ NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hard
 
 
 ----
+Interrupt Mode Table
 priv-modes nmbits clicintattr[i].mode  Interpretation
        M      0       xx               M-mode interrupt
 
@@ -809,9 +810,8 @@ types are supported. In this case, these bits become hard-wired to fixed
 values (WARL).
 
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
-operates in. This field uses the same encoding as the `mstatus.mpp`
-(11: machine mode, 01: supervisor mode, 00 user mode). The valid length of
-this field can be programmed with `cliccfg.nmbits`.
+operates in. This field is writable and is unchanged by writes to `cliccfg`.`nmbits` but the read and implicit read value 
+is the interpretation as specified in the Interrupt Mode Table above.
 
 NOTE: For security purpose, the `mode` field can only be set to a privilege level that is equal to or lower than the currently running privilege level.
 
