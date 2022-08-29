@@ -247,8 +247,7 @@ NOTE: WARL means "Write Any, Read Legal" indicating that any value can
 be attempted to be written but only some supported values will actually
 be written.
 
-NOTE: CLIC mode is enabled using previously reserved values (`*11`)
-in the low two bits of mtvec.
+NOTE: The settings of {tvec} mode with the value of `11` and a newly defined {tvec} submode field with the value of `0000` indicate CLIC modes instead of CLINT modes.  Refer to the {tvec} section in this specification for details.
 
 === CLIC mode compared to CLINT mode
 
@@ -264,8 +263,7 @@ Priority for local interrupts is fixed.  {tvec} mode can be set so that all inte
 
 CLIC allows software to control interrupt mode, trigger type, priority, and a CLIC mode vectoring behavior for each individual interrupt.  The CLIC mode vector table holds addresses so does not have the +/-1MiB jump instruction limitation.  CLIC adds support for same privilege level interrupt preemption (horizontal interrupts) and additional support to reduce the number of memory or CSR accesses within an interrupt handler.
 
-Settings of {tvec} mode as described below are used to enable CLIC
-modes instead of the CLINT modes.  Platform profiles may
+Platform profiles may
 require support for either or both of the CLINT and CLIC interrupt modes.
 
 === CLIC compared to PLIC
@@ -904,7 +902,9 @@ A trigger is signaled to the debug module if an interrupt is taken and the inter
 
 This section describes the CLIC-related hart-specific Control and Status Registers (CSRs). When in
 CLINT interrupt mode, the behavior is intended to be software
-compatible with CLINT-mode-only systems.
+compatible with CLINT-mode-only systems.  
+
+Unless explicitly specified differently below, CSR state bits retain their value when switching between CLIC and CLINT modes.  New CLIC CSRs and new CLIC CSR fields appear to be zero for both reads and implicit reads in CLINT mode.   
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -992,13 +992,12 @@ NOTE: Systems implementing both CLIC and CLINT mode may, but are not
 required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
 
-If a system supports both modes, when set to CLIC mode the
-{tvec}.`submode` and {tvec}.`mode` of lower-privilege modes are set
-read-only to `0000` and `11` respectively.  In CLIC mode,
+If a system supports both modes, when `mtvec.submode` is set to `0000` and `mtvec.mode` is set to `11`,
+all privilege modes operate in CLIC mode.  In CLIC mode,
 {tvec}.`submode` and {tvec}.`mode` in lower privilege modes are
-writeable but appear to be `0000` and `11` respectively when read in
+writeable but appear to be `0000` and `11` respectively when read or implicitly read in
 that mode.  When `mtvec.mode` is set to a CLINT mode, {tvec} operates
-as before where each privilege mode can set the CLINT mode
+as before where each privilege mode can set the CLINT mode (direct or vectored)
 independently.
 
 NOTE: Although future CLIC versions may allow privileges to have
@@ -1203,12 +1202,10 @@ register now captures the previous privilege mode (`pp`), interrupt
 level (`pil`) and interrupt enable (`pie`), as well as the id of the
 interrupt in `exccode`.
 
-In systems supporting both CLINT and CLIC modes, the
-CLIC-specific fields (`minhv`, `mpp`, `mpil`, `mpie`) appear to be
-hardwired to zero in basic mode for backwards compatibilty.  When
-CLINT mode is written to {tvec}, the new CLIC {cause} state fields
-(`mhinv` and `mpil`) are zeroed.  The other new CLIC {cause} fields,
-`mpp` and `mpie`, appear as zero in the {cause} CSR but the corresponding
+For backwards compatibility in systems supporting both CLINT and CLIC modes, when
+switching to CLINT mode the new CLIC {cause} state fields
+({inhv} and {pil}) are zeroed.  The other new CLIC {cause} fields,
+{pp} and {pie}, appear as zero in the {cause} CSR but the corresponding
 state bits in the `mstatus` register are not cleared.
 
 In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated.
