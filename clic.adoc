@@ -2545,9 +2545,9 @@ required.
 
 An additional CLIC software interrupt bit (csip) is provided.  This is
 generally available for software use, but is usually used for the
-local background interrupt thread.
+local background interrupt thread, e.g. context switching.
 
-CLIC interrupt inputs are allocated IDs beginning at interrupt ID 16.
+CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
 Any fast local interrupts that would have been connected at interrupt
 ID 16 and above should now be mapped into corresponding inputs of the
 CLIC.
@@ -2571,12 +2571,13 @@ ID  Interrupt   Note
 10  reserved
 11  meip        Machine external (PLIC) interrupt
 
-12  csip        CLIC software interrupt
+12  reserved
 13  reserved
 14  reserved
 15  reserved
 
-16+ inputs      CLIC external inputs
+16  csip        CLIC software interrupt
+17+ inputs      CLIC external inputs
 ----
 
 M-mode only or M/U mode interrupt map recommendation:
