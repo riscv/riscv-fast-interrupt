@@ -2636,7 +2636,7 @@ ID  Interrupt
 3   M-mode software interrupt
 4   M-mode timer interrupt
 5   M-mode external (PLIC) interrupt
-6   external
+6+  external
 ----
 
 [appendix]
