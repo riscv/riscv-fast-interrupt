@@ -1133,7 +1133,11 @@ extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for vectoring is an _implicit_ read at the interrupt level of the interrupt handler, and requires
-execute permission; read permission is irrelevant.  If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
+execute permission; read permission is irrelevant.  
+
+NOTE: software vectoring will need vector table read permission.
+
+If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
 
 NOTE: For simpler systems, we do not require that {tval} is written
 with the faulting address.  For systems with demand paging, {tval}
