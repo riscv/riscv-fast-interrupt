@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 8/16/2022
+:revdate: 8/30/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,6 +110,14 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+08/30/2022  clarify hw vectoring execute permissions, 
+            fixed text to say priv level instead of interrupt level. 
+            changed implicit read to implicit fetch.
+08/30/2022  issue #219 - csip interrupt ordering clarification
+08/30/2022  issue #229 - clarify clicintattr.mode WARL behavior
+08/30/2022  Define CLINT and replace references to "original basic local interrupts" with CLINT
+08/30/2022  issue #191 - software vectoring read permission clarification
+08/30/2022  issue #239/228 - clarification of breakpoints on hw vector table fetches, dpc 
 08/16/2022  issue #202 - 64-bit writes to {clicintctl,clicintattr,clicintie,clicintip} text clarification
 08/02/2022  issue #250 - Clarified that not all specified CSRs are available in all privilege modes
 08/02/2022  issue #248 - created a new xtvec submode field in clic mode
@@ -157,38 +165,38 @@ Date           	Description
 05/25/2021  issue #142 - added text that MPRV and SUM are obeyed on vector table accesses.
 05/11/2021  issue #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
 04/27/2021  clicintip[i] state is undefined when switching from level to edge triggered mode
-04/22/2021	updated adoc format to align with risc-v template, added revision history
-04/18/2021	Added Bibliography section
-04/15/2021	issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
-04/13/2021	issue #141 - N-extension vs Bare S-mode note added.
-04/13/2021	issue #117,#125 fix - change text to match table in M/S/U system if nmbits==1
-04/12/2021	issue #47 fix - add CLIC reset behavior section
-04/12/2021	issue #26 fix - modify wording that defined micro-architectural behavior of xINHV
-04/12/2021	issue #91 - add DTS entry example
-04/12/2021	added CLIC comparision to Advance Interupt Architecture (AIA)
-04/12/2021	issue #111,#105 fix - For hardware vectoring access exceptions, both {tval} and {epc} holds the faulting address
-04/08/2021	issue #49, #79 - downplay M/S/U memory map requirements
-03/30/2021	issue #29 - updated memory map table reserved section to give room for clicinttrig
-03/30/2021	issue #122 fix - remove wording referring to register
-03/11/2021	issue #120 - update WFI wording
-03/11/2021	typo fixing
-03/11/2021	issue #51 - implementation of non CSRRW variants of xscratchcsw/xscratchcswl explicitly not defined/reserved.
-03/11/2021	issue #58 - xintthresh was missing from table summarizing overall interrupt behavior
-02/17/2021	issue #95 fix - removed N extension reference since not ratified.
-02/17/2021	issue #90 fix - clarified that clicintip!=0 means interrupt pending
-02/17/2021	issue #89 - updated CLIC interrupt ID ordering recommendations
-02/17/2021	ihnv clarification - inhv bit has no effect except when returning from a trap using an {ret} instruction 
-02/17/2021	ihnv clarification - inhv only written by hw during table vector read. can be written by software.
-02/02/2021	WFI wording change
-01/19/2021	WFI wording change
-01/07/2021	WFI section added
-01/07/2021	Notes added clarifying clicintie and mstatus.xie
-01/07/2021	interrupt priority clarification 
-12/17/2020	Added support for interrupt triggers
-10/20/2020	clarified differences between level and priority
-10/20/2020	fixed value range for CLICINTCTLBITS
-10/20/2020	Clarified relationship among interrupt level, cliccfg.nlbits and CLICINTCTLBITS
-09/08/2020	clarified description for interrupt level
+04/22/2021  updated adoc format to align with risc-v template, added revision history
+04/18/2021  Added Bibliography section
+04/15/2021  issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
+04/13/2021  issue #141 - N-extension vs Bare S-mode note added.
+04/13/2021  issue #117,#125 fix - change text to match table in M/S/U system if nmbits==1
+04/12/2021  issue #47 fix - add CLIC reset behavior section
+04/12/2021  issue #26 fix - modify wording that defined micro-architectural behavior of xINHV
+04/12/2021  issue #91 - add DTS entry example
+04/12/2021  added CLIC comparision to Advance Interupt Architecture (AIA)
+04/12/2021  issue #111,#105 fix - For hardware vectoring access exceptions, both {tval} and {epc} holds the faulting address
+04/08/2021  issue #49, #79 - downplay M/S/U memory map requirements
+03/30/2021  issue #29 - updated memory map table reserved section to give room for clicinttrig
+03/30/2021  issue #122 fix - remove wording referring to register
+03/11/2021  issue #120 - update WFI wording
+03/11/2021  typo fixing
+03/11/2021  issue #51 - implementation of non CSRRW variants of xscratchcsw/xscratchcswl explicitly not defined/reserved.
+03/11/2021  issue #58 - xintthresh was missing from table summarizing overall interrupt behavior
+02/17/2021  issue #95 fix - removed N extension reference since not ratified.
+02/17/2021  issue #90 fix - clarified that clicintip!=0 means interrupt pending
+02/17/2021  issue #89 - updated CLIC interrupt ID ordering recommendations
+02/17/2021  ihnv clarification - inhv bit has no effect except when returning from a trap using an {ret} instruction 
+02/17/2021  ihnv clarification - inhv only written by hw during table vector read. can be written by software.
+02/02/2021  WFI wording change
+01/19/2021  WFI wording change
+01/07/2021  WFI section added
+01/07/2021  Notes added clarifying clicintie and mstatus.xie
+01/07/2021  interrupt priority clarification 
+12/17/2020  Added support for interrupt triggers
+10/20/2020  clarified differences between level and priority
+10/20/2020  fixed value range for CLICINTCTLBITS
+10/20/2020  Clarified relationship among interrupt level, cliccfg.nlbits and CLICINTCTLBITS
+09/08/2020  clarified description for interrupt level
 ----
 
 == Background and Motivation
