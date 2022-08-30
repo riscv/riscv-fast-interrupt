@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 8/2/2022
+:revdate: 8/16/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,7 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
-
+08/16/2022  issue #202 - 64-bit writes to {clicintctl,clicintattr,clicintie,clicintip} text clarification
 08/02/2022  issue #250 - Clarified that not all specified CSRs are available in all privilege modes
 08/02/2022  issue #248 - created a new xtvec submode field in clic mode
 08/02/2022  issue #100 - reserving use of uimm bits in xnxti for future use
