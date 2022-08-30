@@ -1086,12 +1086,14 @@ except when returning from an exception using an {ret} instruction.  Since succe
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
 
-If the {inhv} bit of the previous privilege mode is set, the hart resumes the trap handler memory access to retrieve the
-function pointer for vectoring with permissions corresponding to the previous privilege mode.
-The trap handler function address is fetched from the current privilege mode's
-`xepc`.  If the fetch is successful, the hart
+If the {inhv} bit of the previous privilege mode is set, the hart
+resumes the trap handler memory access to retrieve the function
+pointer for vectoring with permissions corresponding to the previous
+privilege mode.  The trap handler function address is fetched from the
+current privilege mode's `xepc`.  If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause} of the handler privilege mode.
+address, then clears the {inhv} bit in {cause} of the handler
+privilege mode.
 
 ----
 /* get inhv value of previous privilege mode */
@@ -1132,8 +1134,9 @@ mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
 extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
-function pointer for vectoring is an _implicit_ read at the interrupt level of the interrupt handler, and requires
-execute permission; read permission is irrelevant.  
+function pointer for hardware vectoring is an _implicit_ read at the
+interrupt level of the interrupt handler, and requires execute
+permission; read permission is irrelevant.
 
 NOTE: software vectoring will need vector table read permission.
 
