@@ -1134,7 +1134,7 @@ mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
 extensions are supported).
 
 For permissions-checking purposes, the memory access to retrieve the
-function pointer for hardware vectoring is an _implicit_ read at the
+function pointer for hardware vectoring is an _implicit_ fetch at the
 privilege mode of the interrupt handler, and requires execute
 permission; read permission is irrelevant.
 
