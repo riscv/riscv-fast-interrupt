@@ -1170,7 +1170,13 @@ which execution was interrupted.  In CLIC mode, the {epc} CSR additionally may h
 
 === Changes to {dpc} CSRs
 
-For implicit hardware vector table reads, whether breakpoints trap on the table read is left as an implementation option. For explicit loads used in software vectoring, watchpoints operate as normal for any load.   In CLIC mode, the `dpc` CSR additionally may hold the faulting address if breakpoints are allowed to trap on the table fetch during hardware vectoring.  If breakpoints are allowed to trap on the table read, dret should honor inhv.   
+For implicit hardware vector table fetches, whether breakpoints trap
+on the table read is left as an implementation option. For explicit
+loads used in software vectoring, watchpoints operate as normal for
+any load.  In CLIC mode, the `dpc` CSR additionally may hold the
+faulting address if breakpoints are allowed to trap on the table fetch
+during hardware vectoring.  If breakpoints are allowed to trap on the
+table read, dret should honor inhv.
 
 === Changes to {cause} CSRs
 
