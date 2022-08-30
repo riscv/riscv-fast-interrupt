@@ -1168,6 +1168,10 @@ still accessible in basic mode (but does not have any effect).
 The {epc} CSRs behave the same in both modes, capturing the PC at
 which execution was interrupted.  In CLIC mode, the {epc} CSR additionally may hold the faulting address if there is an access exception on the table fetch during hardware vectoring.
 
+=== Changes to {dpc} CSRs
+
+For implicit hardware vector table reads, whether breakpoints trap on the table read is left as an implementation option. For explicit loads used in software vectoring, watchpoints operate as normal for any load.   In CLIC mode, the `dpc` CSR additionally may hold the faulting address if breakpoints are allowed to trap on the table fetch during hardware vectoring.  If breakpoints are allowed to trap on the table read, dret should honor inhv.   
+
 === Changes to {cause} CSRs
 
 In both CLINT and CLIC modes, the {cause} CSR is written at the
