@@ -1,0 +1,44 @@
+Date: 2020/5/12
+Task Group: Fast Interrupts
+Chair: Krste Asanovic
+Co-Chair: Kevin Chen
+Number of Attendees: ~10
+Current issues on github: https://github.com/riscv/riscv-fast-interrupt/blob/master/clic.adoc
+
+Issues discussed:
+
+#29 Specification of debug triggers for CLIC interrupt
+
+Group generally agreed that CLIC interrupt triggers should be
+configured through memory-mapped registers.  The group discussed
+changes to the proposed memory map, including only requiring 32b word
+writes, and moving interrupt enable to top of field and interrupt ID
+to bottom.
+
+One unresolved issue is whether triggers should be on pending
+interrupts, and/or pending and enabled interrupts, and/or the next
+interrupt to be taken.  The CLIC group members will confer with debug
+group to resolve.
+
+#39 WARL for edge/level spec
+
+Group agreed with WARL definition for this field, and so closed the
+issue.
+
+#(no number)
+
+Finally, the group spend some time discussing auto-clearing of
+edge-triggered interrupts.  The consensus was that the clear must
+happen on entry to the ISR.  Another concern was around race
+conditions if an ISR wants to check for further interrupts inside
+handler.  Memory-mapped access to read/clear the IP bits has race
+problems, so recommendation is to use the mnxti CSR instruction to
+access/clear any further interrupts.
+
+The group decided we need a logic diagram of the configurable
+level/edge input to help resolve questions around specification of
+what happens when edge/level configuration is changed during
+operation.
+
+
+

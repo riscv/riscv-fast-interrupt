@@ -1,0 +1,136 @@
+:sectnums:
+:toc: left
+
+:encoding: utf-8
+= RISC-V Fast Interrupt: Architectural Tests Plan
+
+A plan for developing the riscv architectural tests for the Fast Interrupt
+Extension.
+
+== Introduction
+
+The point of this test plan is to:
+
+* Explain what the RISC-V architectural tests try to achieve, both generally
+  and for the fast interrupt architecture in particular.
+
+* Act as a starting point for verification engineers writing
+  verification plans. 
+
+Some useful links:
+
+* https://github.com/riscv/riscv-compliance[RISC-V Compliance Github Repo].
+** https://github.com/riscv/riscv-compliance/tree/master/doc[Associated Documentation].
+* https://github.com/riscv/riscv-fast-interrupt
+
+== Test bench setup and deterministic sequences
+
+The framework for architectural tests is to load a test (binary) and start a hart, 
+the hart signals finished, results are extraced from memory and verified against a signature.
+Since interrupts can occur asynchronously it is limiting to create deterministic tests for 
+different implementations with results that can be compared with SAIL model results.  For example,
+with different implementation, a different number of instructions will occur before the pending interrupt bit 
+actually gets set.  Depending on the implementation, the execution pc could be a different value than the SAIL model.
+
+=== One possible determanistic sequence is
+- if implementation only has level interrupts (pending bit cannot be set by testbench), testbench sets interrupts to the asserted position before running the test.  Since mstatus.mie is reset by default, no interrupts will be taken until it is enabled.
+- setup cliccfg
+- setup xthresh
+- setup interrupt based on implementation parameter
+- setup xtvec_handler
+- fence instruction
+- enable status.mie/sie/uie
+- loop to self
+
+This sequence ensures the xepc value will be the loop to self and implementation signatures should match SAIL model.
+
+== Implemenation parameters needed by the testbench
+- EDGE: 0 - level, 1 - edge.  If set to 0, testbench will need to assert the interrput before the test binary is run.
+- NEG: 0 - positive, 1 - negative (interrupt polarity, only used if testbench is level and will be asserting interrupts before test binary is run.
+- INTERRUPT1_NUM - 1st interrupt number, used to calculate interrupt address and expected exccode value.
+- INTERRUPT2_NUM - 2nd interrupt number for tests that require 2 interrupts (preemption, priority encoder verification)
+- CLICCFG - address of cliccfg register.  Used as base address for interrupt address calculation and verification of mclicbase value.
+- CLICINTCTLBITS - number of implemented clicintctl bits.
+- addresses of new CLIC csr registers.  Until the spec is ratified, the implementation will need to provide the addresses of the new CLIC csr registers for that implementation.
+
+== Test sequences
+
+=== suite of tests to verify interrupt privilege result 
+- based on CLICINTCTLBITS, nlbits, clicintctl[i] setting for m, m/u, m/s/u implementations
+- compare against table in section 3.2.1 Specifying Interrupt Privilege Mode
+
+==== Signatures
+- xie
+- xip
+- xcause
+- xstatus
+- xepc
+- xtval
+- xintstatus
+- xscratchcsw
+- xscratchcswl
+
+=== suite of tests to verify interrupt priority encoder implementation 
+- compare against table in section 7.1 General Interrupt Overview
+
+==== Signatures
+- xie
+- xip
+- xcause
+- xstatus
+- xepc
+- xtval
+- xintstatus
+- xscratchcsw
+- xscratchcswl
+
+=== hardware vectoring test
+- checks xtvt
+- create a pmp violation to check xinhv? if fault xtval and xepc tested
+
+=== verify clicinfo csr matches build parameters
+
+=== check clicintattr/ctrl/ip/ie accessibility in s-mode, u-mode
+
+=== verify xcause mstatus bits match xstatus
+
+=== verify xnxti
+- in non-clic mode a read should return 0
+- in interrupt routine, check xnxti when interrupt pending and when not pending to verify conditional behavior
+- interrupt chaining
+
+=== verify xintthresh
+- verify only applies to current privilege mode
+
+=== verify preemption works without losing state
+
+=== verify WFI cases
+
+=== verify clicintie masking works
+
+=== verify mclicbase matches CLICCFG implementation parameter
+
+=== verify xideleg and xedeleg still accessible but have no effect in clic mode
+
+=== check XIE, XIP CSRs appear hardwired 0 in CLIC mode, 
+- retain value when switched back to original mode
+
+=== verify only mtvec, not stvec or utvec can change from clic to non-clic mode
+
+=== byte write of clicintip/ie/ctl/attr vs. 32-bit write
+
+== Coverage Holes
+
+=== async behavior on pipeline
+
+=== only comparing up-to two interrupts at a time
+
+=== clicintattr.trig
+
+
+
+
+
+
+
+- 
