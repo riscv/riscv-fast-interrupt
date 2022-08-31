@@ -2560,8 +2560,10 @@ on {scratchcswl} is not defined/reserved.
 
 == CLIC Interrupt ID ordering recommendations
 
-There are a few CLIC interrupt ID ordering recommendations
-as part of a profile and are not mandatory in all incarnations of the CLIC.
+As stated in the RISC-V profiles specification, RISC-V profiles specify a common 
+set of ISA choices that capture the most value for most users to enable software 
+compatibility. CLIC compatibility with RISC-V specified profiles is not mandatory.  
+Four different CLIC interrupt ID orderings are enumerated below for ease of reference in profile specifications.
 
 === CLINT mode compatibility recommendation: 
 The CLINT mode interrupts retain their interrupt ID in CLIC mode.
@@ -2591,10 +2593,10 @@ ID  Interrupt   Note
  6  reserved
  7  mtip        Machine timer interrupt
 
- 8  ueip        User external (PLIC) interrupt
- 9  seip        Supervisor external (PLIC) interrupt
+ 8  ueip        User external (PLIC/APLIC) interrupt
+ 9  seip        Supervisor external (PLIC/APLIC) interrupt
 10  reserved
-11  meip        Machine external (PLIC) interrupt
+11  meip        Machine external (PLIC/APLIC) interrupt
 
 12  reserved
 13  reserved
@@ -2626,16 +2628,16 @@ ID  Interrupt
 4+  external (including legacy)
 ----
 
-=== Interrupt map with PLIC recommendation:
+=== Interrupt map with PLIC/APLIC recommendation:
 [source]
 ----
 ID  Interrupt
 0   S-mode software interrupt
 1   S-mode timer interrupt
-2   S-mode external (PLIC) interrupt
+2   S-mode external (PLIC/APLIC) interrupt
 3   M-mode software interrupt
 4   M-mode timer interrupt
-5   M-mode external (PLIC) interrupt
+5   M-mode external (PLIC/APLIC) interrupt
 6+  external
 ----
 
