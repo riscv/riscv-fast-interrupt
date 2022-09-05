@@ -2378,9 +2378,9 @@ operand specified as usual in the instruction.
 
 In practice, only the read-modify-write (swap/CSRRW) operation is useful 
 for {scratchcsw}. In contrast, the "pure read" and "pure write" 
-operations are meaningless and not useful at all. The implementation of the 
+operations are meaningless and not useful at all. The behavior of the 
 non-CSRRW variants (when either `rd` or `rs1` is `x0` or when `rs1` is an immediate 
-operand) on {scratchcsw} is not defined/reserved. 
+operand) on {scratchcsw} is implementation-defined. 
 
 NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
