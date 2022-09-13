@@ -388,7 +388,15 @@ M-mode CLIC memory map
   0x00B8         4B          RW        clicinttrig[30]
   0x00BC         4B          RW        clicinttrig[31]
 
-
+  0x0200         4B          R or RW   iparray[31:0]
+  0x0204         4B          R or RW   iparray[63:32]
+  ...
+  0x03FC         4B          R or RW   iparray[4095:4064]
+  0x0400         4B          RW        iearray[31:0]
+  0x0404         4B          RW        iearray[63:32]
+  ...
+  0x05FC         4B          RW        iearray[4095:4064]
+  
   0x1000+4*i     1B/input    R or RW   clicintip[i]
   0x1001+4*i     1B/input    RW        clicintie[i]
   0x1002+4*i     1B/input    RW        clicintattr[i]
@@ -407,10 +415,19 @@ configured to be supervisor-accessible via the M-mode CLIC region.
 [source]
 ----
 Layout of Supervisor-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0200       4B          R or RW   iparray[31:0]
+0x0204       4B          R or RW   iparray[63:32]
+  ...
+0x03FC       4B          R or RW   iparray[4095:4064]
+0x0400       4B          RW        iearray[31:0]
+0x0404       4B          RW        iearray[63:32]
+  ...
+0x05FC       4B          RW        iearray[4095:4064]
+  
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 User-mode CLIC regions only expose interrupts that have been
@@ -419,10 +436,19 @@ configured to be user-accessible via the M-mode CLIC region.
 [source]
 ----
 Layout of user-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0200       4B          R or RW   iparray[31:0]
+0x0204       4B          R or RW   iparray[63:32]
+  ...
+0x03FC       4B          R or RW   iparray[4095:4064]
+0x0400       4B          RW        iearray[31:0]
+0x0404       4B          RW        iearray[63:32]
+  ...
+0x05FC       4B          RW        iearray[4095:4064]
+  
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 The location of the S-mode and U-mode CLIC regions are independent of
@@ -437,19 +463,19 @@ additionally supported but 64b accesses can be broken into two 32b accesses in a
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
-`clicintctl[__i__]` memory locations appear hardwired to zero.
+`clicintctl[__i__]`, `iparray[__i__]`, `iearray[__i__]` memory locations appear hardwired to zero.
 
 All CLIC-memory mapped registers are visible to M-mode.
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as S-mode interrupts are not acessible to U-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]`, , `iparray[__i__]`, `iearray[__i__]` configured as M-mode interrupts are not acessible to S-mode and U-mode.
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]`, , `iparray[__i__]`, `iearray[__i__]` configured as S-mode interrupts are not acessible to U-mode.
 
 In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
+`clicintctl[__i__]`, `iparray[__i__]`, and `iearray[__i__]`.
 
 Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
+`clicintctl[__i__]`, `iparray[__i__]`, and `iearray[__i__]`.
 
 The privilege mode of an interrupt is controlled by both `cliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
 
@@ -905,6 +931,12 @@ interrupt trigger.
 This logic is intended to be used with tmexttrigger.intctl as described in the RISC-V debug specification.
 
 A trigger is signaled to the debug module if an interrupt is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.enable is set.
+
+=== CLIC Interrupt Arrays (`iparray` `iearray`)
+
+`iparray` `iearray` are optional mirrored views of the set of `clicintip` and `clicintie` registers, provided so software can quickly read muliple pending interrupts or modify multiple interrupt enables with fewer instructions.  Bit i of `iparray` mirrors `clicintip[__i__]`, and bit i of `iearray` mirrors `clicintie[__i__]`.  
+
+Note: In a straightforward implementation, reading or writing an interrupt bit in `iparray` is equivalent to reading or writing the interrupt pending bit in `clicintip`.  Likewise reading or writing an interrupt bit in `iearray` is equivalent to reading or writing the interrupt enable bit in `clicintie`.
 
 == CLIC CSRs
 
