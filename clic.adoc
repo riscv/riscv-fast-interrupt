@@ -2583,9 +2583,10 @@ The CLINT-mode interrupts retain their interrupt ID in CLIC mode.
 The `clicintattr` settings are now used to delegate these interrupts as
 required.
 
-An additional CLIC software interrupt bit (csip) is provided.  This is
-generally available for software use, but is usually used for the
-local background interrupt thread, e.g. context switching.
+The existing CLINT software interrupt bits are primarily intended for
+inter-hart interrupt signaling.  An additional separate CLIC software
+interrupt bit (`csip`) is added to provide support for a local
+background interrupt thread, e.g. context switching.
 
 CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
 Any fast local interrupts that would have been connected at interrupt
@@ -2623,7 +2624,7 @@ ID  Interrupt   Note
 The following optional recommendations remove unused interrupt inputs
 and compress the map to simplify hardware implementations.
 
-=== CLIC-mode interrupt-map recommendation for systems with PLIC/APLIC:
+=== CLIC-mode interrupt-map recommendation for single-hart systems with PLIC/APLIC:
 
 [source]
 ----
@@ -2637,7 +2638,7 @@ ID  Interrupt
 6+  external                               
 ----
 
-=== CLIC-mode interrupt-map recommendation for M/S/U systems without N extension with no PLIC/APLIC:
+=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N extension with no PLIC/APLIC:
 
 [source]
 ----
@@ -2649,7 +2650,7 @@ ID  Interrupt
 4+  other
 ----
 
-=== CLIC-mode interrupt-map recommendation for M-mode only or M/U mode
+=== CLIC-mode interrupt-map recommendation for single-hart M-mode only or M/U mode
 systems without N extension and no PLIC/APLIC:
 
 [source]
