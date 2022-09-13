@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 8/30/2022
+:revdate: 9/13/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+09/13/2022  issues #219/#222 - CLIC interrupt ordering text clarifications.
 08/30/2022  clarify hw vectoring execute permissions, 
             fixed text to say priv level instead of interrupt level. 
             changed implicit read to implicit fetch.
