@@ -1001,12 +1001,16 @@ NOTE: Systems implementing both CLIC and CLINT mode may, but are not
 required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
 
-If a system supports both modes, when `mtvec.submode` is set to `0000` and `mtvec.mode` is set to `11`,
+If a system supports both modes, `mtvec.mode` is set to `11` and when `mtvec.submode` is set to `0000`,
 all privilege modes operate in CLIC mode.  In CLIC mode,
-{tvec}.`submode` and {tvec}.`mode` in lower privilege modes are
-writeable but appear to be `0000` and `11` respectively when read or implicitly read in
-that mode.  When `mtvec.mode` is set to a CLINT mode, {tvec} operates
-as before where each privilege mode can set the CLINT mode (direct or vectored)
+{tvec}.`mode` and {tvec}.`submode` in lower privilege modes are
+writeable but appear to be `11` and `0000` respectively when read or implicitly read in
+that mode.  
+
+When `mtvec.mode` is set to a CLINT mode, all privilege modes operate in CLINT mode.  In CLINT mode, 
+{tvec}.`mode` in lower privilege modes are
+writeable but {tvec}.`mode` bit 1 appears to be `0` when read or implicitly read in
+that mode.  {tvec} operates as before where each privilege mode can set the CLINT mode (direct or vectored)
 independently.
 
 NOTE: Although future CLIC versions may allow privileges to have
