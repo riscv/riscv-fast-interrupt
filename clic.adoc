@@ -1111,18 +1111,24 @@ address, then clears the {inhv} bit in {cause} of the handler
 privilege mode.
 
 ----
-/* get inhv value of previous privilege mode */
+/* get xinhv value of previous privilege mode */
+if   (~ (haveUsrMode()) | ~(sys_enable_next()))
+  ucause_uinhv = 0; // if N-extension (user interrupts) is not supported 
+else 
+  ucause_uinhv = ucause.UINHV();
+
+  
 match cur_privilege {
-  User => prev_inhv = ucause.INHV();
+  User => prev_xinhv = ucause_uinhv;
   Supervisor => if sstatus.SPP() then {
-                  prev_inhv = scause.INHV(); 
+                  prev_xinhv = scause.SINHV(); 
                 } else {
-                  prev_inhv = ucause.INHV();
+                  prev_xinhv = ucause_uinhv;
                 } 
   Machine => match mstatus.MPP() {
-               User       => prev_inhv = ucause.INHV();
-               Supervisor => prev_inhv = scause.INHV();
-               Machine    => prev_inhv = mcause.INHV();
+               User       => prev_xinhv = ucause_uinhv;
+               Supervisor => prev_xinhv = scause.SINHV();
+               Machine    => prev_xinhv = mcause.MINHV();
              }
 
 /* is instruction URET, SRET or MRET */
@@ -1132,14 +1138,14 @@ match (ctl) {
   CTL_MRET => xepc = mepc;
 }
 
-if prev_inhv then {
+if prev_xinhv then {
   /* pc set from table entry pointed to by {epc}, not by value of {epc} */
   set_next_pc(mem_read(xepc) & ~1)
 } else {
   set_next_pc(xepc)
 }
 ----
-NOTE: The inhv bit when set at xRET informs hardware to repeat the table load using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
+NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table load using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
 
 Implementations might support only one of CLINT or CLIC mode.
 If only basic mode is supported, writes to bit 1 are ignored and it is
@@ -1191,7 +1197,7 @@ loads used in software vectoring, watchpoints operate as normal for
 any load.  In CLIC mode, the `dpc` CSR additionally may hold the
 faulting address if breakpoints are allowed to trap on the table fetch
 during hardware vectoring.  If breakpoints are allowed to trap on the
-table read, dret should honor inhv.
+table read, dret should honor {inhv}.
 
 === Changes to {cause} CSRs
 
