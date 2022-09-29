@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 9/13/2022
+:revdate: 9/27/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,11 +110,14 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+09/27/2022  issue #271/#272 - xinhv text cleanup. setting ucause_inhv in pseudo-code when u-mode not implemented.
+09/27/2022  issue #240/#255 - clarify CLIC vs CLINT mode settings
 09/13/2022  issues #219/#222 - CLIC interrupt ordering text clarifications.
+09/05/2022  issue #267 - update text from not defined to implementation-defined.
 08/30/2022  clarify hw vectoring execute permissions, 
             fixed text to say priv level instead of interrupt level. 
             changed implicit read to implicit fetch.
-08/30/2022  issue #219 - csip interrupt ordering clarification
+08/30/2022  issue #219 - csip interrupt ordering clarification - CSIP interrupt ID was changed from 12 to 16
 08/30/2022  issue #229 - clarify clicintattr.mode WARL behavior
 08/30/2022  Define CLINT and replace references to "original basic local interrupts" with CLINT
 08/30/2022  issue #191 - software vectoring read permission clarification
