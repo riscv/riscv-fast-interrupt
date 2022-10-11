@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 9/27/2022
+:revdate: 10/11/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,8 +110,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
-10/11/2022  Reserved use of all but simple csrrw access to scratchcsw, clarified operation of the instruction
-10/11/2022  Added more clarification on csip
+10/11/2022  issue #275 - clarify hwvector text
+10/11/2022  issue #279 - Reserved use of all but simple csrrw access to scratchcsw/l, clarified operation of the instruction
+10/11/2022  issue #277 - Added more clarification on csip
 09/27/2022  issue #271/#272 - xinhv text cleanup. setting ucause_inhv in pseudo-code when u-mode not implemented.
 09/27/2022  issue #240/#255 - clarify CLIC vs CLINT mode settings
 09/13/2022  issues #219/#222 - CLIC interrupt ordering text clarifications.
@@ -2577,10 +2578,7 @@ This new CSR operates similarly to {scratchcsw} except that the swap
 condition is true when the interrupter and interruptee are not both
 application tasks or not both interrupt handlers.
 
-Similar to {scratchcsw}, only the read-modify-write (swap/CSRRW) operation is defined for 
-{scratchcswl}. The implementation of the non-CSRRW variants (when 
-either `rd` or `rs1` is `x0` or when `rs1` is an immediate operand)
-on {scratchcswl} is not defined/reserved. 
+As with {scratchcsw}, these CSRs are only designed to be used with the csrrw instruction with neither rd nor rs1 set to x0. Accessing the {scratchcswl} register with the csrrw instruction with either rd or rs1 set to x0, or using any other CSR instruction form (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
 
 == CLIC Interrupt ID ordering recommendations
 
