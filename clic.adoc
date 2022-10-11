@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+10/11/2022  Added more clarification on csip
 09/27/2022  issue #271/#272 - xinhv text cleanup. setting ucause_inhv in pseudo-code when u-mode not implemented.
 09/27/2022  issue #240/#255 - clarify CLIC vs CLINT mode settings
 09/13/2022  issues #219/#222 - CLIC interrupt ordering text clarifications.
@@ -2599,10 +2600,17 @@ The CLINT-mode interrupts retain their interrupt ID in CLIC mode.
 The `clicintattr` settings are now used to delegate these interrupts as
 required.
 
+We recommend allocating an edge-triggered CLIC software interrupt bit
+(`csip`) with the lowest number (16) among the external interrupts to
+provide support for a local background interrupt thread, e.g. context
+switching.  By placing the `csip` interrupt at the lowest number among
+external interrupts, we avoid requiring another interrupt level to
+ensure this only runs when there are no other interrupts.
+
 The existing CLINT software interrupt bits are primarily intended for
-inter-hart interrupt signaling.  An additional separate CLIC software
-interrupt bit (`csip`) is added to provide support for a local
-background interrupt thread, e.g. context switching.
+inter-hart interrupt signaling, and so are retained for that purpose.
+The software interrupts can have their priority changed using their
+`clicintctl` setting.
 
 CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
 Any fast local interrupts that would have been connected at interrupt
