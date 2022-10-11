@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+10/11/2022  Reserved use of all but simple csrrw access to scratchcsw, clarified operation of the instruction
 10/11/2022  Added more clarification on csip
 09/27/2022  issue #271/#272 - xinhv text cleanup. setting ucause_inhv in pseudo-code when u-mode not implemented.
 09/27/2022  issue #240/#255 - clarify CLIC vs CLINT mode settings
@@ -2380,24 +2381,19 @@ CSR {scratchcsw} can be defined for all but the lowest privilege mode
 to support conditional swapping of the {scratch} register when
 transitioning between privilege modes.  The CSR instruction is used
 once at the entry to a handler routine and once at handler exit, so
-only adds two instructions to the interrupt code path.  Though
-designed to be used with `csrrw` instructions, these CSRs can be
-accessed with any CSR instruction.
+only adds two instructions to the interrupt code path.
 
-For all CSR instructions accessing {scratchcsw}, the value written into
-`rd` is either {scratch} if {pp} is different than the current
-privilege mode, or `rs1` if {pp} is the same as the current privilege
-mode.  The {scratch} register is only written if there is a privilege
-mode difference, and if so, it is written obeying the usual CSR
-read-modify-write conventions (e.g., swap/set/clear bits) using the
-original {scratch} value as one source operand and the other source
-operand specified as usual in the instruction.
+These CSRs are only designed to be used with the `csrrw` instruction
+with neither `rd` nor `rs1` set to `x0`.  Accessing the {scratchcsw}
+register with the `csrrw` instruction with either `rd` or `rs1` set to
+`x0`, or using any other CSR instruction form
+(CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
 
-In practice, only the read-modify-write (swap/CSRRW) operation is useful 
-for {scratchcsw}. In contrast, the "pure read" and "pure write" 
-operations are meaningless and not useful at all. The behavior of the 
-non-CSRRW variants (when either `rd` or `rs1` is `x0` or when `rs1` is an immediate 
-operand) on {scratchcsw} is implementation-defined. 
+When using `csrrw` to access {scratchcsw}, the value written into `rd`
+is either {scratch} if {pp} is different than the current privilege
+mode, or `rs1` if {pp} is the same as the current privilege mode.  The
+{scratch} register is only written with the original value of `rs1` if
+there is a privilege mode difference.
 
 NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
@@ -2407,6 +2403,17 @@ NOTE: The CSR instructions are defined to always copy a result
 ({scratch} or `rs1`) to the `rd` destination to simplify
 implementations using register renaming, and in normal use the
 instructions set both `rs1` = `sp` and `rd` = `sp`.
+
+An example of normal usage of the {scratchcsw} CSR is as follows:
+
+[source]
+----
+csrrw sp, mscratchcsw, sp
+# If mpp!=M-mode, swap mscratch and stack pointer (sp)
+# otherwise sp copied to sp (i.e., no change) and mscratch unchanged
+----
+
+Formal description follows:
 
 [source]
 ----
