@@ -1150,7 +1150,7 @@ if prev_xinhv then {
   set_next_pc(xepc)
 }
 ----
-NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table load using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
+NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
 
 Implementations might support only one of CLINT or CLIC mode.
 If only basic mode is supported, writes to bit 1 are ignored and it is
@@ -1173,7 +1173,7 @@ with the faulting address.  For systems with demand paging, {tval}
 should be written with the faulting address to simplify page-fault
 handling code.
 
-NOTE: Horizontal traps (same privilege level) are unrecoverable. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults on vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run). However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are recommended to be written with the faulting address in systems with demand paging.
+NOTE: Interrupted context is lost on horizontal traps during table fetch where exceptions are the same privilege level as the interrupt handler. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults for the less privileged mode vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run). However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are recommended to be written with the faulting address in systems with demand paging.
 
 Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
 
