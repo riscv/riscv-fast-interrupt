@@ -271,7 +271,7 @@ that provides local interrupts and manages
 the software, timer, and external interrupt signals
 (``**__x__**sip``/``**__x__**tip``/``**__x__**eip`` signals in
 the {ip} register).  This basic controller also allows additional
-custom fast interrupt signals to be added in bits 16 and up of the
+custom fast local interrupt signals to be added in bits 16 and up of the
 {ip} register.
 
 Priority for local interrupts is fixed.  {tvec} mode can be set so that all interrupts are direct and set the pc to the same vector base address.  {tvec} mode can also be set so that all interrupts are vectored using a vector table filled with jump instructions.
@@ -297,7 +297,7 @@ hart-local interrupt sources by the CLIC at each core.
 
 === CLIC compared to Advanced Interrupt Architecture
 
-Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for reduced context switching with back to back interrupts.
+Advanced interrupt Architecture (AIA) supports message-signaled interrupts (MSIs) and an Advanced PLIC (APLIC) and targeted to support multiple harts, and support for virtualization.  Like CLIC, the relative priority of all interrupts (not just external) can be configured. CLIC is targeted at CLIC per-core and has the option to give each interrupt source a separate trap entry address,  preemption (nesting) of interrupts with adjustable priority threshold control, and support for reduced context switching with back-to-back interrupts.
 
 == CLIC Overview
 
@@ -315,7 +315,7 @@ and priority (`clicintctl[__i__]`).
 
 When the first 16 interrupt inputs are reserved for the CLINT mode
 interrupts present in the low 16 bits of the {ip} and {ie} registers,
-up to 4080 local external interrupts can be added.
+up to 4080 local interrupts can be added.
 
 === Interrupt Preemption
 
@@ -2606,10 +2606,10 @@ The `clicintattr` settings are now used to delegate these interrupts as
 required.
 
 We recommend allocating an edge-triggered CLIC software interrupt bit
-(`csip`) with the lowest number (16) among the external interrupts to
+(`csip`) with the lowest number (16) among the local interrupts to
 provide support for a local background interrupt thread, e.g. context
 switching.  By placing the `csip` interrupt at the lowest number among
-external interrupts, we avoid requiring another interrupt level to
+local interrupts, we avoid requiring another interrupt level to
 ensure this only runs when there are no other interrupts.
 
 The existing CLINT software interrupt bits are primarily intended for
@@ -2647,7 +2647,7 @@ ID  Interrupt   Note
 15  reserved
 
 16  csip        CLIC software interrupt
-17+ inputs      CLIC external inputs
+17+ inputs      CLIC local inputs
 ----
 
 In CLINT mode, as stated in the RISC-V privilege specification, each
@@ -2678,7 +2678,7 @@ ID  Interrupt
 3   M-mode software interrupt
 4   M-mode timer interrupt
 5   M-mode external (PLIC/APLIC) interrupt
-6+  external                               
+6+  local
 ----
 
 === CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N extension with no PLIC/APLIC:
