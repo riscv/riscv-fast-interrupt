@@ -1117,39 +1117,51 @@ address, then clears the {inhv} bit in {cause} of the handler
 privilege mode.
 
 ----
-/* get xinhv value of previous privilege mode */
-if   (~ (haveUsrMode()) | ~(sys_enable_next()))
-  ucause_uinhv = 0; // if N-extension (user interrupts) is not supported 
-else 
-  ucause_uinhv = ucause.UINHV();
+/* MRET pseudo-code */
+set_next_pc(exception_handler(cur_privilege, MRET, PC));
 
+function exception_handler(cur_priv, xret, pc) {
+  match (xret) {
+...
+      MRET =>  {      
+      let prev_priv = cur_priv;
+      mstatus.MIE   = mstatus.MPIE;
+      mstatus.MPIE  = 1;
+      cur_priv      = mstatus.MPP;
+      ... /* additional standard MRET behavior */
+
+      let xepc = prepare_xret_target(Machine);
+      
+      if  get_xinhv_value(cur_priv) &  /* check if resuming hardware vectoring */
+          (cur_priv != prev_priv)      /* recovery scheme does not apply to horizontal exceptions */
+      then {  
+        match check_fetch_permissions(xepc) {
+          ...
+          Addr_OK => { 
+            clear_inhv(cur_priv)           /* If table entry read successful, clear inhv of current privilege */
+            next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
+          }
+        } else { /* Standard MRET behavior - xepc becomes next_pc */
+          next_pc = xepc & ~1;
+        }
+      }
+    },
+...
+}
+
+function prepare_xret_target(p) =
+  match p {
+    Machine    => mepc,
+    Supervisor => sepc,
+    User       => uepc
+  }
   
-match cur_privilege {
-  User => prev_xinhv = ucause_uinhv;
-  Supervisor => if sstatus.SPP() then {
-                  prev_xinhv = scause.SINHV(); 
-                } else {
-                  prev_xinhv = ucause_uinhv;
-                } 
-  Machine => match mstatus.MPP() {
-               User       => prev_xinhv = ucause_uinhv;
-               Supervisor => prev_xinhv = scause.SINHV();
-               Machine    => prev_xinhv = mcause.MINHV();
-             }
-
-/* is instruction URET, SRET or MRET */
-match (ctl) { 
-  CTL_URET => xepc = uepc;
-  CTL_SRET => xepc = sepc;
-  CTL_MRET => xepc = mepc;
-}
-
-if prev_xinhv then {
-  /* pc set from table entry pointed to by {epc}, not by value of {epc} */
-  set_next_pc(mem_read(xepc) & ~1)
-} else {
-  set_next_pc(xepc)
-}
+ function get_xinhv_value(p) =
+  match p {
+    Machine    => mcause.MINHV,
+    Supervisor => if (haveSMode) then scause.SINHV else 0,
+    User       => if (haveUMode & haveUModeInterrupts) then ucause.UINHV else 0;      
+  }
 ----
 NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
 
