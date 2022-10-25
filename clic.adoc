@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+10/25/2022  issue #274 - clarify handling of horizontal traps on table fetch in pseudo-code
 10/11/2022  issue #275 - clarify hwvector text
 10/11/2022  issue #279 - Reserved use of all but simple csrrw access to scratchcsw/l, clarified operation of the instruction
 10/11/2022  issue #277 - Added more clarification on csip
@@ -1132,14 +1133,13 @@ function exception_handler(cur_priv, xret, pc) {
 
       let xepc = prepare_xret_target(Machine);
       
-      if  get_xinhv_value(cur_priv) &  /* check if resuming hardware vectoring */
-          (cur_priv != prev_priv)      /* recovery scheme does not apply to horizontal exceptions */
+      if  get_xinhv_value(cur_priv) 
       then {  
-        match check_fetch_permissions(xepc) {
-          ...
-          Addr_OK => { 
+        if (check_fetch_permissions(xepc) = Addr_OK)
             clear_inhv(cur_priv)           /* If table entry read successful, clear inhv of current privilege */
             next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
+          } else {
+            /* take table-fetch trap */
           }
         } else { /* Standard MRET behavior - xepc becomes next_pc */
           next_pc = xepc & ~1;
