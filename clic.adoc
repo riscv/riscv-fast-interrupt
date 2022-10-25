@@ -1118,24 +1118,24 @@ privilege mode.
 set_next_pc(exception_handler(cur_privilege, MRET, PC));
 
 function exception_handler(cur_priv, xret, pc) {
-  match (cur_priv, xret) {
+  match (xret) {
 ...
       MRET =>  {      
-      let prev_priv   = cur_privilege;
-      mstatus.MIE     = mstatus.MPIE;
-      mstatus.MPIE    = 1;
-      cur_privilege   = mstatus.MPP;
+      let prev_priv = cur_priv;
+      mstatus.MIE   = mstatus.MPIE;
+      mstatus.MPIE  = 1;
+      cur_priv      = mstatus.MPP;
       ... /* additional standard MRET behavior */
 
       let xepc = prepare_xret_target(Machine);
       
-      if  get_xinhv_value(cur_privilege) & /* check if resuming hardware vectoring */
-          (cur_privilege != prev_priv)     /* recovery scheme does not apply to horizontal exceptions */
+      if  get_xinhv_value(cur_priv) &  /* check if resuming hardware vectoring */
+          (cur_priv != prev_priv)      /* recovery scheme does not apply to horizontal exceptions */
       then {  
         match check_fetch_permissions(xepc) {
           ...
           Addr_OK => { 
-            clear_inhv(cur_privilege)      /* If table entry read successful, clear inhv of current privilege */
+            clear_inhv(cur_priv)           /* If table entry read successful, clear inhv of current privilege */
             next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
           }
         } else { /* Standard MRET behavior - xepc becomes next_pc */
