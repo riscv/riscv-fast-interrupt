@@ -2705,6 +2705,158 @@ ID  Interrupt
 ----
 
 
+[hypervisor]
+== CLIC Hypervisor Extension Support
+
+CLIC implementations are expected to be targeted for embedded devices and hypervisor context switches may considerably affect interrupt latency.
+However, there are some systems that require low interrupt latency that may wish to have hypervisor support.  
+For example, software implementations that spend significant time processing interrupts may wish to supported untrusted interrupt handling as a way of limiting the scope of software bugs from affecting system integrity.
+Systems intending to support untrusted interrupt handling in microcontrollers that do not need virtual memory or MMU can run trusted code in M-mode and untrusted code in S-mode with SATP CSR hardwired to 0.
+But for systems supporting virtual memory, it may be desired to prevent interrupt handlers from accidentily modifying supervisor virtual page tables.  
+Using the hypervisor extension, the system could use the hypervisor to support address translation while running untrusted interrupt handling in VS-mode with VSATP hardwired to 0.
+
+User mode interrupts are not defined in hypervisor mode and the CLIC hypervisor extension uses the encodings reserved for user interrupt support.  
+This enables regular S-mode operating systems to execute without modification in HS-mode or as VS-mode guests.
+
+=== CLIC Privilege Mode Encoding
+
+----
+CLIC Encoding for RISC-V interrupt privilege levels when misa.H is 1
+Virtualization Mode (V) Encoding Name                                Abbreviation
+        0               00       Reserved              
+        0               01       Hypervisor-extended supervisor mode HS-mode
+        0               11       Machine mode                        M-mode
+        1               00       Virtual supervisor mode             VS-mode
+----
+
+As with the CLINT hypervisor specification, regular S-mode operating systems can execute without modification either in HS-mode or as VS-mode guests.  Also, VS-mode interrupts are globally disabled when executing in U-mode. 
+
+----
+Interrupt Mode Table when misa.H is 1
+priv-modes nmbits clicintattr[i].mode   Virtualization Mode Interpretation
+ M/HS/S/U   0/1       XX                X                   Reserved
+ M/HS/S/U   2         00                X                   VS-mode interrupt (WARL is 01 when V=1 but actual value remains 00)
+ M/HS/S/U   2         01                0                   HS-mode interrupt
+ M/HS/S/U   2         10                X                   Reserved
+ M/HS/S/U   2         11                X                   M-mode interrupt
+ M/HS/S/U   3         XX                X                   Reserved
+----
+
+clicintattr[i].mode appears to be WARL 01 when read or implicitly read when in VS-mode.  
+When misa.H is 1, only privilege modes higher than VS-mode can modify clicintattr[i].mode. 
+
+=== Changes to Hypervisor CSRs
+
+Hypervisor mode adds CSRs.  CLIC modifications to CLINT CSR behavior is extended to hypervisor mode as described below.
+
+==== Changes to CLIC definitions of scause CSR
+----
+ scause
+ Bits    Field        Description
+ XLEN-1 Interrupt     Interrupt=1, Exception=0
+    30  sinhv         Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    29  spvp          Supervisor Previous Virtualization mode, same as hstatus.spvp
+    28  spp           Previous privilege mode, same as sstatus.spp
+    27  spie          Previous interrupt enable, same as sstatus.spie
+ 26:24  (reserved)
+ 23:16  spil[7:0]     Previous interrupt level
+ 15:12  (reserved)
+ 11:0   exccode[11:0] Exception/interrupt code
+
+ vscause
+ Bits    Field        Description
+ XLEN-1 Interrupt     Interrupt=1, Exception=0
+    30  vsinhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    29  (reserved)
+    28  vspp          Previous privilege mode, same as vsstatus.spp
+    27  vspie         Previous interrupt enable, same as vsstatus.spie
+ 26:24  (reserved)
+ 23:16  vspil[7:0]    Previous interrupt level
+ 15:12  (reserved)
+ 11:0   exccode[11:0] Exception/interrupt code
+----
+
+==== Changes to Delegation ({hedeleg}/{hideleg}) CSRs
+
+In CLIC mode,
+the `mode` field in Interrupt Attribute Register (`clicintattr[__i__].mode`)
+specifies the privilege mode in which each interrupt should be taken,
+so the {hideleg} CSR ceases to have effect in CLIC mode.  The `hideleg`
+CSR is still accessible and state bits retain their values when
+switching between CLIC and CLINT interrupt modes.
+
+Exception delegation specified by `hedeleg` functions the same in CLIC
+mode as in CLINT mode.
+
+==== Changes to `hvip`/`hip`/`hie`/`vsip`/`vsie` CSRs
+
+The {ie} CSR appears hardwired to zero in CLIC mode, replaced by separate
+memory-mapped interrupt enables (`clicintie[__i__]`).
+
+The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
+separate memory-mapped interrupt pendings (`clicintip[__i__]`).
+
+Writes to {ie}/{ip} will be ignored and will not trap (i.e., no access faults).
+{ie}/{ip} always appear to be zero in CLIC mode.
+
+In systems that support both CLINT and CLIC modes, the state bits in
+{ie} and {ip} retain their value when switching between modes.
+
+Note: hvip is a register that a hypervisor can write to indicate virtual interrupts intended for VS-mode. 
+An equivalent implementation to deliver virtual interrupts would be to hardwire the inputs assigned to 
+virtual interrupts `i` input to 0 and then HS-mode software can deliver interrupts to VS-mode by setting 
+clicintattr[`i`].trig to 00 (positive-edge-triggered) and writing clicintip[`i`] to 1.
+
+Note: hip/hie are separate from sip/sie to allow hypervisor extension emulation on implementations that don't implement it in hardware.  Accesses to hip/hie CSRs would be trapped into m-mode.  A possible implementation of the CLIC memory map would be to alias the same physical CLIC memory-mapped registers to different address ranges, with each address range given different permissions and use memory-mapped trapping to emulate the hypervisor specific interrupts. 
+
+Note: `hgeip`/ `hgeie` behavior if implemented is unchanged from CLINT mode.  See the CLIC Interrupt ID ordering recommendations for more details on implementation recommendations.
+
+The hypervisor specification automatically translates certain interrupts from virtual supervisor codes to supervisor codes.  E.g., if interrupt number 10, 6, 2 are delegated to VS-mode, vsip and vscause report 9, 5, 1 respectively.
+An optional control bit has been added to cliccfg to enable this id translation behavior.
+
+[source]
+----
+  cliccfg register layout when misa.H=1
+
+  Bits    Field
+  7       vidtrans
+  6:5     nmbits[1:0]
+  4:1     nlbits[3:0]
+    0     nvbits
+----
+
+When enabled, the 1-bit `cliccfg.vidtrans` WARL field subtracts the VS-mode interrupt ID code i by 1 if i != 0 as reported in vscause and the clicintip registers in the VS-mode CLIC region.  
+When disabled, no automatic translation occurs.
+
+==== Changes to vscause CSR
+
+==== Changes to vstval CSR
+
+==== Changes to {scratchcsw} and {scratchcswl}
+When misa.H is 1, the {scratchcsw} and {scratchcswl} take into account xPP along with status.spvp when determining privilege mode changes.
+
+==== Additional CLIC VS-mode CSRs
+CLIC hypervisor mode includes these additional VS-mode CSRs defined above.
+vstvec
+vstvt
+vsnxti
+vsintthresh
+
+==== Changes to {intstatus} CSRs when misa.H is 1
+
+ mintstatus fields
+ 31:24 mil
+ 23:16 (reserved) # To follow pattern of others.
+ 15: 8 sil
+  7: 0 vsil
+
+ vsintstatus fields
+ 31:16 (reserved)
+ 15: 8 vsil
+  7: 0 (reserved)
+
+
+
 [appendix]
 == Appendix
 
