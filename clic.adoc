@@ -460,7 +460,7 @@ Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears 
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
 `clicintctl[__i__]`.
 
-The privilege mode of an interrupt is controlled by both `cliccfg.nmbits` and `clicintattr[__i__].mode` as described in the Specifying Interrupt Privilege Mode section below.
+The privilege mode of an interrupt is controlled by `clicintattr[__i__].mode`.
 
 It is not intended that the interconnect to the CLIC memory-mapped
 interrupt regions be required to carry the privilege mode of the
@@ -504,75 +504,12 @@ not furnish these fields must hardwire them to zero.
   cliccfg register layout
 
   Bits    Field
-  7       reserved (WPRI 0)
-  6:5     nmbits[1:0]
+  7:5     reserved (WPRI 0)
   4:1     nlbits[3:0]
     0     nvbits
 ----
 
 Detailed explanation for each field are described in the following sections.
-
-==== Specifying Interrupt Privilege Mode
-
-The 2-bit `cliccfg.nmbits` WARL field specifies how many bits are 
-physically implemented in `clicintattr[__i__].mode` to
-represent an input __i__'s privilege mode. Although `cliccfg.nmbits` field
-is always 2-bit wide, the physically implemented bits in this field 
-can be fewer than two (depending how many interrupt privilege-modes are supported).
-
-For example, in M-mode-only systems, only M-mode exists so we do not
-need any extra bit to represent the supported privilege-modes. In this case,
-no physically implemented bits are needed in the `clicintattr.mode`
-and thus `cliccfg.nmbits` is 0 (i.e., `cliccfg.nmbits` can be hardwired to 0).
-
-In M/U-mode systems with N-extension user-level interrupts support, `cliccfg.nmbits` can be
-set to 0 or 1.  If `cliccfg.nmbits` = 0, then all interrupts are treated as
-M-mode interrupts.  If the `cliccfg.nmbits` = 1, then a value of 1 in
-the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
-indicates that interrupt intput is taken in M-mode,
-while a value of 0 indicates that interrupt is taken in U-mode.
-
-Similarly, in systems that support all M/S/U-mode interrupts, `cliccfg.nmbits`
-can be set to 0, 1, or 2 bits to represent privilege-modes.
-`cliccfg.nmbits` = 0 indicates that all local interrupts are taken in
-M-mode.  `cliccfg.nmbits` = 1 indicates that the MSB selects between M-mode
-(1) and S-mode (0).  `cliccfg.nmbits` = 2 indicates that the two MSBs of
-each `clicintattr[__i__].mode` register encode the interrupt's privilege
-mode using the same encoding as the `mstatus.mpp` field.
-
-NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. Bare S-mode has already been ratified as part of privileged architecture. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. The proposed N-extension would also add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
-
-----
- Encoding for RISC-V privilege levels (mstatus.mpp)
-
- Level  Encoding Name              Abbreviation
- 0      00       User/Application  U
- 1      01       Supervisor        S
- 2      10       Reserved
- 3      11       Machine           M
-
-----
-
-
-----
-Interrupt Mode Table
-priv-modes nmbits clicintattr[i].mode  Interpretation
-       M      0       xx               M-mode interrupt
-
-     M/U      0       xx               M-mode interrupt
-     M/U      1       0x               U-mode interrupt
-     M/U      1       1x               M-mode interrupt
-
-   M/S/U      0       xx               M-mode interrupt
-   M/S/U      1       0x               S-mode interrupt
-   M/S/U      1       1x               M-mode interrupt
-   M/S/U      2       00               U-mode interrupt
-   M/S/U      2       01               S-mode interrupt
-   M/S/U      2       10               Reserved (or extended S-mode)
-   M/S/U      2       11               M-mode interrupt
-
-   M/S/U      3       xx               Reserved
-----
 
 ==== Specifying Interrupt Level
 
@@ -835,11 +772,21 @@ types are supported. In this case, these bits become hard-wired to fixed
 values (WARL).
 
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
-operates in. This field is writable and is unchanged by writes to `cliccfg`.`nmbits` but the read and implicit read value 
-is the interpretation as specified in the Interrupt Mode Table above.
+operates in. 
+
+----
+ Encoding for RISC-V privilege levels (mstatus.mpp)
+
+ Level  Encoding Name              Abbreviation
+ 0      00       User/Application  U
+ 1      01       Supervisor        S
+ 2      10       Reserved
+ 3      11       Machine           M
+----
 
 NOTE: For security purpose, the `mode` field can only be set to a privilege level that is equal to or lower than the currently running privilege level.
 
+NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hardware delegation of interrupts out of M-mode. Bare S-mode has already been ratified as part of privileged architecture. There are also proposals to add S-mode PMP support to allow an RTOS running in S-mode to isolate itself from tasks running in U-mode. The proposed N-extension would also add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
 
 === CLIC Interrupt Input Control (`clicintctl`)
 
@@ -1473,22 +1420,92 @@ discovery mechanism that is in development.
 
 == CLIC Parameters
 
+=== clicintattr[i].mode, clicintctl[i] parameters
+The CLIC hardware combines the valid bits in clicintattr[i].mode and clicintctl[i] to form an unsigned integer, 
+then picks the global maximum across all pending-and-enabled interrupts based on this value.  
+
+However not all implementations may choose to physically implement all or only some or none of the clicintattr[i].mode bits. 
+To provide software knowledge of valid values of clicintattr[i].mode and clicintctrl[i], the following parameters are defined.
+To provide implementation flexibility, these parameters may be hard-coded or 
+should be configured/setup at the platform level.
+
+[source]
+----
+CLICMINTMINLEVEL 0-255                         M-mode min level value
+CLICMINTMAXLEVEL 255                           M-mode max level value
+
+CLICSINTSUPPORT 0-1                            S-mode interrupts are supported
+CLICSINTMINLEVEL 0-255                         S-mode min level value
+CLICSINTMAXLEVEL 0-255                         S-mode max level value
+
+CLICUINTSUPPORT 0-1                            U-mode interrupts are supported
+CLICUINTMINLEVEL 0-255                         U-mode min level value
+CLICUINTMAXLEVEL 0-255                         U-mode max level value
+
+CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
+                                                 cliccfg.nlbits
+
+CLICINTCTLBITS 0-8                             Number of bits implemented in
+                                                 clicintctl[i]
+INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
+----
+
+==== Possible implementation - Both clicintattr[i].mode bits are always implemented.
+One possible implementation would be to always physically implement both clicintattr[i].mode bits. 
+CLICxINTMAXLEVEL would be 255 and CLICxINTMINLEVEL would be 0 for all supported interrupt privilege modes.
+
+==== Possible implementation - No clicintattr[i].mode bits are physically implemented.
+Another possible implementation would be to not physically implement any clicintattr[i].mode bits.  Instead, clicintattr[i].mode value is 
+set based on a comparison between clicintctrl[i] value and the CLICxINTMINLEVEL and CLICxINTMAXLEVEL values.  
+E.g. clicintattr[i].mode == m-mode if CLICMINTMINLEVEL <= clicintctrl[i] <= CLICMINTMAXLEVEL. 
+Writing clicintattr[i].mode to a mode value incompatible with the current clicintctrl[i] value, 
+changes the clicintctrl[i] value to a deterministic valid value within the CLICxINTMINLEVEL/CLICxINTMAXLEVEL range.
+
+==== Possible implementation - Number of physically implemented clicintattr[i].mode bits implemented based on number of interrupt privilege modes supported.
+Another possible implementation would be to implement 0, 1, or 2 clicintattr[i].mode bits based
+on the number of interrupt privilege modes supported.
+CLICxINTMAXLEVEL would be 255 and CLICxINTMINLEVEL would be 0 for all supported interrupt privilege modes.
+
+For example, in M-mode-only systems, only M-mode exists so we do not
+need any extra bit to represent the supported interrupt privilege-modes. In this case,
+no physically implemented bits are needed in the `clicintattr.mode`.
+
+In systems that only support interrupts in M-mode and a less privileged mode (e.g. M/S, M/U with unratifed N-extension user-level interrupts support),
+ only a single clicintattr[i].mode bit needs to be implemented.
+A value of 1 in the most-significant bit (MSB) of a `clicintattr[__i__].mode` register
+indicates that interrupt intput is taken in M-mode,
+while a value of 0 indicates that interrupt is taken in the less privileged mode.
+
+In systems that support interrupts in M and multiple less privileged modes, two clicintattr[i].mode bits need to be implemented.
+
+----
+Interrupt Mode Table
+   interrupt  implemented
+   privilege  mode bits    WARL values of
+   modes                   clicintattr[i].mode  Interpretation
+       M         0             11               M-mode interrupt
+
+     M/U         1             00               U-mode interrupt
+     M/U         1             11               M-mode interrupt
+
+     M/S         1             01               S-mode interrupt
+     M/S         1             11               M-mode interrupt
+
+   M/S/U         2             00               U-mode interrupt
+   M/S/U         2             01               S-mode interrupt
+   M/S/U         2             11               M-mode interrupt
+----
+
+=== Other Parameters
+
 [source]
 ----
 Name           Value Range                     Description
 CLICANDBASIC   0-1                             Implements CLINT mode also?
-CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U,
-                                                                       3=M/S/U
-CLICLEVELS     2-256                           Number of interrupt levels including 0
+
 NUM_INTERRUPT  2-4096                          Always has MSIP, MTIP
 CLICMAXID      12-4095                         Largest interrupt ID
-CLICINTCTLBITS 0-8                             Number of bits implemented in
-                                                 clicintctl[i]
-INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
-CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for
-                                                 cliccfg.nmbits
-CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
-                                                 cliccfg.nlbits
+
 CLICSELHVEC    0-1                             Selective hardware vectoring supported?
 CLICMTVECALIGN >= 6                            Number of hardwired-zero least
                                                  significant bits in mtvec address.
