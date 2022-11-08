@@ -1238,12 +1238,11 @@ update the interrupt context state.
 NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
 operation.
+ 
+These CSRs are only designed to be used with the CSRR (CSRRS rd,csr,x0), CSRRSI, and CSRRCI instructions. Accessing the {nxti} CSR using any other CSR instruction form (CSRRW/CSRRS,rs1!=x0/CSRRC/CSRRWI) is reserved.
+Note: Use of xnxti with CSRRSI with non-zero uimm values for bits 0, 2, and 4 are reserved for future use.
 
-NOTE: All CSR instructions may be used with {nxti}.  The operation will
-be the same as the corresponding CSR instruction used with xstatus.  The
-value read and the side-effects will be as specified in this section.
-
-A read of the {nxti} CSR returns either zero, indicating there is no
+A read of the {nxti} CSR using CSRR returns either zero, indicating there is no
 suitable interrupt to service or that the highest ranked interrupt is
 SHV or that the system is not in a CLIC mode, or returns a non-zero
 address of the entry in the trap handler table for software trap
@@ -1277,7 +1276,6 @@ clear the corresponding pending bit when the CSR instruction that accesses
 interrupt pending bit is not zeroed. This behavior allows software to optimize the
 selection and execution of interrupts using `{nxti}`.
 
-Note: Use of xnxti with non-zero uimm values for bits 0, 2, and 4 are reserved for future use.
 
 [source]
 --
