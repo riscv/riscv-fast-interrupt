@@ -1189,7 +1189,7 @@ switching to CLINT mode the new CLIC {cause} state fields
 {pp} and {pie}, appear as zero in the {cause} CSR but the corresponding
 state bits in the `mstatus` register are not cleared.
 
-In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated.
+In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated ({inhv} is set by hardware at start of hardware vectoring, cleared at end of successful hardware vectoring, no change otherwise).
 On the other hand, when not in CLIC mode, {cause} has the CLINT mode format.
 
 The supervisor `scause` register has only a single `spp` bit (to
