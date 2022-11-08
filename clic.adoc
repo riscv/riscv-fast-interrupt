@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 10/25/2022
+:revdate: 11/08/2022
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,6 +110,10 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+11/08/2022  issue #271 - text cleanup - updated inhv to xinhv
+11/08/2022  issue #280 - clarified nxti CSR access types
+11/08/2022  issue #235 - clarified inhv text for statement when a trap is taken all cause fields are updated.
+11/08/2022  issue #88/#282 - moved xintstatus to read-only CSR addr range, moved clicbase, nvbits, clicinfo to parameters section
 10/25/2022  issue #274 - clarify handling of horizontal traps on table fetch in pseudo-code
 10/25/2022  issue #277 - be consistent in calling CLIC inputs local interrupts.
 10/11/2022  issue #275 - clarify hwvector text
