@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 1/31/2023
+:revdate: 2/14/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+02/14/2023  issue #298 - typo cleanup - removed redundant note text in smclicshv section
 01/31/2023  issues #75/#160 - reordered text into 5 extensions, smclic, ssclic, suclic, smclicshv, smclicconfig. No functional changes intended.
 11/08/2022  issue #271 - text cleanup - updated inhv to xinhv
 11/08/2022  issue #280 - clarified nxti CSR access types
@@ -1512,11 +1513,6 @@ pending bit in the service routine.
 In contrast, when a non-vectored (common code) interrupt is selected,
 the hardware will not automatically clear an edge-triggered pending
 bit.
-
-NOTE: To improve performance, when a vectored interrupt is selected
-and serviced, the hardware will automatically clear a corresponding
-edge-triggered pending bit, so software doesn't need to clear the
-pending bit in the service routine.
 
 ==== smclicshv Changes to CLIC Interrupt Attribute (`clicintattr`)
 
