@@ -110,6 +110,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+02/14/2023  issue #294 - Change addresses of mintstatus, sintstatus, uintstatus to  0xFB1, 0xDB1, and 0xCB1, respectively.
 02/14/2023  issue #298 - typo cleanup - removed redundant note text in smclicshv section
 01/31/2023  issues #75/#160 - reordered text into 5 extensions, smclic, ssclic, suclic, smclicshv, smclicconfig. No functional changes intended.
 11/08/2022  issue #271 - text cleanup - updated inhv to xinhv
@@ -682,7 +683,7 @@ additions for CLIC mode described in the following sections.
        0x343   mtval        Bad address or instruction
        0x344   mip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0x345   mnxti        Interrupt handler address and enable modifier
- (NEW) 0xF46   mintstatus   Current interrupt levels
+ (NEW) 0xFB1   mintstatus   Current interrupt levels
  (NEW) 0x347   mintthresh   Interrupt-level threshold
  (NEW) 0x348   mscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0x349   mscratchcswl Conditional scratch swap on level change
@@ -1304,7 +1305,7 @@ additions for CLIC mode described in the following sections.
        0x143   stval        Bad address or instruction
        0x144   sip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0x145   snxti        Interrupt handler address and enable modifier
- (NEW) 0xD46   sintstatus   Current interrupt levels
+ (NEW) 0xDB1   sintstatus   Current interrupt levels
  (NEW) 0x147   sintthresh   Interrupt-level threshold
  (NEW) 0x148   sscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0x149   sscratchcswl Conditional scratch swap on level change
@@ -1434,7 +1435,7 @@ additions for CLIC mode described in the following sections.
        0x043   utval        Bad address or instruction
        0x044   uip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0x045   unxti        Interrupt handler address and enable modifier
- (NEW) 0xC46   uintstatus   Current interrupt levels
+ (NEW) 0xCB1   uintstatus   Current interrupt levels
  (NEW) 0x047   uintthresh   Interrupt-level threshold
  (NEW) 0x049   uscratchcswl Conditional scratch swap on level change
 ----
