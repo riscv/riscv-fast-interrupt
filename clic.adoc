@@ -1855,23 +1855,37 @@ treated as hardwired to 1.
 The NUM_TRIGGER 6-bit parameter specifies the number of maximum interrupt
 triggers supported in this implementation. Valid values are 0 to 32.
 
+=== clicintattr[i].mode, clicintctl[i] parameters
+The CLIC hardware combines the valid bits in clicintattr[i].mode and clicintctl[i] to form an unsigned integer, 
+then picks the global maximum across all pending-and-enabled interrupts based on this value.  
+
+However not all implementations may choose to physically implement all or only some or none of the clicintattr[i].mode bits. 
+To provide software knowledge of valid values of clicintattr[i].mode and clicintctrl[i], the following parameters are defined.
+To provide implementation flexibility, these parameters may be hard-coded or 
+should be configured/setup at the platform level.
+
+[source]
+----
+CLICMINTMINLEVEL 0-255                         M-mode min level value
+CLICMINTMAXLEVEL 255                           M-mode max level value
+CLICSINTSUPPORT 0-1                            ssclic S-mode CLIC extension is supported
+CLICSINTMINLEVEL 0-255                         S-mode min level value
+CLICSINTMAXLEVEL 0-255                         S-mode max level value
+CLICUINTSUPPORT 0-1                            suclic U-mode CLIC extension is supported
+CLICUINTMINLEVEL 0-255                         U-mode min level value
+CLICUINTMAXLEVEL 0-255                         U-mode max level value
+INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
+----
+
 === Additional CLIC Parameters
 
 [source]
 ----
 Name           Value Range                     Description
 CLICANDBASIC   0-1                             Implements CLINT mode also?
-CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U,
-                                                                       3=M/S/U
-CLICLEVELS     2-256                           Number of interrupt levels including 0
-NUM_INTERRUPT  2-4096                          Always has MSIP, MTIP
-CLICMAXID      12-4095                         Largest interrupt ID
+NUM_INTERRUPT  1-4096                          
+CLICMAXID      1-4095                          Largest interrupt ID
 
-INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
-CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for
-                                                 cliccfg.nmbits
-CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
-                                                 cliccfg.nlbits
 CLICMTVECALIGN >= 6                            Number of hardwired-zero least
                                                  significant bits in mtvec address.
 CLICXNXTI      0-1                             Has xnxti CSR implemented?
