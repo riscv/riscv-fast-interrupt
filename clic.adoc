@@ -1,6 +1,7 @@
 :sectnums:
 :toc: left
 
+:cliccfg: pass:q[``**__x__**cliccfg``]
 :status: pass:q[``**__x__**status``]
 :edeleg: pass:q[``**__x__**edeleg``]
 :ideleg: pass:q[``**__x__**ideleg``]
@@ -388,8 +389,7 @@ M-mode CLIC memory map
   ###   0x00C0-0x07FF              reserved    ###
   ###   0x0800-0x0FFF              custom      ###
   
-  0x0000         1B          RW        cliccfg
-
+  0x0000         1B          RW        reserved for smclicconfig extension 
 
   0x0040         4B          RW        clicinttrig[0]
   0x0044         4B          RW        clicinttrig[1]
@@ -1262,10 +1262,11 @@ configured to be supervisor-accessible via the M-mode CLIC region.
 [source]
 ----
 Layout of Supervisor-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0000       1B          RW        reserved for smclicconfig extension 
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 The location of the S-mode CLIC regions are independent of
@@ -1397,10 +1398,11 @@ configured to be user-accessible via the higher privilege mode CLIC regions.
 [source]
 ----
 Layout of user-mode CLIC regions
-0x000+4*i   1B/input    R or RW   clicintip[i]
-0x001+4*i   1B/input    RW        clicintie[i]
-0x002+4*i   1B/input    RW        clicintattr[i]
-0x003+4*i   1B/input    RW        clicintctl[i]
+0x0000       1B          RW        reserved for smclicconfig extension 
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
 ----
 
 The location of the U-mode CLIC regions are independent of
@@ -1883,16 +1885,12 @@ Hardware implementations may wish to have a single implementation support differ
 
 === CLIC Memory-Mapped Registers
 
-==== CLIC Configuration (`cliccfg`)
+==== CLIC Configuration ({cliccfg} registers)
 
 The CLIC has a single memory-mapped 8-bit global configuration
-register, `cliccfg`, that defines how many privilege modes are supported and
+register per privilege mode, {cliccfg}, that defines 
 how the `clicintctl[__i__]` registers are subdivided into level and
-priority fields.
-
-The `cliccfg` register has two WARL fields, a 2-bit `nmbits` field,
-and a 4-bit `nlbits` field, plus two reserved
-bits WPRI-hardwired to zero in current spec.
+priority fields.  `mcliccfg` has an additional field that defines interrupt privilege mode configuration.
 
 NOTE: WPRI means "Writes Preserve Values, Reads Ignore Values"
 indicating whole read/write fields are reserved for future use. Software
@@ -1903,11 +1901,34 @@ not furnish these fields must hardwire them to zero.
 
 [source]
 ----
-  cliccfg register layout
+  mcliccfg register layout
+  located at MCLICBASE
 
   Bits    Field
   7       reserved (WPRI 0)
   6:5     nmbits[1:0]
+  4:1     nlbits[3:0]
+    0     reserved (WPRI 0)
+----
+
+[source]
+----
+  scliccfg register layout - dependent on ssclic extension
+  located at SCLICBASE
+
+  Bits    Field
+  7:5     reserved (WPRI 0)
+  4:1     nlbits[3:0]
+    0     reserved (WPRI 0)
+----
+
+[source]
+----
+  ucliccfg register layout - dependent on suclic extension
+  located at UCLICBASE
+
+  Bits    Field
+  7:5     reserved (WPRI 0)
   4:1     nlbits[3:0]
     0     reserved (WPRI 0)
 ----
