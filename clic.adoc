@@ -631,6 +631,7 @@ retain the same interrupt IDs.
 
 Optional interrupt triggers (`clicinttrig[__i__]`) are used to generate
 a breakpoint exception, entry into Debug Mode, or a trace action.
+If these registers are not implemented, they appear as hard-wired zeros.
 
 Each interrupt trigger is a 32-bit memory-mapped WARL register with the
 following layout:
@@ -1004,7 +1005,7 @@ Otherwise, hardware would have to select multiple maximum interrupts (one
 per privilege mode), compare and qualify with their associated thresholds,
 then pick a qualified maximum interrupt with the highest privilege mode.
 
-==== Optional Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
+==== Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
 
 To accelerate interrupt handling with multiple privilege modes, a new
 CSR {scratchcsw} can be defined for all but the lowest privilege mode
@@ -1063,7 +1064,7 @@ software tries to access a given mode's {scratchcsw} CSR from a
 lesser-privileged mode, so the new CSR does not open a virtualization
 hole.
 
-==== Optional Scratch Swap CSR ({scratchcswl}) for Interrupt Levels
+==== Scratch Swap CSR ({scratchcswl}) for Interrupt Levels
 
 A new {scratchcswl} CSR is added to support faster swapping of the
 stack pointer between interrupt and non-interrupt code running in the
@@ -1344,7 +1345,7 @@ sintstatus fields
   7: 0 uil if usclic is supported
 ----
 
-==== ssclic Optional Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
+==== ssclic Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
 
 [source]
 ----
@@ -1870,9 +1871,6 @@ CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
                                                  cliccfg.nlbits
 CLICMTVECALIGN >= 6                            Number of hardwired-zero least
                                                  significant bits in mtvec address.
-CLICXNXTI      0-1                             Has xnxti CSR implemented?
-CLICXCSW       0-1                             Has xscratchcsw/xscratchcswl
-                                                 implemented?
 ----
 NOTE: These parameters are likely to be available by the general
 discovery mechanism that is in development.
