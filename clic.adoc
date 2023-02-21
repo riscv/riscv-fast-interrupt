@@ -3,7 +3,6 @@
 
 :cliccfg: pass:q[``**__x__**cliccfg``]
 :status: pass:q[``**__x__**status``]
-:edeleg: pass:q[``**__x__**edeleg``]
 :ideleg: pass:q[``**__x__**ideleg``]
 :ie: pass:q[``**__x__**ie``]
 :tvec: pass:q[``**__x__**tvec``]
@@ -76,7 +75,6 @@ endif::[]
 Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
 
 :status: pass:q[``**__x__**status``]
-:edeleg: pass:q[``**__x__**edeleg``]
 :ideleg: pass:q[``**__x__**ideleg``]
 :ie: pass:q[``**__x__**ie``]
 :tvec: pass:q[``**__x__**tvec``]
@@ -239,9 +237,11 @@ control, future extensions might also support directing interrupts to
 harts within a core, hence the name (also CLIC sounds better than HLIC
 or HIC).
 
+NOTE: CLIC only replaces the original RISC-V basic local interrupt scheme.  Exception behavior is unchanged.
+
 === Original RISC-V basic local Interrupts (CLINT mode)
 
-The RISC-V Privileged Architecture specification defines CSRs {ip}, {ie}, `mideleg` and interrupt behavior.  
+The RISC-V Privileged Architecture specification defines CSRs such as {ip}, {ie} and interrupt behavior.  
 A simple interrupt controller that provides inter-processor interrupts and timer 
 functionalities for this RISC-V interrupt scheme has been called CLINT.  
 This specification will use the term CLINT mode when {tvec}.mode is set to either `00` or `01`.
@@ -675,7 +675,6 @@ additions for CLIC mode described in the following sections.
 ----
        Number  Name         Description
        0x300   mstatus      Status register
-       0x302   medeleg      Exception delegation register
        0x303   mideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
        0x304   mie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0x305   mtvec        Trap-handler base address / interrupt mode
@@ -700,17 +699,14 @@ When in CLINT interrupt mode, the {status} register behavior is unchanged
 the {pp} and {pie} in {status} are now accessible
 via fields in the {cause} register.
 
-==== Changes to Delegation ({edeleg}/{ideleg}) CSRs
+==== Changes to Delegation ({ideleg}) CSRs
 
 In CLIC mode,
 the `mode` field in Interrupt Attribute Register (`clicintattr[__i__].mode`)
-specifies the privilege mode in which each interrupt should be taken,
-so the {ideleg} CSR ceases to have effect in CLIC mode.  The {ideleg}
+specifies the privilege mode in which each interrupt should be taken.
+If {ideleg} exists, the {ideleg} CSR ceases to have effect in CLIC mode.  If {ideleg} exists, the {ideleg}
 CSR is still accessible and state bits retain their values when
 switching between CLIC and CLINT interrupt modes.
-
-Exception delegation specified by {edeleg} functions the same in CLIC
-mode as in CLINT mode.
 
 ==== Changes to {ie}/{ip} CSRs
 
@@ -1298,8 +1294,6 @@ additions for CLIC mode described in the following sections.
 ----
        Number  Name         Description
        0x100   sstatus      Status register
-       0x102   sedeleg      Exception delegation register
-       0x103   sideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
        0x104   sie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0x105   stvec        Trap-handler base address / interrupt mode
  (NEW) 0x107   stvt         Trap-handler vector table base address
@@ -1429,8 +1423,6 @@ additions for CLIC mode described in the following sections.
 ----
        Number  Name         Description
        0x000   ustatus      Status register
-       0x002   uedeleg      Exception delegation register
-       0x003   uideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
        0x004   uie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0x005   utvec        Trap-handler base address / interrupt mode
  (NEW) 0x007   utvt         Trap-handler vector table base address
