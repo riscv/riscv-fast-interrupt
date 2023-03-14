@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+03/14/2023  issue #295 - MRET/SRET clears current priv intthresh when going to a lower priv mode.
 02/28/2023  issue #305 - clean up xideleg and xedeleg text
 02/14/2023  pull #302 - make clicinttrig, xnxti/xscratchcsw/xscratchcswl non-optional
 02/14/2023  issue #293 - create separate cliccfg per priv mode
@@ -1004,6 +1005,10 @@ of the associated privilege mode (while ignoring thresholds in other modes).
 Otherwise, hardware would have to select multiple maximum interrupts (one
 per privilege mode), compare and qualify with their associated thresholds,
 then pick a qualified maximum interrupt with the highest privilege mode.
+
+If the hart is currently running at some privilege mode `x`, 
+an MRET or SRET instruction that changes the privilege mode to a mode less privileged than `x`
+also sets {intthresh} = 0.
 
 ==== Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
 
