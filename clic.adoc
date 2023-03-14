@@ -994,21 +994,27 @@ by simply writing zero.
 The interrupt-level threshold is only valid when running in associated
 privilege mode and not in other modes. This is because interrupts for
 lower privilege modes are always disabled, whereas interrupts for higher
-privilege modes are always enabled. For example, machine-mode interrupts
-will not be masked by machine-mode threshold setting when running in user mode.
-This is analogous to how mstatus.mie does not mask machine-mode interrupts
-when running in lower privilege modes.
+privilege modes are always enabled.
 
-NOTE: This behavior significantly reduces the hardware cost because it only
-needs to select one global maximum interrupt and compare with the threshold
-of the associated privilege mode (while ignoring thresholds in other modes).
-Otherwise, hardware would have to select multiple maximum interrupts (one
-per privilege mode), compare and qualify with their associated thresholds,
-then pick a qualified maximum interrupt with the highest privilege mode.
+If the hart is currently running at some privilege mode `x`, an MRET
+or SRET instruction that changes the privilege mode to a mode less
+privileged than `x` also sets {intthresh} = 0.  This prevents a higher
+privilege mode from having a non-zero threshold while a lower
+privilege mode is running.
 
-If the hart is currently running at some privilege mode `x`, 
-an MRET or SRET instruction that changes the privilege mode to a mode less privileged than `x`
-also sets {intthresh} = 0.
+NOTE: The anticipated use of threshold is to provide critical sections
+within code running at one privilege level, not to selectively mask
+interrupts before running lower-privilege code.  If desired,
+higher-privilege-mode interrupts can be selectively disabled using
+local interrupt enables before switching to a lower privilege mode.
+
+NOTE: This behavior significantly reduces the hardware cost because it
+only needs to select one global maximum interrupt and compare with the
+threshold of the associated privilege mode.  If higher-privilege modes
+could have non-zero thresholds, hardware would have to select multiple
+maximum interrupts (one for the current mode and one for each
+higher-privilege mode) qualified by the per-mode threshold, then pick
+a qualified maximum interrupt with the highest privilege mode.
 
 ==== Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
 
