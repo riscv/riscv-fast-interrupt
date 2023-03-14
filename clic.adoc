@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+03/14/2023  issue #309 - Added discussion on NMI and RNMI handling.
 03/14/2023  issue #295 - MRET/SRET clears current priv intthresh when going to a lower priv mode.
 02/28/2023  issue #305 - clean up xideleg and xedeleg text
 02/14/2023  pull #302 - make clicinttrig, xnxti/xscratchcsw/xscratchcswl non-optional
@@ -1230,6 +1231,28 @@ mode.
 WARNING: Traps should be avoided at any time when {epc}/{cause} are live
 because these CSRs will be overwritten. Software should try to back them
 up if needed.
+
+==== Non-Resumable Non-Maskable Interrupts
+
+The handling of NMIs is implementation-specific, but NMIs are always
+handled in M-mode and can overwrite `mepc` and `mcause` of an active
+M-mode CLIC interrupt handler.
+
+=== Resumable Non-Maskable Interrupts
+
+NOTE: This section describes the interaction of the CLIC with the
+proposed new RNMI specification.
+
+The resumable NMI (RNMI) extension adds additional `mnepc`, `mncause`,
+and `mnstatus` CSRs.  When in CLIC mode, the RNMI retains the CLIC's
+additional state in the `mncause` and `mnstatus` CSRs to allow CLIC
+interrupts to be resumed.
+
+The RNMI is taken at the highest interrupt level, which only has an
+effect if software enables RNMIs inside the RNMI handler.
+
+An MNRET instruction will clear `mintthresh` if returning to a lower
+privilege mode.
 
 ==== Returns from Handlers
 
