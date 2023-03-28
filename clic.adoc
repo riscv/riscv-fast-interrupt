@@ -438,8 +438,15 @@ The location of the M-mode CLIC region is
 specified by the platform specification and made visible via the
 discovery mechanism for that platform.  
 
-The CLIC specification does not dictate how CLIC memory-mapped registers are split between privilege regions as well as the layout of multiple harts as this is generally a platform issue and each platform needs to define a discovery mechanism to determine the memory map locations. Some considerations for platforms to consider are selecting regions that allow for efficient PMP and virtual memory configuration.
-For example, it may desired that the bases of each privilege mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
+The CLIC specification does not dictate how CLIC memory-mapped
+registers are split between privilege regions as well as the layout of
+multiple harts as this is generally a platform issue and each platform
+needs to define a discovery mechanism to determine the memory map
+locations. Some considerations for platforms to consider are selecting
+regions that allow for efficient PMP and virtual memory configuration.
+For example, it may desired that the base of each privilege mode CLIC
+region is naturally aligned to a virtual memory page (4KiB) so they can be
+mapped through the TLBs.
 
 ==== Specifying Interrupt Level
 
@@ -1312,7 +1319,9 @@ the location of the M-mode CLIC region, and their base addresses are
 specified by the platform specification and made visible via the
 discovery mechanism for that platform.  
 
-Note: It may desired that the bases of each privilege mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
+NOTE: It may desired that the base of each privilege mode CLIC region
+is aligned to a virtual memory page (4KiB) so they can be mapped
+through the TLBs.
 
 Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as M-mode interrupts are not acessible to S-mode.
 
