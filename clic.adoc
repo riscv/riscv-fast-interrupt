@@ -2181,7 +2181,7 @@ enabling interrupts:
 [source]
 ----
    .align 3
-      # Inline preemptible interuppt handler.
+      # Inline preemptible interrupt handler.
       # Only safe for horizontal interrupts.
    foo:
       #----- Interrupts disabled on entry ---#
@@ -2205,7 +2205,7 @@ enabling interrupts:
       csrw mepc, a1                # Put epc back.
       lw a1, OFFSET(sp)            # Restore a1.
       csrw mcause, a0              # Put cause back.
-      lw s0, OFFSET(sp)            # Restore s0.
+      lw a0, OFFSET(sp)            # Restore a0.
       addi sp, sp, FRAMESIZE       # Free stack frame.
       mret                         # Return from handler.
       #------------------------------------#
