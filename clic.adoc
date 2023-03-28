@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+03/28/2023  issue #311 - provided separate unlbits/snlbits/mnlbits in separate clicfg registers per mode
 03/14/2023  issue #309 - Added discussion on NMI and RNMI handling.
 03/14/2023  issue #295 - MRET/SRET clears current priv intthresh when going to a lower priv mode.
 02/28/2023  issue #305 - clean up xideleg and xedeleg text
@@ -1952,15 +1953,14 @@ not furnish these fields must hardwire them to zero.
   located at MCLICBASE
 
   Bits    Field
-  31      reserved (WPRI 0)
-  30:29   nmbits[1:0]
-  28:25   mnlbits[3:0]
-  24:13   reserved (WPRI 0)
-  12:9    snlbits[3:0]
-     8    reserved (WPRI 0)
-   8:5    reserved (WPRI 0)
-   4:1    unlbits[3:0]
-     0    reserved (WPRI 0)----
+  31:28   reserved (WPRI 0)
+  27:24   unlbits[3:0]
+  23:20   reserved (WPRI 0)
+  19:16   snlbits[3:0]
+  15:6    reserved (WPRI 0)
+   5:4    nmbits[1:0]
+   3:0    mnlbits[3:0]
+----
 
 [source]
 ----
@@ -1968,12 +1968,11 @@ not furnish these fields must hardwire them to zero.
   located at SCLICBASE
 
   Bits    Field
-  15:13   reserved (WPRI 0)
-  12:9    snlbits[3:0]
-     8    reserved (WPRI 0)
-   8:5    reserved (WPRI 0)
-   4:1    unlbits[3:0]
-     0    reserved (WPRI 0)
+  31:28   reserved (WPRI 0)
+  27:24   unlbits[3:0]
+  23:20   reserved (WPRI 0)
+  19:16   snlbits[3:0]
+  15:0    reserved (WPRI 0)
 ----
 
 [source]
@@ -1982,9 +1981,9 @@ not furnish these fields must hardwire them to zero.
   located at UCLICBASE
 
   Bits    Field
-  7:5     reserved (WPRI 0)
-  4:1     unlbits[3:0]
-    0     reserved (WPRI 0)
+  31:28   reserved (WPRI 0)
+  27:24   unlbits[3:0]
+  23:0    reserved (WPRI 0)
 ----
 
 Detailed explanation for each field are described in the following sections.
