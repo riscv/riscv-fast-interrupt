@@ -1952,11 +1952,15 @@ not furnish these fields must hardwire them to zero.
   located at MCLICBASE
 
   Bits    Field
-  7       reserved (WPRI 0)
-  6:5     nmbits[1:0]
-  4:1     nlbits[3:0]
-    0     reserved (WPRI 0)
-----
+  31      reserved (WPRI 0)
+  30:29   nmbits[1:0]
+  28:25   mnlbits[3:0]
+  24:13   reserved (WPRI 0)
+  12:9    snlbits[3:0]
+     8    reserved (WPRI 0)
+   8:5    reserved (WPRI 0)
+   4:1    unlbits[3:0]
+     0    reserved (WPRI 0)----
 
 [source]
 ----
@@ -1964,9 +1968,12 @@ not furnish these fields must hardwire them to zero.
   located at SCLICBASE
 
   Bits    Field
-  7:5     reserved (WPRI 0)
-  4:1     nlbits[3:0]
-    0     reserved (WPRI 0)
+  15:13   reserved (WPRI 0)
+  12:9    snlbits[3:0]
+     8    reserved (WPRI 0)
+   8:5    reserved (WPRI 0)
+   4:1    unlbits[3:0]
+     0    reserved (WPRI 0)
 ----
 
 [source]
@@ -1976,7 +1983,7 @@ not furnish these fields must hardwire them to zero.
 
   Bits    Field
   7:5     reserved (WPRI 0)
-  4:1     nlbits[3:0]
+  4:1     unlbits[3:0]
     0     reserved (WPRI 0)
 ----
 
@@ -2039,8 +2046,8 @@ NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hard
 
 ==== Specifying Interrupt Level
 
-The 4-bit `cliccfg.nlbits` WARL field indicates how many upper bits in
-`clicintctl[__i__]` are assigned to encode the interrupt level.
+The 4-bit `cliccfg.xnlbits` WARL field indicates how many upper bits in
+`clicintctl[__i__]` are assigned to encode the interrupt level at that privilege level.
 
 Although the interrupt level is an 8-bit unsigned integer, the number
 of bits actually assigned or implemented can be fewer than 8.
