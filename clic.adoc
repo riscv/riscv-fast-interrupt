@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 3/28/2023
+:revdate: 4/11/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+04/11/2023  issue #290 - force xepc to have table-entry alignment on xRET during inhv
 03/28/2023  issue #311 - provided separate unlbits/snlbits/mnlbits in separate cliccfg registers per mode.  This changes the cliccfg bit ordering.
 03/28/2023  issue #304 - clean up VM page boundary alignment recommendations
 03/28/2023  issue #295 - also include DRET in clearing intthresh
@@ -1676,10 +1677,10 @@ as follows:
 If the {inhv} bit of the previous privilege mode is set, the hart
 resumes the trap handler memory access to retrieve the function
 pointer for vectoring with permissions corresponding to the previous
-privilege mode.  The trap handler function address is fetched from the
-current privilege mode's `xepc`.  
-If the trap handler function address is not XLEN/8 aligned, 
-implementations may raise address-misaligned exceptions.
+privilege mode.
+The trap handler function address is obtained from the current
+privilege mode's `xepc` with the low bits of the address cleared to
+force the access to be naturally aligned to an XLEN/8-byte table entry.
 If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler
