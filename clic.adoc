@@ -2459,7 +2459,12 @@ interrupts with a level greater than `pil` will be serviced in this
 loop.  Note that {il} can decrease from its current value on the
 {nxti} read.  {il} should not increase in this code, as interrupts are
 enabled here and if a higher-level interrupt was ready, it should have
-preempted this instruction.
+preempted this instruction.  If one wishes to have horizontal hardware 
+vector interrupts preempt the software loop handler, then the ABI for 
+the hardware vectored interrupts can be required to save and restore 
+mcause. Interrupts will naturally be disabled on entry to that handler. 
+This removes the overhead from every iteration of the software-vectored 
+loop and places it into the hardware-vectored handler only as needed.
 
 <13> If there was another appropriate interrupt to service, the code
 loops back to perform the next handler call.  The `service_loop` only
