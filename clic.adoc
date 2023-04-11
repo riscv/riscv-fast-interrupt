@@ -2260,6 +2260,9 @@ trampoline, which uses the {nxti} instruction to obtain the
 trap-handler address.  The code sequence below is annotated with an
 explanation of its operation.
 
+NOTE: Example handlers in this specification do not account for the presence of f or v registers 
+when saving registers.
+
 === C-ABI Trampoline Code
 
 [source]
