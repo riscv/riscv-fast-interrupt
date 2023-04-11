@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+04/11/2023  issue #318 - use zero instead of x0 in assembly examples.
 04/11/2023  issue #290 - force xepc to have table-entry alignment on xRET during inhv
 03/28/2023  issue #311 - provided separate unlbits/snlbits/mnlbits in separate cliccfg registers per mode.  This changes the cliccfg bit ordering.
 03/28/2023  issue #304 - clean up VM page boundary alignment recommendations
