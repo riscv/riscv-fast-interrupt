@@ -2178,11 +2178,11 @@ entry point on an 8-byte boundary.
    foo:
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
       sw a0, OFFSET(sp)            # Save working register.
-      sw x0, INTERRUPT_FLAG, a0    # Clear interrupt flag.
+      sw zero, INTERRUPT_FLAG, a0    # Clear interrupt flag.
       sw a1, OFFSET(sp)            # Save working register.
       la a0, COUNTER               # Get counter address.
       li a1, 1
-      amoadd.w x0, (a0), a1        # Increment counter in memory.
+      amoadd.w zero, (a0), a1        # Increment counter in memory.
       lw a1, OFFSET(sp)            # Restore registers.
       lw a0, OFFSET(sp)
       addi sp, sp, FRAMESIZE       # Free stack frame.
@@ -2217,17 +2217,17 @@ enabling interrupts:
       csrr a0, mcause              # Read cause.
       sw a1, OFFSET(sp)            # Save working register.
       csrr a1, mepc                # Read epc.
-      csrrsi x0, mstatus, MIE      # Enable interrupts.
+      csrrsi zero, mstatus, MIE      # Enable interrupts.
       #----- Interrupts enabled ---------#
       sw a0, OFFSET(sp)            # Save cause on stack.
-      sw x0, INTERRUPT_FLAG, a0    # Clear interrupt flag.
+      sw zero, INTERRUPT_FLAG, a0    # Clear interrupt flag.
       sw a1, OFFSET(sp)            # Save epc on stack.
       la a0, COUNTER               # Get counter address.
       li a1, 1
-      amoadd.w x0, (a0), a1        # Increment counter in memory.
+      amoadd.w zero, (a0), a1        # Increment counter in memory.
       lw a1, OFFSET(sp)            # Restore epc
       lw a0, OFFSET(sp)            # Restore cause
-      csrrci x0, mstatus, MIE      # Disable interrupts.
+      csrrci zero, mstatus, MIE      # Disable interrupts.
       #----- Interrupts disabled  ---------#
       csrw mepc, a1                # Put epc back.
       lw a1, OFFSET(sp)            # Restore a1.
@@ -2286,7 +2286,7 @@ explanation of its operation.
 
   service_loop:             # 5 instructions in pending-interrupt service loop.
     lw a1, (a0)             # Indirect into handler vector table for function pointer. <9>
-    csrrsi x0, mstatus, MIE # Ensure interrupts enabled. <10>
+    csrrsi zero, mstatus, MIE # Ensure interrupts enabled. <10>
 
     jalr a1                 # Call C ABI Routine, a0 has interrupt ID encoded. <11>
                             # Routine must clear down interrupt in CLIC.
@@ -2301,7 +2301,7 @@ explanation of its operation.
   exit:                     # Fast exit point.
     lw a0, OFFSET(sp)       # Get saved mepc.
 
-    csrrci x0, mstatus, MIE # Disable interrupts <15>
+    csrrci zero, mstatus, MIE # Disable interrupts <15>
   #---- Critical section with interrupts disabled -----------------------
     csrw mcause, a1         # Restore previous context.
 
@@ -2568,14 +2568,14 @@ interrupt using the `wfi` instruction.  The code is entered at the
 ----
     # Source code for interrupt-driven model background code.
 sleep:
-    csrrci x0, mstatus, MIE # Disable interrupts.  <1>
+    csrrci zero, mstatus, MIE # Disable interrupts.  <1>
     wfi                     # Hart waits for next interrupt event.
     csrrsi a0, mnxti, MIE   # Gather interrupt details, and enable interrupts. <2>
     beqz a0, sleep          # Go back to sleep if no interrupt (will be preempted if SHV). <3>
 
 service_loop: <4>
     lw a1, (a0)             # Get handler address.
-    csrrsi x0, mstatus, MIE # Enable interrupts    
+    csrrsi zero, mstatus, MIE # Enable interrupts    
     jalr a1                 # Call C-ABI handler routine
     csrrsi a0, mnxti, MIE   # Claim any pending interrupt at level > 0
     bnez a0, service_loop   # Loop to service any interrupt.
@@ -2583,7 +2583,7 @@ service_loop: <4>
     # This is also entry point to begin sleeping.
 enter_sleep: <5>
     la a0, sleep
-    csrci x0, mstatus, MIE  # Disable interrupts.
+    csrci zero, mstatus, MIE  # Disable interrupts.
     #--- Interrupts disabled
     csrw mepc, a0           # Initialize mepc to point to sleep
     li a0, (MMODE)<<PP|(0)<<PIL|(1)<<PIE
@@ -2704,10 +2704,10 @@ returns with a regular `j ra`.
   # Only safe for horizontal interrupts.
   # Handlers have two temporary registers available, a0, a1.
 handler_example:
-  sw x0, INTERRUPT_FLAG, a0     # Clear interrupt flag.
+  sw zero, INTERRUPT_FLAG, a0     # Clear interrupt flag.
   la a0, COUNTER                # Get counter address.
   li a1, 1                      # Increment value.
-  amoadd.w x0, (a0), a1         # Bump counter.
+  amoadd.w zero, (a0), a1         # Bump counter.
   j ra
 
   # Interrupt trampoline code.
@@ -2736,7 +2736,7 @@ irq_loop:
   lw a1, OFFSET(sp)            # Get epc.
 exit:
   lw a0, OFFSET(sp)            # Get cause.
-  csrrci x0, mstatus, MIE      # Disable interrupts.
+  csrrci zero, mstatus, MIE      # Disable interrupts.
   #----- Interrupts disabled  ---------#
   csrw mepc, a1                # Put epc back.
   lw a1, OFFSET(sp)            # Restore a1.
@@ -2811,7 +2811,7 @@ irq_enter:
   csrrw sp, mscratch, sp       # Already in M-mode, so swap sp back.
   sw sp, OFFSET-FRAMESIZE(sp)  # Save previous sp to stack.
   addi sp, sp, -FRAMESIZE      # Create a frame on stack.
-  sw x0, OFFSET(sp)            # Save previous mscratch to stack (was zero).
+  sw zero, OFFSET(sp)            # Save previous mscratch to stack (was zero).
   sw a0, OFFSET(sp)            # Save a register.  
 continue:
   csrr a0, mcause              # Read cause.
@@ -2867,11 +2867,11 @@ interrupts from the same privilege mode.
       csrrw sp, mscratchcsw, sp    # Conditionally swap in stack pointer.
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
       sw s0, OFFSET(sp)            # Save working register.
-      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
+      sw zero, INTERRUPT_FLAG, s0    # Clear interrupt flag.
       sw s1, OFFSET(sp)            # Save working register.
       la s0, COUNTER               # Get counter address.
       li s1, 1
-      amoadd.w x0, (s0), s1        # Increment counter in memory.
+      amoadd.w zero, (s0), s1        # Increment counter in memory.
       lw s1, OFFSET(sp)            # Restore registers.
       lw s0, OFFSET(sp)
       addi sp, sp, FRAMESIZE       # Free stack frame.
@@ -2891,18 +2891,18 @@ interrupts from the same privilege mode.
       sw s1, OFFSET(sp)            # Save working register.
       csrr s0, mcause              # Read cause.
       csrr s1, mepc                # Read epc.
-      csrrsi x0, mstatus, MIE      # Enable interrupts.
+      csrrsi zero, mstatus, MIE      # Enable interrupts.
       #----- Interrupts enabled ---------#
       sw s0, OFFSET(sp)            # Save cause on stack.
-      sw x0, INTERRUPT_FLAG, s0    # Clear interrupt flag.
+      sw zero, INTERRUPT_FLAG, s0    # Clear interrupt flag.
       sw s1, OFFSET(sp)            # Save epc on stack.
       la s0, COUNTER               # Get counter address.
       li s1, 1
-      amoadd.w x0, (s0), s1        # Increment counter in memory.
+      amoadd.w zero, (s0), s1        # Increment counter in memory.
       lw s1, OFFSET(sp)            # Restore epc
       lw s0, OFFSET(sp)            # Restore cause
       #----- Interrupts disabled  ---------#
-      csrrci x0, mstatus, MIE      # Disable interrupts.
+      csrrci zero, mstatus, MIE      # Disable interrupts.
       csrw mepc, s1                # Put epc back.
       csrw mcause, s0              # Put cause back.
       lw s1, OFFSET(sp)            # Restore s1.
