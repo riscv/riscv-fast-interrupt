@@ -1668,7 +1668,7 @@ traps on fetches to the trap vector table.
 The {inhv} bits are only written by hardware during the table vector
 read operation. The {inhv} bits can be written by software, including
 when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} will treat {epc} as the address of a table entry instead of the address of an instruction.
+except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} will treat {epc} as the address of a table entry instead of the address of an instruction. 
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
@@ -1677,7 +1677,10 @@ If the {inhv} bit of the previous privilege mode is set, the hart
 resumes the trap handler memory access to retrieve the function
 pointer for vectoring with permissions corresponding to the previous
 privilege mode.  The trap handler function address is fetched from the
-current privilege mode's `xepc`.  If the fetch is successful, the hart
+current privilege mode's `xepc`.  
+If the trap handler function address is not XLEN/8 aligned, 
+implementations may raise address-misaligned exceptions.
+If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler
 privilege mode.
@@ -1730,7 +1733,7 @@ function prepare_xret_target(p) =
   }
 ----
 
-NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of data page fault and can handle them using exactly the same code.
+NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of page faults and can handle them using exactly the same code.
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
