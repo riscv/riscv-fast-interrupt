@@ -1012,14 +1012,14 @@ privilege modes are always enabled.
 
 If the hart is currently running at some privilege mode `x`, an MRET
 or SRET instruction that changes the privilege mode to a mode less
-privileged than `x` also sets {intthresh} = 0.  This prevents a higher
-privilege mode from having a non-zero threshold while a lower
+privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.  
+This prevents a higher privilege mode from having a non-minimum threshold while a lower
 privilege mode is running.
 
 Likewise, if the RISC-V debug specification is implemented and 
 the hart is currently running at some privilege mode `x`, a DRET 
 instruction that changes the privilege mode to a mode less privileged 
-than `x` also sets {intthresh} = 0.
+than `x` also sets {intthresh} to the lowest supported {intthresh} value.
 
 NOTE: The anticipated use of threshold is to provide critical sections
 within code running at one privilege level, not to selectively mask
@@ -1030,7 +1030,7 @@ local interrupt enables before switching to a lower privilege mode.
 NOTE: This behavior significantly reduces the hardware cost because it
 only needs to select one global maximum interrupt and compare with the
 threshold of the associated privilege mode.  If higher-privilege modes
-could have non-zero thresholds, hardware would have to select multiple
+could have non-minimum thresholds, hardware would have to select multiple
 maximum interrupts (one for the current mode and one for each
 higher-privilege mode) qualified by the per-mode threshold, then pick
 a qualified maximum interrupt with the highest privilege mode.
@@ -1269,7 +1269,7 @@ interrupts to be resumed.
 The RNMI is taken at the highest interrupt level, which only has an
 effect if software enables RNMIs inside the RNMI handler.
 
-An MNRET instruction will clear `mintthresh` if returning to a lower
+An MNRET instruction will set `mintthresh` to the lowest supported `mintthresh` value if returning to a lower
 privilege mode.
 
 ==== Returns from Handlers
