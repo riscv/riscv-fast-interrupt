@@ -31,93 +31,138 @@ Since interrupts can occur asynchronously it is limiting to create deterministic
 different implementations with results that can be compared with SAIL model results.  For example,
 with different implementation, a different number of instructions will occur before the pending interrupt bit 
 actually gets set.  Depending on the implementation, the execution pc could be a different value than the SAIL model.
+The following deterministic test sequences are only designed to test understanding and expected behavior of the CLIC spec.
 
-=== One possible determanistic sequence is
-- if implementation only has level interrupts (pending bit cannot be set by testbench), testbench sets interrupts to the asserted position before running the test.  Since mstatus.mie is reset by default, no interrupts will be taken until it is enabled.
-- setup cliccfg
-- setup xthresh
-- setup interrupt based on implementation parameter
-- setup xtvec_handler
-- fence instruction
-- enable status.mie/sie/uie
-- loop to self
+=== smclic testcases
+smclic testcases work for implementations that support m-mode.
 
-This sequence ensures the xepc value will be the loop to self and implementation signatures should match SAIL model.
+generic test pseudo code
+----
+current mtvec/mscratch saved (used by arch_test.h)
+RVMODEL_SET_INT
+fence
+enable global interrupts
+finish (if no interrupts)
 
-== Implemenation parameters needed by the testbench
-- EDGE: 0 - level, 1 - edge.  If set to 0, testbench will need to assert the interrput before the test binary is run.
-- NEG: 0 - positive, 1 - negative (interrupt polarity, only used if testbench is level and will be asserting interrupts before test binary is run.
-- INTERRUPT1_NUM - 1st interrupt number, used to calculate interrupt address and expected exccode value.
-- INTERRUPT2_NUM - 2nd interrupt number for tests that require 2 interrupts (preemption, priority encoder verification)
-- CLICCFG - address of cliccfg register.  Used as base address for interrupt address calculation and verification of mclicbase value.
-- CLICINTCTLBITS - number of implemented clicintctl bits.
-- addresses of new CLIC csr registers.  Until the spec is ratified, the implementation will need to provide the addresses of the new CLIC csr registers for that implementation.
+interrupt handler1:
+save signatures (mcause, mstatus, mepc, mtval, mintstatus, mintthresh, mnxti, mscratch, mscratchcsw, mscratchcswl)
+modify mtvec/mtvt to interrupt handler2:
+enable interrupts (clint would nest to interrupt handler2, clic does not)
+modify mepc to jump to finsh
+RVMODEL_CLEAR_INT
+RVMODEL_SET_INT2
+mret
 
-== Test sequences
+interrupts still enabled so enter interrupt handler2:
+save signatures (mcause, mstatus, mepc, mtval, mintstatus, mintthresh, mnxti, mscratch, mscratchcsw, mscratchcswl)
+RVMODEL_CLEAR_INT2
+clear previous global interrupts
+mret
 
-=== suite of tests to verify interrupt privilege result 
-- based on CLICINTCTLBITS, nlbits, clicintctl[i] setting for m, m/u, m/s/u implementations
-- compare against table in section 3.2.1 Specifying Interrupt Privilege Mode
+finish:
+restore mtvec, mscratch for arch_test.h
+----
 
-==== Signatures
-- xie
-- xip
-- xcause
-- xstatus
-- xepc
-- xtval
-- xintstatus
-- xscratchcsw
-- xscratchcswl
+[%autofit]
+----
+ Current  |      CLIC          |->      Current'          Previous
+ p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
+ P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
+ P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
+ P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
+ P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
 
-=== suite of tests to verify interrupt priority encoder implementation 
-- compare against table in section 7.1 General Interrupt Overview
+----
 
-==== Signatures
-- xie
-- xip
-- xcause
-- xstatus
-- xepc
-- xtval
-- xintstatus
-- xscratchcsw
-- xscratchcswl
+m-mode CSRs to check signatures
+mstatus
+mideleg
+mie
+mtvec
+mtvt
+mscratch
+mepc
+mcause
+mtval
+mip
+mnxti
+mintstatus
+mintthresh
+mscratchcswl
 
-=== hardware vectoring test
-- checks xtvt
-- create a pmp violation to check xinhv? if fault xtval and xepc tested
+TEST PLAN CASES
+[%autofit]
+----
+trigger, clear, retrigger single interrupt for both vectored/direct program 
+verify single interrupt will not trigger in m-mode unless both clicintie and mstatus.mie are set  
+exception if handler address is in non-executable memory | NOT COVERED
+verify interrupt level order
+verify interrupt priority order
+verify a higher level interrupt can nest a lower level interrupt handler
+verify mintthresh can prevent a higher level interrupt nesting a lower level interrupt handler
+verify non-shv edge interrupt is cleared after write instruction to mxnti 
+verify edge interrupt pending is not cleared when interrupt source is cleared.
+verify level interrupt is cleared when interrupt source is cleared
+verify mnxti csr contains vector table entry of next pending interrupt
+verify mnxti csr returns 0 when pending interrupt level < mcause.mpil
+verify write of mnxti updates mstatus
+verify updates to mcause shadow fields update mstatus
+verify wfi resumes if interrupt level > intstatus.mil and intthresh.mth mstatus.mie disabled
+----
 
-=== verify clicinfo csr matches build parameters
+=== ssclic testcases
 
-=== check clicintattr/ctrl/ip/ie accessibility in s-mode, u-mode
+[%autofit]
+----
+ Current  |      CLIC          |->      Current'          Previous
+ p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
+ P  ?  ?  | nP<P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
+ P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
+ P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
+ P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
+ P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
+ P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
+ P  e  L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  e  pc  # Vertical interrupt taken
+----
 
-=== verify xcause mstatus bits match xstatus
+Additional m/s-mode CSRs to check signatures
+sstatus
+sie
+stvec
+stvt
+sscratch
+sepc
+scause
+stval
+sip
+snxti
+sintstatus
+sintthresh
+sscratchcsw
+mscratchcsw (priv mode change)
+sscratchcswl
 
-=== verify xnxti
-- in non-clic mode a read should return 0
-- in interrupt routine, check xnxti when interrupt pending and when not pending to verify conditional behavior
-- interrupt chaining
+TEST PLAN CASES
+[%autofit]
+----
+verify interrupt priv delegation | translated privs thru mstatus.mpriv, mstatus.mpp?
+verify s-mode interrupt is not handled in m-mode
+verify m-mode interrupt is handled in s-mode with mstatus.mie
+verify m-mode interrupt can nest a s-mode interrupt handler
+verify write to mtvec.mode updates stvec.mode
+verify wfi resumes in m-mode handler if s-mode interrupt occurs 
+----
 
-=== verify xintthresh
-- verify only applies to current privilege mode
+=== smclicshv testcases
 
-=== verify preemption works without losing state
-
-=== verify WFI cases
-
-=== verify clicintie masking works
-
-=== verify mclicbase matches CLICCFG implementation parameter
-
-=== verify xideleg and xedeleg still accessible but have no effect in clic mode
-
-=== check XIE, XIP CSRs appear hardwired 0 in CLIC mode, 
-- retain value when switched back to original mode
-
-=== verify only mtvec, not stvec or utvec can change from clic to non-clic mode
-
-=== byte write of clicintip/ie/ctl/attr vs. 32-bit write
+TEST PLAN CASES
+[%autofit]
+----
+verify shv auto-clears an edge triggered interrupt 
+verify shv interrupt is handled at the correct index in the xtvt table
+verify exception is taken when xtvt table is in non-executable region
+verify scause.sinhv set with mret returning to s-mode treats mepc as addr in xtvt table
+----
 
 == Coverage Holes
 
@@ -125,12 +170,7 @@ This sequence ensures the xepc value will be the loop to self and implementation
 
 === only comparing up-to two interrupts at a time
 
-=== clicintattr.trig
+=== exception if handler address is in non-executable memory 
 
+=== situations where wfi is not required to wake up. But could be done by user configuring a timer interrupt.
 
-
-
-
-
-
-- 
