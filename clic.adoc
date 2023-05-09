@@ -1262,9 +1262,25 @@ NOTE: This section describes the interaction of the CLIC with the
 proposed new RNMI specification.
 
 The resumable NMI (RNMI) extension adds additional `mnepc`, `mncause`,
-and `mnstatus` CSRs.  When in CLIC mode, the RNMI retains the CLIC's
-additional state in the `mncause` and `mnstatus` CSRs to allow CLIC
-interrupts to be resumed.
+and `mnstatus` CSRs.  When in CLIC mode, `mncause` is similarly extended to 
+include `mnstatus` state and CLIC state.
+
+[source]
+----
+ mncause
+ Bits    Field      Description
+ XLEN-1 Interrupt    Interrupt=1, Exception=0
+    30  (reserved)
+ 29:28  mpp[1:0]     Previous privilege mode, same as mnstatus.mpp
+    27  mpie         Previous interrupt enable, same as mnstatus.mpie
+ 26:24  (reserved)   
+ 23:16  mpil[7:0]    Previous interrupt level
+ 15:12  (reserved)
+ 11:0  Exccode[11:0] Exception/interrupt code
+----
+
+The `mncause.mpp` and `mncause.mpie` fields mirror the `mnstatus.mpp` and
+`mnstatus.mpie` fields, and are aliased into `mncause`.
 
 The RNMI is taken at the highest interrupt level, which only has an
 effect if software enables RNMIs inside the RNMI handler.
