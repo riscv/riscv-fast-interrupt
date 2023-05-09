@@ -1959,7 +1959,7 @@ Hardware implementations may wish to have a single implementation support differ
 
 ==== CLIC Configuration ({cliccfg} registers)
 
-The CLIC has a single memory-mapped 8-bit global configuration
+The CLIC has a single memory-mapped 32-bit global configuration
 register per privilege mode, {cliccfg}, that defines 
 how the `clicintctl[__i__]` registers are subdivided into level and
 priority fields.  `mcliccfg` has an additional field that defines interrupt privilege mode configuration.
@@ -1978,9 +1978,9 @@ not furnish these fields must hardwire them to zero.
 
   Bits    Field
   31:28   reserved (WPRI 0)
-  27:24   unlbits[3:0]
+  27:24   unlbits[3:0] if suclic is supported, else reserved (WPRI 0)
   23:20   reserved (WPRI 0)
-  19:16   snlbits[3:0]
+  19:16   snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)
   15:6    reserved (WPRI 0)
    5:4    nmbits[1:0]
    3:0    mnlbits[3:0]
@@ -1993,9 +1993,9 @@ not furnish these fields must hardwire them to zero.
 
   Bits    Field
   31:28   reserved (WPRI 0)
-  27:24   unlbits[3:0]
+  27:24   unlbits[3:0] if suclic is supported, else reserved (WPRI 0)
   23:20   reserved (WPRI 0)
-  19:16   snlbits[3:0]
+  19:16   snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)
   15:0    reserved (WPRI 0)
 ----
 
@@ -2009,6 +2009,12 @@ not furnish these fields must hardwire them to zero.
   27:24   unlbits[3:0]
   23:0    reserved (WPRI 0)
 ----
+
+scliccfg and ucliccfg are subsets of the mcliccfg register.
+
+NOTE: In a straightforward implementation, reading or writing any field 
+in ucliccfg or scliccfg is equivalent to reading or writing the homonymous 
+field in mcliccfg.
 
 Detailed explanation for each field are described in the following sections.
 
@@ -2069,14 +2075,14 @@ NOTE: Bare S-mode (no MMU, satp=0) can be used in microcontrollers to allow hard
 
 ==== Specifying Interrupt Level
 
-The 4-bit `cliccfg.xnlbits` WARL field indicates how many upper bits in
+The 4-bit `mcliccfg.xnlbits` WARL fields indicate how many upper bits in
 `clicintctl[__i__]` are assigned to encode the interrupt level at that privilege level.
 
 Although the interrupt level is an 8-bit unsigned integer, the number
 of bits actually assigned or implemented can be fewer than 8.
 As described above, the number of bits assigned is specified in
-`cliccfg.nlbits`. The number of bits actually implemented can be derived
-from `cliccfg.nlbits` and a fixed parameter `CLICINTCTLBITS`
+`mcliccfg.xnlbits`. The number of bits actually implemented can be derived
+from `mcliccfg.xnlbits` and a fixed parameter `CLICINTCTLBITS`
 (with value between 0 to 8) which specifies bits implemented for both
 interrupt level and priority.
 
@@ -2084,23 +2090,23 @@ NOTE: The number of available level bits can be determined by subtracting
 the number of mode bits from CLICINTCTLBITS.
 
 
-For example, if the `nlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
+For example, if the `xnlbits` {gt} `CLICINTCTLBITS`, then the lower bits of
 the 8-bit interrupt level are assumed to be all 1s.  Similarly,
-if `nlbits` {lt} 8, then the lower bits of the 8-bit interrupt level are
+if `xnlbits` {lt} 8, then the lower bits of the 8-bit interrupt level are
 assumed to be all 1s. 
 
-If `nlbits` = 0, then all interrupts are treated as level 255.
+If `xnlbits` = 0, then all interrupts are treated as level 255.
 
-Examples of `cliccfg` settings:
+Examples of `mcliccfg` settings:
 
 [source]
 ----
- CLICINTCTLBITS nlbits clicintctl[i] interrupt levels
-       0         2      ........     255
-       1         2      l.......     127,255
-       2         2      ll......     63,127,191,255
-       3         3      lll.....     31,63,95,127,159,191,223,255
-       4         1      lppp....     127,255
+ CLICINTCTLBITS mnlbits clicintctl[i] interrupt levels
+       0         2      ........      255
+       1         2      l.......      127,255
+       2         2      ll......      63,127,191,255
+       3         3      lll.....      31,63,95,127,159,191,223,255
+       4         1      lppp....      127,255
 
  "." bits are non-existent bits for level encoding, assumed to be 1
  "l" bits are available variable bits in level specification
@@ -2113,7 +2119,7 @@ between 0 to 8. The implemented bits are kept left-justified
 in the most-significant bits of each 8-bit `clicintctl[__i__]`
 register, with the lower unimplemented bits treated as hardwired to 1.
 These control bits are interpreted as level and priority according to
-the setting in the CLIC Configuration register (`cliccfg.nlbits`).
+the setting in the CLIC Configuration register (`mcliccfg.xnlbits`).
 
 === smclicconfig Changes to CLIC CSRs
 ==== smclicconfig Changes to Interrupt-Level Threshold ({intthresh}) CSRs
