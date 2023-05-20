@@ -56,7 +56,8 @@ program interrupt1/2 CLICINTIE (based on RVMODEL_INT1_CLICINTIE, RVMODEL_INT2_CL
 RVMODEL_SET_INT1
 fence
 switch priv_mode to RVMODEL_CLIC_STARTING_PRIV
-enable mstatus.mie
+set mstatus.mie to RVMODEL_MSTATUS_MIE
+RVMODEL_WFI
 finish /* e.g. if RVMODEL_SET_INT1 is defined to actually not set interrupt1, or interrupt level is 0, or interrupt priv is < current_priv), all signatures would stay default */
 
 m_interrupt_handler1:
@@ -81,17 +82,6 @@ finish:
 restore mtvec, mscratch for arch_test.h
 ----
 
-m-mode interrupt behavior
-[%autofit]
-----
- Current  |      CLIC          |->      Current'          Previous
- p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
- P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
- P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
- P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
-----
-
 smclic tests TEST PLAN CASES  organize by subfeature (trigger, pending, enable, priority, level, threshold/interrupt ordering)
 just care about positive coverage?  negative coverage too?  if x doesn't happen?
 Defaults:
@@ -104,6 +94,7 @@ RVMODEL_INT2_CLICINTIE = 1
 RVMODEL_MSTATUS_MIE = 1
 RVMODEL_MNXTI_SIMMED = 0x8
 RVMODEL_MNXTI_CIMMED = 0x8
+RVMODEL_WFI nop
 ----
 ==== clic_no_mint-01.S
 Description: verify single interrupt will not trigger in m-mode unless both clicintie and mstatus.mie are set
@@ -191,37 +182,6 @@ Description: verify interrupt priority order
 
 === ssclic testcases
 
-m-mode/s-mode interrupt behavior
-[%autofit]
-----
- Current  |      CLIC          |->      Current'          Previous
- p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
- P  ?  ?  | nP<P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
- P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
- P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
- P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
- P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  e  L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  e  pc  # Vertical interrupt taken
-----
-
-additional s-mode CSRs signatures saved in interrupt handlers
-sstatus
-sie
-stvec
-stvt
-sscratch
-sepc
-scause
-stval
-sip
-snxti
-sintstatus
-sintthresh
-sscratchcsw
-mscratchcsw (priv mode change)
-sscratchcswl
-
 TEST PLAN CASES
 [%autofit]
 ----
@@ -245,13 +205,782 @@ verify exception is taken when xtvt table is in non-executable region
 verify scause.sinhv set with mret returning to s-mode treats mepc as addr in xtvt table
 ----
 
-== Coverage Holes
+=== smclint testcases
+Smclint testcases require I, Zicsr, and m-mode interrupts (Smclint).
+Since no clint tests are currently available in riscv-arch-test, these tests are created to verify CLINT and that after adding CLIC extension to SAIL that CLINT mode is not broken.
+Full coverage of possible interrupts would be difficult because different implementations can choose which are implemented and mip/mie bits can be hardwired to 0.
+So the smclint tests only compare up to two interrupts at a time and default to using msip and mtip interrupts.
 
-=== async behavior on pipeline
+Below is generic test pseudo code that is used by the smclint tests to stimulate different behavior.  
+anything in ALL_CAPS are defines that can be overwritten with -D or at top of test or in model_test.h
+[%autofit]
+----
+/* to stimulate different test behavior using the same generic test pseudo code, 
+   individual tests will #define different default values here */ 
 
-=== only comparing up-to two interrupts at a time
+#include "model_test.h"
+#include "arch_test.h"
 
-=== exception if handler address is in non-executable memory 
+current mtvec/mscratch saved (used by arch_test.h so needs to be restored at end of test)
+program mie csr RVMODEL_SET_MIE
+RVMODEL_SET_INT1
+fence
+set mstatus.mie to RVMODEL_MSTATUS_MIE
+RVMODEL_WFI
+jump to finish /* e.g. if RVMODEL_SET_INT1 is defined to actually not set interrupt1, or interrupt level is 0, all signatures would stay default */
 
-=== situations where wfi is not required to wake up. 
+m_interrupt_handler1:
+  save signatures /* mcause, mstatus, mepc, mtval, mscratch, mip, mie, mideleg */
+  modify mtvec to point to interrupt handler2:
+  RVMODEL_CLEAR_INT1
+  RVMODEL_SET_INT2
+  set mstatus.mie to RVMODEL_MSTATUS_MIE /* e.g. if RVMODEL_CLEAR_INT1 was defined to actually not clear interrupt1, interrupt1 is still asserted, clint would preempt and jump to interrupt handler2 */
+  modify mepc to jump to finsh
+  save signatures /* mcause, mstatus, mepc, mtval, mscratch, mip, mie, mideleg */
+  mret
+
+m_interrupt_handler2:
+  save signatures /* mcause, mstatus, mepc, mtval, mscratch, mip, mie, mideleg */
+  RVMODEL_CLEAR_INT2
+  clear mstatus.mpie (so mstatus.mie is 0 after mret)
+  mret
+
+finish:
+restore mtvec, mscratch for arch_test.h
+----
+
+Defaults:
+[%autofit]
+----
+RVMODEL_WFI = wfi
+RVMODEL_CLEAR_ALL_INTS = RVMODEL_CLEAR_MSW_INT; RVMODEL_CLEAR_MTIMER_INT
+RVMODEL_MSTATUS_MIE = MSTATUS_MIE // 0x8
+RVMODEL_SET_MIE = (MIE_MSIE | MIE_MTIE) // 0x8 | 0x80
+RVMODEL_CLEAR_MSTATUS_MPIE = MSTATUS_MPIE // 0x80
+RVMODEL_MTVEC_MODE = 0
+RVMODEL_MSTATUS_MASK = (MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP) // mask signature of mstatus to only compare mie, mpie, mpp bits.
+RVMODEL_MIP_MASK = RVMODEL_SET_MIE
+----
+
+==== msw-01.S
+.Description: tests if RVMODEL_SET_MSW_INT is working, hangs in infinite loop otherwise
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger m-mode handler
+- clear interrupt
+- set mepc to finish
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = <EMPTY>
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = <EMPTY>
+ RVMODEL_WFI = jump_to_self 
+----
+==== mtimer-01.S
+.Description: tests if RVMODEL_SET_MTIMER_INT is working, hangs in infinite loop otherwise
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger m-mode handler
+- clear interrupt
+- set mepc to finish
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_INT1 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_SET_INT2 = <EMPTY>
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MTIMER_INT
+ RVMODEL_CLEAR_INT2 = <EMPTY>
+ RVMODEL_WFI = jump_to_self  
+----
+==== nomint-01.S
+.Description: expect interrupts will not trigger in m-mode unless mstatus.mie is set
+- enable mie
+- generate interrupts
+- nop
+- jump to finish
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE = 0
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
+ RVMODEL_WFI = nop  
+----
+
+==== nomint-02.S
+.Description: expect interrupts will not trigger in m-mode unless mie.x is set
+- generate interrupts
+- enable mstatus.mie
+- nop
+- jump to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = 0 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
+ RVMODEL_WFI = nop  
+----
+
+==== wfi-01.S
+.Description: expect wfi to behave like a nop when a single interrupt is pending when mstatus.mie is disabled
+- enable mie CSR
+- generate interrupts
+- wfi
+- wakeup
+- jump to finish
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE = 0
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT
+----
+
+==== direct-01.S 
+.Description: trigger, clear, retrigger same interrupt.
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger m-mode handler
+- clear 1st interrupt
+- generate interrupt
+- trigger 2nd m-mode handler
+- clear 2nd interrupt
+- set mepc to finish
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
+----
+
+==== direct-02.S 
+.Description: trigger, clear, retrigger single interrupt, no 2nd clear. 
+Stimulates pending interrupt after setting mstatus.mpie followed by mret
+mstatus.mie should be cleared after mret so pending interrupt is not taken
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger m-mode handler
+- clear 1st interrupt
+- generate interrupt
+- trigger 2nd m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = <EMPTY> 
+----
+
+==== vectored-01.S 
+.Description: trigger, clear, retrigger single interrupt, vectored-mode.
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger vectored m-mode handler
+- clear 1st interrupt
+- generate interrupt
+- trigger 2nd vectored m-mode handler
+- clear 2nd interrupt
+- set mepc to finish
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_MTVEC_MODE = 1 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT
+----
+
+==== vectored-02.S 
+.Description: trigger, clear, retrigger single interrupt, no 2nd clear. 
+Stimulates pending interrupt after setting mstatus.mpie followed by mret, vectored-mode.
+mstatus.mie should be cleared after mret so pending interrupt is not taken
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger vectored m-mode handler
+- clear 1st interrupt
+- generate interrupt
+- trigger 2nd vectored m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_MTVEC_MODE = 1 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
+ RVMODEL_CLEAR_INT2 = <EMPTY> 
+----
+
+==== level-01.S
+.Description: verify interrupt level order, 2 interrupts asserted in 1st interrupt handler, mtvec.mode=direct
+- enable mie CSR
+- generate interrupt 1
+- enable mstatus.mie
+- trigger m-mode handler
+- generate interrupt 2 (both interrupts now pending)
+- trigger 2nd m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_CLEAR_INT1 = <EMPTY>
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
+----
+
+==== level-02.S
+.Description: verify interrupt level order, swap 2 interrupt order, mtvec.mode=direct
+- enable mie CSR
+- generate interrupt 1
+- enable mstatus.mie
+- trigger m-mode handler
+- generate interrupt 2 (both interrupts now pending)
+- set mstatus.mie
+- trigger 2nd m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_SET_INT1 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = <EMPTY>
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
+----
+
+==== level-03.S
+.Description: verify interrupt level order, 2 interrupts asserted in 1st interrupt handler, mtvec.mode=vectored
+- enable mie CSR
+- generate interrupt 1
+- enable mstatus.mie
+- trigger vectored m-mode handler
+- generate interrupt 2 (both interrupts now pending)
+- set mstatus.mie
+- trigger 2nd vectored m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_MTVEC_MODE = 1 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_CLEAR_INT1 = <EMPTY>
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
+----
+
+==== level-04.S
+.Description: verify interrupt level order, swap 2 interrupt order, mtvec.mode=vectored
+- enable mie CSR
+- generate interrupt 1
+- enable mstatus.mie
+- trigger vectored m-mode handler
+- generate interrupt 2 (both interrupts now pending)
+- set mstatus.mie
+- trigger 2nd vectored m-mode handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+[%autofit]
+----
+ RVMODEL_MTVEC_MODE = 1 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MTIMER_INT
+ RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
+ RVMODEL_CLEAR_INT1 = <EMPTY>
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
+----
+=== ssclint testcases
+Similar to smclint but adding s-mode interrupt privilege delegation
+
+generic test pseudo code that is used by most clint tests to stimulate different behavior.  
+anything in ALL_CAPS are defines that can be overwritten with -D or at top of test or in model_test.h
+[%autofit]
+----
+/* to stimulate different test behavior using the same generic test pseudo code, 
+   individual tests will #define different default values here */ 
+
+#include "model_test.h"
+#include "arch_test.h"
+
+current mtvec/mscratch saved (used by arch_test.h so needs to be restored at end of test)
+program mie csr RVMODEL_SET_MIE
+setup delegation
+program sie csr RVMODEL_SET_SIE
+RVMODEL_SET_MINT1
+RVMODEL_SET_MINT2
+RVMODEL_SET_SINT1
+RVMODEL_SET_SINT2
+fence
+switch priv_mode to RVMODEL_CLINT_STARTING_PRIV
+set mstatus.mie to RVMODEL_MSTATUS_MIE
+set SEPC to location_1s
+RVMODEL_SWITCH_TO_S_MODE
+location1_s:
+RVMODEL_WFI
+jump done /* e.g. if RVMODEL_SET_INT1 is defined to actually not set interrupt1, or interrupt level is 0, all signatures would stay default */
+
+m_interrupt_handler:
+  save m-mode signatures /* mcause, mstatus, mepc, mtval, mscratch, mip, mie, mideleg */
+  modify mtvec to point to mtvec_finish:
+
+  if mcause is ECALL, jump to mtvec_finish
+  
+  RVMODEL_CLEAR_MINT1
+  RVMODEL_CLEAR_MINT2
+  set MEPC to s_done
+  mret
+
+s_interrupt_handler:
+  save s-mode signatures /* scause, sstatus, sepc, stval, sscratch, sip, sie */
+  modify stvec to point to stvec_finish:
+
+  RVMODEL_CLEAR_SINT1
+  RVMODEL_CLEAR_SINT2
+  set SEPC to s_done
+  sret
+
+stvec_finish:
+   save scause signature
+s_done:
+   ecall
+   
+mtvec_finish:
+   save mcause signature
+m_done:
+restore mtvec, mscratch for arch_test.h
+----
+
+==== nodeleg-01.S 
+.Description: Verify when executing in s-mode, the m-mode interrupt will be handled even though mstatus.mie is 0:
+- generate m-mode interrupt (ssie) (not delegated to s-mode),
+- switch to s-mode (mstatus.mie disabled),
+- trigger (m-mode handler),
+- clear interrput,
+- return to s-mode,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+==== nodeleg-02.S 
+.Description: Verify when executing in s-mode, the m-mode interrupt will be handled (this time mstatus.mie is 1):
+- generate m-mode interrupt (stie),
+- switch to s-mode (mstatus.mie disabled),
+- trigger (m-mode handler),
+- clear interrput,
+- return to s-mode,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = 1
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = SIE_STIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_STIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+==== nodelegvec-01.S 
+.Description: Verify when executing in s-mode, the vectored m-mode interrupt will be handled even though mstatus.mie is 0:
+- generate vectored m-mode interrupt (ssie) (not delegated to s-mode),
+- switch to s-mode (mstatus.mie disabled),
+- trigger (m-mode handler),
+- clear interrput,
+- return to s-mode,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MTVEC_MODE     = 1 
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+==== deleg-01.S 
+.Description: Verify when executing in s-mode, an s-mode interrupt will be handled when mstatus.sie is 1:
+- generate s-mode interrupt (ssie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- clear interrupt,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_SSIE
+ RVMODEL_SET_MIDELEG    = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== deleg-02.S 
+.Description: Verify when executing in s-mode, an s-mode interrupt will be handled when mstatus.sie is 1:
+- generate s-mode interrupt (stie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- clear interrupt,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_STIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_STIE
+ RVMODEL_SET_MIDELEG    = SIE_STIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_STIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== delegvec-01.S 
+.Description: Verify when executing in s-mode, a vectored s-mode interrupt will be handled when mstatus.sie is 1:
+- generate vectored s-mode interrupt (ssie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- clear interrupt,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_STVEC_MODE     = 1 
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_SSIE
+ RVMODEL_SET_MIDELEG    = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== order-01.S 
+.Description: Verify order of 2 s-mode interrupts
+- generate 2 s-mode interrupts (ssie, stie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- clear interrupts,
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT2    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+==== order-02.S 
+.Description:
+- generate 2 s-mode interrupts (ssie, stie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- only sint1 is cleared,
+- re-enable mstatus.sie
+- trigger (go to stvec_finish, capture cause signature)
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+----
+
+==== order-03.S 
+.Description:
+- generate 2 s-mode interrupts (ssie, stie),
+- switch to s-mode,
+- trigger (s-mode handler),
+- only sint2 is cleared,
+- re-enable mstatus.sie
+- trigger (go to stvec_finish, capture cause signature)
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT2    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+==== privorder-01.S 
+.Description: Verify m-mode interrupt is handled before s-mode interrupt
+- generate 1 m-mode interrupt (ssie) and 1 s-mode interrupt (stie),
+- switch to s-mode,
+- trigger (m-mode handler),
+- clear m-mode interrupt
+- return to s-mode
+- trigger (s-mode handler)
+- clear s-mode interrupt
+- return to s-mode
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT2    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+==== privorder-02.S 
+.Description: Verify m-mode vectored interrupt is handled before s-mode interrupt
+- generate 1 vectored m-mode interrupt (ssie) and 1 direct s-mode interrupt (stie),
+- switch to s-mode,
+- trigger (m-mode handler),
+- clear m-mode interrupt
+- return to s-mode
+- trigger (s-mode handler)
+- clear s-mode interrupt
+- return to s-mode
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MTVEC_MODE     = 1 
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT2    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== privorder-03.S 
+.Description: Verify m-mode interrupt is handled before s-mode vectored interrupt
+- generate 1 direct m-mode interrupt (ssie) and 1 vectored s-mode interrupt (stie),
+- switch to s-mode,
+- trigger (m-mode handler),
+- clear m-mode interrupt
+- return to s-mode
+- trigger (s-mode handler)
+- clear s-mode interrupt
+- return to s-mode
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_STVEC_MODE     = 1 
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = (SIE_SSIE | SIE_STIE)
+ RVMODEL_SET_MIDELEG    = (SIE_STIE)
+ RVMODEL_SETUP_SIP_INTS = LI(t0, (SIE_SSIE | SIE_STIE)); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+ RVMODEL_SET_SINT2      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT2    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== mdisable-01.S 
+.Description: Verify m-mode interrupt not taken in m-mode when mstatus.mie is 0
+- generate m-mode interrupt (ssie) (not delegated to s-mode),
+- stay in m-mode
+- wfi
+- wakeup
+- jump to done
+- ecall
+[%autofit]
+----
+ RVMODEL_SWITCH_TO_S_MODE = <EMPTY>
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== mdisable-02.S 
+.Description: Verify m-mode interrupt not taken in m-mode when mie CSR is 0
+- generate m-mode interrupt (ssie) (not delegated to s-mode),
+- stay in m-mode
+- nop
+- wakeup
+- jump to done
+- ecall
+[%autofit]
+----
+ RVMODEL_WFI            = nop
+ RVMODEL_SWITCH_TO_S_MODE = <EMPTY>
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== mdisable-03.S 
+.Description: Verify s-mode interrupt not taken in m-mode
+- generate s-mode interrupt (ssie)
+- stay in m-mode
+- wfi
+- wakeup
+- jump to done
+- ecall
+[%autofit]
+----
+ RVMODEL_SWITCH_TO_S_MODE = <EMPTY>
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = SIE_SSIE
+ RVMODEL_SET_MIDELEG    = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== sdisable-01.S 
+.Description: Verify s-mode interrupt not taken in s-mode when mstatus.sie is 0
+- generate s-mode interrupt (ssie)
+- switch to s-mode,
+- wfi
+- wakeup
+- jump to done
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_MSTATUS_MIE    = 0
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_STIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+==== sdisable-02.S 
+.Description: Verify s-mode interrupt not taken in s-mode when sie CSR is 0
+- generate s-mode interrupt (ssie)
+- switch to s-mode,
+- nop
+- jump to done
+- ecall back to m-mode
+[%autofit]
+----
+ RVMODEL_WFI            = nop
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = 0
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_MIP_MASK       = SIE_SSIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+
+=== example of setting MSW and MTIMER interrupts in model_test.h
+----
+#ifndef RVMODEL_SAIL_MCLINTBASE    
+        #define RVMODEL_SAIL_MCLINTBASE 0x02000000
+#endif
+
+#ifndef RVMODEL_SAIL_MSIP_OFFSET    
+        #define RVMODEL_SAIL_MSIP_OFFSET 0x0
+#endif
+
+#ifndef RVMODEL_SAIL_MTIMECMP_OFFSET    
+        #define RVMODEL_SAIL_MTIMECMP_OFFSET 0x4000
+#endif
+
+#ifndef RVMODEL_SAIL_MTIMECMPH_OFFSET    
+        #define RVMODEL_SAIL_MTIMECMPH_OFFSET 0x4004
+#endif
+
+#define RVMODEL_SET_MSW_INT                                                           \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MSIP_OFFSET)>> 12);         \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MSIP_OFFSET) & 0xFFF);      \
+    li t1, 1;                                                                         \
+    sw t1, (t0);                                                                      \
+
+#define RVMODEL_CLEAR_MSW_INT                                                         \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MSIP_OFFSET)>> 12);         \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MSIP_OFFSET) & 0xFFF);      \
+    sw x0, (t0);                                                                      \
+
+#define RVMODEL_SET_MTIMER_INT                                                        \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMP_OFFSET)>> 12);     \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMP_OFFSET) & 0xFFF);  \
+    sw x0, (t0);                                                                      \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMPH_OFFSET)>> 12);    \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMPH_OFFSET) & 0xFFF); \
+    sw x0, (t0);                                                                      \
+
+#define RVMODEL_CLEAR_MTIMER_INT                                                      \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMPH_OFFSET)>> 12);    \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMPH_OFFSET) & 0xFFF); \
+    sw t1, (t0);                                                                      \
+    lui t0,      ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMP_OFFSET)>> 12);     \
+    addi t0, t0, ((RVMODEL_SAIL_MCLINTBASE + RVMODEL_SAIL_MTIMECMP_OFFSET) & 0xFFF);  \
+    sw t1, (t0);                                                                      \
+----
+
+=== Coverage Holes
+
+==== async behavior on pipeline
+
+==== only comparing up-to two interrupts at a time
+
+==== exception if handler address is in non-executable memory
+
+==== xtvec locations aren't randomized, range of table jumps aren't randomized
+
+==== situations where wfi is not required to wake up. 
+
+==== WARL settings of implementation
 
