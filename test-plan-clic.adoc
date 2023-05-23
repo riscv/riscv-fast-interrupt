@@ -260,6 +260,7 @@ RVMODEL_CLEAR_MSTATUS_MPIE = MSTATUS_MPIE // 0x80
 RVMODEL_MTVEC_MODE = 0
 RVMODEL_MSTATUS_MASK = (MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPP) // mask signature of mstatus to only compare mie, mpie, mpp bits.
 RVMODEL_MIP_MASK = RVMODEL_SET_MIE
+RVMODEL_ECALL = <empty>
 ----
 
 ==== msw-01.S
@@ -280,6 +281,16 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT2 = <EMPTY>
  RVMODEL_WFI = jump_to_self 
 ----
+Coverage
+----
+msip trigger | verify RVMODEL_SET_MSW_INT trigger
+msip clear   | verify RVMODEL_CLEAR_MSW_INT clear
+mip.msip     | verify mip signature 0/1
+mcause       | verify machine software interrupt signature
+mstatus      | verify mstatus.mie/mpie/mpp signature in interrupt handler and after mret
+mtvec        | verify interrupt uses mtvec to calculate pc of interrupt handler (direct)
+mepc         | verify mepc location is jump_to_self location
+----
 ==== mtimer-01.S
 .Description: tests if RVMODEL_SET_MTIMER_INT is working, hangs in infinite loop otherwise
 - enable mie CSR
@@ -297,6 +308,16 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT2 = <EMPTY>
  RVMODEL_WFI = jump_to_self  
 ----
+Coverage
+----
+mtip trigger | verify RVMODEL_SET_MTIMER_INT trigger
+mtip clear   | verify RVMODEL_CLEAR_MTIMER_INT clear
+mip.mtip     | verify mip signature 0/1
+mcause       | verify machine timer interrupt signature
+mstatus      | verify mstatus.mie/mpie/mpp signature in interrupt handler and after mret
+mtvec        | verify interrupt uses mtvec to calculate pc of interrupt handler (direct)
+mepc         | verify mepc location is jump_to_self location
+----
 ==== nomint-01.S
 .Description: expect interrupts will not trigger in m-mode unless mstatus.mie is set
 - enable mie
@@ -312,7 +333,10 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
  RVMODEL_WFI = nop  
 ----
-
+Coverage
+----
+mstatus.mie | verify no interrupt occurs in m-mode if mstatus.mie is 0
+----
 ==== nomint-02.S
 .Description: expect interrupts will not trigger in m-mode unless mie.x is set
 - generate interrupts
@@ -328,7 +352,11 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
  RVMODEL_WFI = nop  
 ----
-
+Coverage
+----
+mie.msip | verify no msw interrupt occurs if mie.msip is 0
+mie.mtip | verify no mtimer interrupt occurs if mie.mtip is 0
+----
 ==== wfi-01.S
 .Description: expect wfi to behave like a nop when a single interrupt is pending when mstatus.mie is disabled
 - enable mie CSR
@@ -345,7 +373,12 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT
 ----
-
+Coverage
+----
+mstatus.mie | verify no interrupt occurs in m-mode if mstatus.mie is 0
+wfi | verify wakeup/nop occurs with mstatus.mie = 0
+wfi | verify wakeup/nop occurs with pending interrupt
+----
 ==== direct-01.S 
 .Description: trigger, clear, retrigger same interrupt.
 - enable mie CSR
@@ -366,7 +399,11 @@ RVMODEL_MIP_MASK = RVMODEL_SET_MIE
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
 ----
-
+Coverage - same as msw-01.S plus
+----
+mtvec.mode     | verify direct mode is used to handle interrupt
+msip retrigger | verify after mstatus.mie is enabled in interrupt handler, msip will retrigger
+----
 ==== direct-02.S 
 .Description: trigger, clear, retrigger single interrupt, no 2nd clear. 
 Stimulates pending interrupt after setting mstatus.mpie followed by mret
@@ -389,7 +426,10 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_CLEAR_INT2 = <EMPTY> 
 ----
-
+Coverage - same as msw-01.S plus
+----
+msip retrigger | verify after mstatus.mie is enabled after mret, msip will retrigger
+----
 ==== vectored-01.S 
 .Description: trigger, clear, retrigger single interrupt, vectored-mode.
 - enable mie CSR
@@ -411,7 +451,11 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT
 ----
-
+Coverage - same as msw-01.S plus
+----
+mtvec.mode     | verify vectored mode is used to handle interrupt
+msip retrigger | verify after mstatus.mie is enabled in interrupt handler, msip will retrigger
+----
 ==== vectored-02.S 
 .Description: trigger, clear, retrigger single interrupt, no 2nd clear. 
 Stimulates pending interrupt after setting mstatus.mpie followed by mret, vectored-mode.
@@ -435,7 +479,39 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_CLEAR_INT2 = <EMPTY> 
 ----
-
+Coverage - same as msw-01.S plus
+----
+mtvec.mode     | verify vectored mode is used to handle interrupt
+msip retrigger | verify after mstatus.mie is enabled after mret, msip will retrigger
+----
+==== ecall-01.S 
+.Description: trigger, clear, set interrupt pending, ecall
+Stimulates ecall within an interrupt handler to stimulate mcause.interrupt toggling
+mstatus.mie should be cleared after mret so pending interrupt is not taken
+- enable mie CSR
+- generate interrupt
+- enable mstatus.mie
+- trigger m-mode vectored interrupt handler
+- ecall instruction to trigger (direct) exception handler
+- set mepc to finish
+- clear mstatus.mpie
+- mret to finish
+- re-trigger interrupt
+[%autofit]
+----
+ RVMODEL_SET_MIE = MIE_MSIE
+ RVMODEL_MTVEC_MODE = 1 
+ RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
+ RVMODEL_SET_INT2 = <EMPTY>
+ RVMODEL_CLEAR_INT1 = <EMPTY>
+ RVMODEL_CLEAR_INT2 = <EMPTY>
+ RVMODEL_ECALL = ecall
+----
+Coverage - same as msw-01.S plus
+----
+mtvec.mode           | verify vectored mode is used to handle interrupt
+mcause.interrupt 0/1 | verify ecall toggles mcause.interrupt, uses direct exception handler
+----
 ==== level-01.S
 .Description: verify interrupt level order, 2 interrupts asserted in 1st interrupt handler, mtvec.mode=direct
 - enable mie CSR
@@ -454,7 +530,10 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
 ----
-
+Coverage
+----
+Interrupt ordering - both interrupts asserted in msw interrupt handler
+----
 ==== level-02.S
 .Description: verify interrupt level order, swap 2 interrupt order, mtvec.mode=direct
 - enable mie CSR
@@ -474,7 +553,9 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
 ----
-
+----
+Interrupt ordering - both interrupts asserted in mtimer interrupt handler
+----
 ==== level-03.S
 .Description: verify interrupt level order, 2 interrupts asserted in 1st interrupt handler, mtvec.mode=vectored
 - enable mie CSR
@@ -495,7 +576,11 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
 ----
-
+Coverage
+----
+mtvec.mode         | verify vectored mode is used to handle interrupt, signature of higher priority interrupt
+Interrupt ordering | both interrupts asserted in msw interrupt handler
+----
 ==== level-04.S
 .Description: verify interrupt level order, swap 2 interrupt order, mtvec.mode=vectored
 - enable mie CSR
@@ -515,6 +600,11 @@ mstatus.mie should be cleared after mret so pending interrupt is not taken
  RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
+----
+Coverage
+----
+mtvec.mode         | verify vectored mode is used to handle interrupt, signature of higher priority interrupt
+Interrupt ordering | both interrupts asserted in mtimer interrupt handler
 ----
 === ssclint testcases
 Similar to smclint but adding s-mode interrupt privilege delegation
@@ -582,7 +672,7 @@ restore mtvec, mscratch for arch_test.h
 - generate m-mode interrupt (ssie) (not delegated to s-mode),
 - switch to s-mode (mstatus.mie disabled),
 - trigger (m-mode handler),
-- clear interrput,
+- clear interrupt,
 - return to s-mode,
 - ecall back to m-mode
 [%autofit]
@@ -594,12 +684,20 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
 ----
+Coverage
+----
+mideleg 0         | verify interrupt is handled in m-mode
+mstatus.mie=0     | verify m-mode interrupt will occur in s-mode when mstatus.mie=0
+mip signature     | verify mip signature
+sip signature     | verify since ideleg is 0, sip is not visible
+mcause signature  | verify ssie signature
+----
 ==== nodeleg-02.S 
 .Description: Verify when executing in s-mode, the m-mode interrupt will be handled (this time mstatus.mie is 1):
 - generate m-mode interrupt (stie),
 - switch to s-mode (mstatus.mie disabled),
 - trigger (m-mode handler),
-- clear interrput,
+- clear interrupt,
 - return to s-mode,
 - ecall back to m-mode
 [%autofit]
@@ -611,12 +709,20 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SET_SINT1      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
 ----
+Coverage
+----
+mideleg 0         | verify interrupt is handled in m-mode
+mstatus.mie=1     | verify m-mode interrupt will occur in s-mode when mstatus.mie=1
+mip signature     | verify mip signature
+sip signature     | verify since ideleg is 0, sip is not visible
+mcause signature  | verify stie signature
+----
 ==== nodelegvec-01.S 
 .Description: Verify when executing in s-mode, the vectored m-mode interrupt will be handled even though mstatus.mie is 0:
 - generate vectored m-mode interrupt (ssie) (not delegated to s-mode),
 - switch to s-mode (mstatus.mie disabled),
 - trigger (m-mode handler),
-- clear interrput,
+- clear interrupt,
 - return to s-mode,
 - ecall back to m-mode
 [%autofit]
@@ -628,6 +734,14 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
  RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+Coverage
+----
+mideleg 0         | verify vectored interrupt is handled in m-mode
+mstatus.mie=0     | verify vectored m-mode interrupt will occur in s-mode when mstatus.mie=0
+mip signature     | verify mip signature
+sip signature     | verify since ideleg is 0, sip is not visible
+mcause signature  | verify ssie signature
 ----
 ==== deleg-01.S 
 .Description: Verify when executing in s-mode, an s-mode interrupt will be handled when mstatus.sie is 1:
@@ -647,7 +761,15 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
 ----
-
+Coverage
+----
+mideleg           | verify interrupt is handled in s-mode
+mstatus.mie=1     | verify s-mode interrupt will occur in s-mode when mstatus.sie=1
+mip signature     | verify mip signature
+sip signature     | verify since ideleg is set, sip is visible
+scause signature  | verify ssie signature
+mcause signature  | verify ecall signature
+----
 ==== deleg-02.S 
 .Description: Verify when executing in s-mode, an s-mode interrupt will be handled when mstatus.sie is 1:
 - generate s-mode interrupt (stie),
@@ -666,7 +788,10 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SET_SINT1      = LI(t0, SIE_STIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_STIE); csrrc x0,CSR_SIE, t0;
 ----
-
+Coverage - same as deleg-01.S except
+----
+scause signature  | verify stie signature
+----
 ==== delegvec-01.S 
 .Description: Verify when executing in s-mode, a vectored s-mode interrupt will be handled when mstatus.sie is 1:
 - generate vectored s-mode interrupt (ssie),
@@ -686,7 +811,10 @@ restore mtvec, mscratch for arch_test.h
  RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
  RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
 ----
-
+Coverage - same as deleg-01.S plus
+----
+vector signature  | verify s-mode vectored interrupt occurred.
+----
 ==== order-01.S 
 .Description: Verify order of 2 s-mode interrupts
 - generate 2 s-mode interrupts (ssie, stie),
@@ -973,14 +1101,25 @@ restore mtvec, mscratch for arch_test.h
 === Coverage Holes
 
 ==== async behavior on pipeline
+Tests only have interrupts occur after mstatus.mie enabled or mret (which sets mstatus.mie to mstatus.mpie)
 
-==== only comparing up-to two interrupts at a time
+==== limited interrupt types tested
+Tests only compare up-to two interrupts at a time.
+Only msw and mtimer interrupts are used.  MSW and Mtimer interrupts are only asserted and cleared by macros 
+so no actual checking of CLINT msw and mtimer behavior is checked.  
+E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.
 
-==== exception if handler address is in non-executable memory
+==== xtvec locations 
+Locations aren't randomized, range of table jumps aren't randomized
+Handler address is always in executable memory so no exceptions will occur during interrupt.
 
-==== xtvec locations aren't randomized, range of table jumps aren't randomized
+==== interrupts vs. exceptions
+Only ecall exceptions are used to verify mcause.interrupt toggling.
 
-==== situations where wfi is not required to wake up. 
+==== wfi holes
+situations where wfi is not required to wake up are not tested 
+wfi only confirmed to continue/wakeup when mstatus.mie is 0.  Interrupts occur before wfi but do not occur while executing wfi. 
 
 ==== WARL settings of implementation
+Only legal values are intended to be written to CSRs.  WARL of CSR is not checked.
 
