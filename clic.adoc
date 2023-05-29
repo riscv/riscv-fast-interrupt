@@ -1007,7 +1007,7 @@ The current hart's effective interrupt level would then be:
 The max is used to prevent a hart from dropping below its original level
 which would break assumptions in design, and also makes it
 simple for software to remove threshold without knowing its own level
-by simply writing zero.
+by simply setting {intthresh} to the lowest supported {intthresh} value.
 
 The interrupt-level threshold is only valid when running in associated
 privilege mode and not in other modes. This is because interrupts for
@@ -1017,7 +1017,7 @@ privilege modes are always enabled.
 If the hart is currently running at some privilege mode `x`, an MRET
 or SRET instruction that changes the privilege mode to a mode less
 privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.  
-This prevents a higher privilege mode from having a non-minimum threshold while a lower
+This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
 privilege mode is running.
 
 Likewise, if the RISC-V debug specification is implemented and 
