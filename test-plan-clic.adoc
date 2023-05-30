@@ -1150,6 +1150,28 @@ Coverage
 ----
 sie=0  | verify s-mode interrupt not taken when in s-mode when sie=0
 ----
+==== sdisable-03.S 
+.Description: Verify s-mode interrupt not taken in m-mode when mstatus.sie is 1 (but wfi acts as nop)
+- generate s-mode interrupt (ssie)
+- wfi
+- wakeup
+- jump to done
+[%autofit]
+----
+ RVMODEL_SWITCH_TO_S_MODE = <EMPTY>
+ RVMODEL_MSTATUS_MIE    = MSTATUS_SIE
+ RVMODEL_SET_SIE        = SIE_SSIE
+ RVMODEL_SET_MIE        = 0
+ RVMODEL_SET_MIDELEG    = SIE_SSIE
+ RVMODEL_MIP_MASK       = SIE_STIE
+ RVMODEL_SETUP_SIP_INTS = LI(t0, SIE_SSIE); csrrs x0,CSR_MIP, t0;
+ RVMODEL_SET_SINT1      = LI(t0, SIE_SSIE); csrrs x0,CSR_SIP, t0;
+ RVMODEL_CLEAR_SINT1    = LI(t0, SIE_SSIE); csrrc x0,CSR_SIE, t0;
+----
+Coverage 
+----
+mstatus.sie=1, mstatus.sie=1  | verify s-mode interrupt not taken when in m-mode when mstatus.sie is 1
+----
 === example of setting MSW and MTIMER interrupts in model_test.h
 ----
 #ifndef RVMODEL_SAIL_MCLINTBASE    
@@ -1196,28 +1218,67 @@ sie=0  | verify s-mode interrupt not taken when in s-mode when sie=0
     sw t1, (t0);                                                                      \
 ----
 
-=== Coverage Holes
+=== Coverage
 
-==== async behavior on pipeline
-Tests only have interrupts occur after mstatus.mie enabled or mret (which sets mstatus.mie to mstatus.mpie)
+Coverage Holes
 
-==== limited interrupt types tested
-Tests only compare up-to two interrupts at a time.
-Only msw and mtimer interrupts are used.  MSW and Mtimer interrupts are only asserted and cleared by macros 
-so no actual checking of CLINT msw and mtimer behavior is checked.  
-E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.
+* async behavior on pipeline
+** Tests only have interrupts occur after mstatus.mie enabled or mret (which sets mstatus.mie to mstatus.mpie)
 
-==== xtvec locations 
-Locations aren't randomized, range of table jumps aren't randomized
-Handler address is always in executable memory so no exceptions will occur during interrupt.
+* limited interrupt types tested
+** Tests only compare up-to two interrupts at a time.
+** Only msw and mtimer interrupts are used.  MSW and Mtimer interrupts are only asserted and cleared by macros so no actual checking of CLINT msw and mtimer behavior is checked.  
+E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.  No external interrupts (SEI, MEI) checked by default. can be overridden with define.
 
-==== interrupts vs. exceptions
-Only ecall exceptions are used to verify mcause.interrupt toggling.
+* xtvec locations 
+** Locations aren't randomized, range of table jumps aren't randomized
+** Handler address is always in executable memory so no exceptions will occur during interrupt.
 
-==== wfi holes
-situations where wfi is not required to wake up are not tested 
-wfi only confirmed to continue/wakeup when mstatus.mie is 0.  Interrupts occur before wfi but do not occur while executing wfi. 
+* interrupts vs. exceptions
+** Only ecall exceptions are used to verify mcause.interrupt toggling.
 
-==== WARL settings of implementation
-Only legal values are intended to be written to CSRs.  WARL of CSR is not checked.
+* wfi holes
+** wfi only confirmed to continue/wakeup when mstatus.mie is 0.  Interrupts occur before wfi but do not occur while executing wfi.
+** situations where wfi is not required to wake up are not tested 
+** wfi resume after interrupt is not checked
+** wfi priv-mode traps not checked 
+
+* WARL settings of implementation
+** Only legal values are intended to be written to CSRs.  WARL behavior is not checked.
+
+* No u-mode interrupts checked
+
+Coverage Summary
+
+* mtime -> interrupt -> trigger, clear, retrigger
+* msip -> interrupt -> trigger, clear, retrigger, enable, disable
+* clint -> pending -> trigger, clear, retrigger (both vectored and direct)
+* clint -> enable -> combination of xie and xstataus.xie
+* clint -> xtvec -> mode (direct vs. vector)
+* clint -> ordering -> interrupt (MSI, MTI, SSI, STI)
+* clint -> privilege -> delegation -> delegate -> machine/supervisor -> handling/ordering
+* clint -> privilege -> pending -> m-mode -> visible, trigger, clear
+* clint -> privilege -> pending -> s-mode -> visible, invisible, trigger, clear  (missing sip STI, SEI is read_only in s-mode?)
+
+* clint -> privilege -> enable -> m-mode int, in m-mode -> mie=0 -> not taken
+* clint -> privilege -> enable -> m-mode int, in m-mode -> mstatus.mie=0 -> not taken
+* clint -> privilege -> enable -> m-mode int, in m-mode -> mie=1 && mstatus.mie=1 -> taken
+
+* clint -> privilege -> enable -> m-mode int, in s-mode -> mie=0 -> not taken
+* clint -> privilege -> enable -> m-mode int, in s-mode -> mstatus.mie=0 -> taken
+* clint -> privilege -> enable -> m-mode int, in s-mode -> mie=1 && mstatus.mie=1 -> taken
+
+* clint -> privilege -> enable -> s-mode int, in s-mode -> sie=0 -> not taken
+* clint -> privilege -> enable -> s-mode int, in s-mode -> mstatus.sie=0 -> not taken
+* clint -> privilege -> enable -> s-mode int, in s-mode -> sie=1 && mstatus.sie=1 -> taken
+
+* clint -> privilege -> enable -> s-mode int, in m-mode -> sie=1 && mstatus.sie=1 -> not taken
+
+* clint -> privilege -> xtvec -> m-mode uses mtvec, s-mode uses stvec (direct vs vectored)
+* clint -> nested -> m-mode to m-mode
+* clint -> nested -> m-mode to s-mode
+* clint -> nested -> s-mode to m-mode
+* clint -> sequenced interrupts -> m-mode to s-mode
+
+* wfi -> resume -> interrupt -> xie == 1 && mstatus.xie == 0
 
