@@ -1957,7 +1957,7 @@ discovery mechanism that is in development.
 
 
 == smclicconfig CLIC configuration extension
-Hardware implementations may wish to have a single implementation support different parameterizations of clic extensions. This extension defines that programmibility.
+Hardware implementations may wish to have a single implementation support different parameterizations of clic extensions. This extension defines that programmability.
 
 === CLIC Memory-Mapped Registers
 
