@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 5/10/2023
+:revdate: 5/30/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+05/30/2023  spelling fixes.
 05/09/2023  issue #317 - clarification that trampoline examples do not account for f or v registers 
 05/09/2023  issue #322 - xcliccfg xnlbits text cleanup
 05/09/2023  issue #321 - intthresh clearing/zeroing text changed to setting to min value
@@ -160,7 +161,7 @@ Date           	Description
 06/21/2022  Made clear that mtvec[5:0]=000010 is still reserved
 06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh 
 06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
-06/07/2022  issue #212/pull#216 - fixed paramter value ranges for NUM_INTERRUPT and CLICMTVECALIGN
+06/07/2022  issue #212/pull#216 - fixed parameter value ranges for NUM_INTERRUPT and CLICMTVECALIGN
 06/07/2022  Pull #218 - typo fix. clicintattr regs are used to delegate interrupts
 06/01/2022  Wording change in comparison with AIA features.  Added reference to Bibliography.
 05/10/2022  issue #235 - change “exception” to “trap” to match priv spec wording.
@@ -203,7 +204,7 @@ Date           	Description
 04/12/2021  issue #47 fix - add CLIC reset behavior section
 04/12/2021  issue #26 fix - modify wording that defined micro-architectural behavior of xINHV
 04/12/2021  issue #91 - add DTS entry example
-04/12/2021  added CLIC comparision to Advance Interupt Architecture (AIA)
+04/12/2021  added CLIC comparison to Advance Interupt Architecture (AIA)
 04/12/2021  issue #111,#105 fix - For hardware vectoring access exceptions, both {tval} and {epc} holds the faulting address
 04/08/2021  issue #49, #79 - downplay M/S/U memory map requirements
 03/30/2021  issue #29 - updated memory map table reserved section to give room for clicinttrig
@@ -890,7 +891,7 @@ when not in CLIC mode, {cause} has the CLINT mode format.
 The {nxti} CSR can be used by software to service the next horizontal
 interrupt for the same privilege mode when it has greater level than
 the saved interrupt context (held in {cause}`.pil`) and greater level
-than the interrupt threshold of the corresponding privilege mode, without incuring
+than the interrupt threshold of the corresponding privilege mode, without incurring
 the full cost of an interrupt pipeline flush and context save/restore.
 The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
 instructions, where the value read is a pointer to an entry in the
@@ -910,7 +911,7 @@ suitable interrupt to service or that the system is not in a CLIC mode, or retur
 address of the entry in the trap handler table for software trap
 vectoring.
 
-If the CSR instruction that acccesses {nxti} includes a write, the
+If the CSR instruction that accesses {nxti} includes a write, the
 {status} CSR is the one used for the read-modify-write portion of the
 operation, while the {cause} register's `exccode` field and the
 {intstatus} register's {il} field can also be updated with the new interrupt id and level.
@@ -1680,7 +1681,7 @@ the trap vector table, while the CLIC vectored mode reads a
 handler function address from the table, and jumps to it in hardware.
 
 NOTE: The vector table contains vector addresses rather than
-instructions because it simplifies  static initialization in C.
+instructions because it simplifies static initialization in C.
 More specifically, the entries in the table are simple XLEN-bit
 function pointers.
 
@@ -1898,7 +1899,7 @@ the starting address of m-mode CLIC memory mapped registers.
 
 Since the CLIC memory map must be aligned at a 4KiB boundary, the MCLICBASE parameter
 has its 12 least-significant bits hardwired to zero. It is used
-to inform software about the location of CLIC m-mode memory mappped registers.
+to inform software about the location of CLIC m-mode memory mapped registers.
 
 Systems with CLIC memory mapped registers for additional privilege modes will provide additional xCLICBASE parameters for each of those CLIC x-mode memory mapped register regions.
 
@@ -1957,7 +1958,7 @@ discovery mechanism that is in development.
 
 
 == smclicconfig CLIC configuration extension
-Hardware implementations may wish to have a single implementation support different parameterizations of clic extensions. This extension defines that programmibility.
+Hardware implementations may wish to have a single implementation support different parameterizations of clic extensions. This extension defines that programmability.
 
 === CLIC Memory-Mapped Registers
 
@@ -2407,7 +2408,7 @@ and `exccode` will be rewritten with the same value that they already
 had (effectively unchanged), and {nxti} will return the table entry
 for the II.
 
-* The II has been superceded by a higher-level non-SHV interrupt.  In
+* The II has been superseded by a higher-level non-SHV interrupt.  In
 this case, {il} will be set to the new higher interrupt level,
 `exccode` will be updated to the new interrupt id, and {nxti} will
 return the vector table entry for the new higher-level interrupt.  The
@@ -2417,7 +2418,7 @@ interrupt that arrives after the state-save sequence was begun for the
 less-important II.  The II, if still pending-enabled, will be serviced
 sometime after the higher-level interrupt as described below.
 
-* The II has been superceded by a higher-priority non-SHV interrupt at
+* The II has been superseded by a higher-priority non-SHV interrupt at
 the same level.  This operates similarly to the previous case, with
 `exccode` updated to the new interrupt id.  Because the lower-priority
 interrupt had not begun to run its service routine, this optimization
@@ -2445,7 +2446,7 @@ the OIC context and `mret` back to it.  This preserves the property
 that the OIC completes execution before servicing any new interrupt
 with a lower or equal interrupt level.
 
-* The II has been superceded by a higher-level SHV interrupt.  In this
+* The II has been superseded by a higher-level SHV interrupt.  In this
 case, the {il} and `exccode` are not updated, and 0 is returned by
 {nxti}.  Once interrupts are reenabled for the following instruction,
 the hart will preempt the current handler and execute the vectored
@@ -2525,7 +2526,7 @@ IC    at entry |->           |       at first nxti (6)
 il     CLIC                  |    CLIC
     level id V |->  mil code | level id V    |-> mil code rd
 p    e<=p  ? ? |->           |                               # Shouldn't happen
-p    e>p   i 0 |->   e    i  |   f>p  j 0    |->  f    j   T # Same or superceded interrupt
+p    e>p   i 0 |->   e    i  |   f>p  j 0    |->  f    j   T # Same or superseded interrupt
 p    e>p   i 0 |->   e    i  |   f>p  j 1    |->  e    i   0 # Ignore vectored interrupt
 p    e>p   i 0 |->   e    i  |   f<=p j ?    |->  e    i   0 # Interrupt disappeared
 p    e>p   i 1 |->   e    i  |                               # Won't be in trampoline
@@ -2590,7 +2591,7 @@ a preempting C-ABI interrupt handler.
 For many embedded systems, after initialization, essentially all code
 is run in response to an interrupt, interrupt levels are used to
 prioritize execution of different tasks, and the hart should
-sleep inbetween interrupt events to save energy.
+sleep in between interrupt events to save energy.
 
 The following code can be used as the background code that runs at
 interrupt level 0 and which when there is no active work to do, puts
@@ -2660,7 +2661,7 @@ and disable interrupts for one instruction, to ensure the SHV
 interrupt will be taken.
 
 <5> This code initializes `mepc` and `mcause` then uses an `mret` to
-jump to the `sleep` loop while simultaneously reseting interrupt level
+jump to the `sleep` loop while simultaneously resetting interrupt level
 to 0 and enabling interrupts.  This is also the entry point to
 initiate interrupt-driven execution.  Interrupts are enabled to allow
 SHV interrupts to preempt execution on the first instruction in
@@ -3064,7 +3065,7 @@ interrupt _i_ can be cleared by writing `0` to this bit. STIP is
 writable in `mip`, and may be written by M-mode software to deliver
 timer interrupts to S-mode.
 
-However, in CLIC mode, {ip} bits can not be updated in software when
+However, in CLIC mode, {ip} bits cannot be updated in software when
 they are in level-sensitive mode.  One possible equivalent
 implementation to deliver timer interrupts would be to hardwire the
 STIP input to 0 and then M-mode software can deliver timer interrupts to
@@ -3088,7 +3089,7 @@ ID  Interrupt
 6+  local
 ----
 
-=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N extension with no PLIC/APLIC:
+=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N-extension with no PLIC/APLIC:
 
 [source]
 ----
