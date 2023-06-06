@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 5/30/2023
+:revdate: 6/6/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+06/06/2023  removed text regarding debug changes to xintthresh as this does not apply #334
 05/30/2023  spelling fixes.
 05/09/2023  issue #317 - clarification that trampoline examples do not account for f or v registers 
 05/09/2023  issue #322 - xcliccfg xnlbits text cleanup
@@ -1020,11 +1021,6 @@ or SRET instruction that changes the privilege mode to a mode less
 privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.  
 This prevents a higher privilege mode from having a non-minimum threshold while a lower
 privilege mode is running.
-
-Likewise, if the RISC-V debug specification is implemented and 
-the hart is currently running at some privilege mode `x`, a DRET 
-instruction that changes the privilege mode to a mode less privileged 
-than `x` also sets {intthresh} to the lowest supported {intthresh} value.
 
 NOTE: The anticipated use of threshold is to provide critical sections
 within code running at one privilege level, not to selectively mask
