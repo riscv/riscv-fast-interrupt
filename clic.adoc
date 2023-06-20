@@ -871,11 +871,14 @@ and interrupts are globally enabled in this privilege mode, then
 execution is immediately transferred to a handler running with the new
 interrupt's privilege mode (`**__x__**`) and interrupt level (`il`).
 
-The CSR {epc} is set to the PC of the interrupted application
-code or preempted interrupt handler, while the {cause}
-register now captures the previous privilege mode (`pp`), interrupt
-level (`pil`) and interrupt enable (`pie`), as well as the id of the
-interrupt in `exccode`.
+As stated in the RISC-V privilege specification, 
+when a trap is taken from privilege mode y into privilege mode x, 
+xPIE is set to the value of x IE; xIE is set to 0; and
+xPP is set to y.  xepc is written with the virtual address of the instruction
+that was interrupted or that encountered the exception.  
+Additionally in CLIC mode, interrupt level (`xpil`) is set to xstatus.xil and
+xcause.exccode is written with a code indicating the event (the id of the
+interrupt or exception code) that caused the trap.
 
 For backwards compatibility in systems supporting both CLINT and CLIC modes, when
 switching to CLINT mode the new CLIC {cause} state field
@@ -1291,32 +1294,12 @@ privilege mode.
 
 ==== Returns from Handlers
 
-The regular {ret} instructions are used to return from handlers in
-privilege mode `*_x_*`.  Execution continues at the saved privilege
-mode {cause}.{pp}, at PC {epc}, with interrupt level
-{cause}.{pil}, and with the global interrupt enable
-for the restored mode as {cause}.{pie}.
-
-The {ret} instruction does not modify the
-{cause}.{pil} field in {cause}.  The
-{cause}.{pp} and {cause}.{pie} fields
-are modified following the behavior previously defined for
-{status}.{pp} and {status}.{pie}
-respectively.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+As stated in the RISC-V Privilege Specification,
+when executing an xRET instruction, supposing xPP holds the value y, xIE is set to xPIE; the
+privilege mode is changed to y; xPIE is set to 1; and xPP is set to the least-privileged supported
+mode.  xRET sets the pc to the value stored in the xepc register.
+Additionally in CLIC mode, xRET sets xintstatus.xil to xcause.xpil.
+The {ret} instruction does not modify the {cause}.{pil} field in {cause}.  
 
 == ssclic S-mode CLIC extension
 The ssclic extension depends on the smclic extension.
