@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 6/6/2023
+:revdate: 6/20/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -109,7 +109,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
-06/06/2023  removed text regarding debug changes to xintthresh as this does not apply #334
+06/20/2023  issue #339 - updated text describing mcause.pil and xret behavior to better match wording in priv spec
+06/06/2023  issue #334 - removed text regarding debug changes to xintthresh as this does not apply #334
 05/30/2023  spelling fixes.
 05/09/2023  issue #317 - clarification that trampoline examples do not account for f or v registers 
 05/09/2023  issue #322 - xcliccfg xnlbits text cleanup
