@@ -957,7 +957,12 @@ selection and execution of interrupts using `{nxti}`.
        clicintip[clic.id] = 0;           // clear edge interrupt
      }
    }
-   rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
+   if (mtvec.submode == 0000) {
+     rd = TBASE + XLEN/4 * clic.id; // Return pointer to trap handler entry.
+   } else {
+     // Return pointer to 2nd trap handler entry, e.g. without context save restore
+     rd = TBASE + XLEN/4 * clic.id + XLEN/8; 
+   }
  } else {
    // No interrupt or in non-CLIC mode.
    rd = 0;
@@ -1611,8 +1616,15 @@ by the additional {tvt} CSR.
                pc := NBASE                              if clicintattr[i].shv = 0                                                           
 
                (vectored)                                                    
-               pc := M[TBASE + XLEN/8 * exccode)] & ~1  if clicintattr[i].shv = 1
+               pc := M[TBASE + XLEN/4 * exccode)] & ~1  if clicintattr[i].shv = 1
                                                              
+    0001 11                                      (CLIC mode, 2nd interrupt handler)
+               (non-vectored)
+               pc := NBASE                                       if clicintattr[i].shv = 0                                                           
+
+               (vectored)                                                    
+               pc := M[TBASE + XLEN/4 * exccode + XLEN/4)] & ~1  if clicintattr[i].shv = 1
+
     0000 10                                      Reserved
     xxxx 1?    (xxxx!=0000)                      Reserved
 
@@ -1634,26 +1646,26 @@ sets interrupt `i` to vectored. When these interrupts are taken, the hart
 switches to the handler's privilege mode, and besides the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {cause}, {status} fields including clearing {status}.{ie}), also sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
-`TBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
+`TBASE+XLEN/4*exccode`.  If the fetch is successful, the hart
 clears the low bit of the handler address, sets the PC to this handler
 address, then clears the {inhv} bit in {cause} of the handler privilege mode.
 The overall effect is:
 
-     pc := M[TBASE + XLEN/8 * exccode] & ~1
+     pc := M[TBASE + XLEN/4 * exccode] & ~1
 
 [source]
 ----
            # Vector table layout for RV32 (4-byte function pointers)
   mtvt ->  0x800000 # Interrupt 0 handler function pointer
-           0x800004 # Interrupt 1 handler function pointer
-           0x800008 # Interrupt 2 handler function pointer
-           0x80000c # Interrupt 3 handler function pointer
+           0x800004 # 2nd Interrupt 0 handler function pointer (e.g. without context save/restore)
+           0x800008 # Interrupt 1 handler function pointer
+           0x80000c # 2nd Interrupt 1 handler function pointer (e.g. without context save/restore)
 
            # Vector table layout for RV64 (8-byte function pointers)
   mtvt ->  0x800000 # Interrupt 0 handler function pointer
-           0x800008 # Interrupt 1 handler function pointer
-           0x800010 # Interrupt 2 handler function pointer
-           0x800018 # Interrupt 3 handler function pointer
+           0x800008 # 2nd Interrupt 0 handler function pointer (e.g. without context save/restore)
+           0x800010 # Interrupt 1 handler function pointer
+           0x800018 # 2nd Interrupt 1 handler function pointer (e.g. without context save/restore)
 ----
 
 NOTE: The CLINT vectored mode simply jumps to an address in
@@ -1849,7 +1861,12 @@ the no-interrupt case.
        clicintip[clic.id] = 0;           // clear edge interrupt
      }
    }
-   rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
+   if (mtvec.submode == 0000) {
+     rd = TBASE + XLEN/4 * clic.id; // Return pointer to trap handler entry.
+   } else {
+     // Return pointer to 2nd trap handler entry, e.g. without context save restore
+     rd = TBASE + XLEN/4 * clic.id + XLEN/8; 
+   }
  } else {
    // No interrupt, or a selectively hardware vectored interrupt, or in non-CLIC mode.
    rd = 0;
