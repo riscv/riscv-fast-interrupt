@@ -1631,12 +1631,17 @@ trap handler address held in the upper XLEN-6 bits of
 
 On the other hand, writing `1` to `clicintattr[__i__].shv`
 sets interrupt `i` to vectored. When these interrupts are taken, the hart
-switches to the handler's privilege mode, and besides the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {cause}, {status} fields including clearing {status}.{ie}), also sets the hardware vectoring bit {inhv} in {cause} of the handler privilege mode.   At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
+switches to the handler's privilege mode, and performs the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {cause}, {status} fields including clearing {status}.{ie}).
+At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (TBASE) is in
 {tvt}.  The trap handler function address is fetched from
 `TBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
-clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause} of the handler privilege mode.
+clears the low bit of the handler address and sets the PC to this handler
+address.
+If the trap handler function address fetch is unsuccessful and a exception trap occurs,
+the {inhv} bit in {cause} of the exception handler privilege mode is set indicating that {epc} of 
+the exception handler privilege mode contains a trap handler function address instead of the virtual address of an instruction.
+
 The overall effect is:
 
      pc := M[TBASE + XLEN/8 * exccode] & ~1
@@ -1668,15 +1673,17 @@ function pointers.
 NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
 traps on fetches to the trap vector table.
 
-The {inhv} bits are only written by hardware during the table vector
-read operation. The {inhv} bits can be written by software, including
+When a trap is taken, the {inhv} bit is set by hardware to indicate if {epc} is the address of a table entry 
+or cleared by hardware to indicate if {epc} is the address of an instruction.
+The {inhv} bits are only set by hardware if an exception occurs during the table vector
+read operation.  The {inhv} bits can be written by software, including
 when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning from an exception using an {ret} instruction.  Since successful hardware vector fetches clear {inhv}, if {inhv} of the previous privilege mode is set, it implies an exception occurred during previous privilege mode table vector read operation.   So when {inhv} of the previous privilege is set, {ret} will treat {epc} as the address of a table entry instead of the address of an instruction. 
+except when returning using an {ret} instruction.  
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
 
-If the {inhv} bit of the previous privilege mode is set, the hart
+If the {inhv} bit is set, the hart
 resumes the trap handler memory access to retrieve the function
 pointer for vectoring with permissions corresponding to the previous
 privilege mode.
@@ -1684,9 +1691,8 @@ The trap handler function address is obtained from the current
 privilege mode's `xepc` with the low bits of the address cleared to
 force the access to be naturally aligned to an XLEN/8-byte table entry.
 If the fetch is successful, the hart
-clears the low bit of the handler address, sets the PC to this handler
-address, then clears the {inhv} bit in {cause} of the handler
-privilege mode.
+clears the low bit of the handler address and sets the PC to this handler
+address.
 
 [source]
 ----
@@ -1696,24 +1702,24 @@ set_next_pc(exception_handler(cur_privilege, MRET, PC));
 function exception_handler(cur_priv, xret, pc) {
   match (xret) {
 ...
-      MRET =>  {      
+      MRET =>  {
+      let xepc = prepare_xret_target(cur_priv);
+      let xinhv = prepare_xinhv_target(cur_priv);
+
       let prev_priv = cur_priv;
       mstatus.MIE   = mstatus.MPIE;
       mstatus.MPIE  = 1;
       cur_priv      = mstatus.MPP;
       ... /* additional standard MRET behavior */
 
-      let xepc = prepare_xret_target(Machine);
-      
-      if  get_xinhv_value(cur_priv) 
+      if xinhv 
       then {  
         if (check_fetch_permissions(xepc) = Addr_OK)
-            clear_inhv(cur_priv)           /* If table entry read successful, clear inhv of current privilege */
             next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
           } else {
             /* take table-fetch trap */
           }
-        } else { /* Standard MRET behavior - xepc becomes next_pc */
+        } else { /* Standard xRET behavior - xepc becomes next_pc */
           next_pc = xepc & ~1;
         }
       }
@@ -1727,12 +1733,12 @@ function prepare_xret_target(p) =
     Supervisor => sepc,
     User       => uepc
   }
-  
- function get_xinhv_value(p) =
+
+function prepare_xinhv_target(p) =
   match p {
     Machine    => mcause.MINHV,
-    Supervisor => if (ssclic) then scause.SINHV else 0,
-    User       => if (suclic) then ucause.UINHV else 0;      
+    Supervisor => scause.SINHV,
+    User       => ucause.UINHV
   }
 ----
 
@@ -1778,7 +1784,8 @@ table read, dret should honor {inhv}.
  mcause
  Bits    Field      Description
  XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  minhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    30  minhv        When 1, indicates mepc is the address of a table entry. 
+                     When 0, indicates mepc is the address of an instruction. 
  29:28  mpp[1:0]     Previous privilege mode, same as mstatus.mpp
     27  mpie         Previous interrupt enable, same as mstatus.mpie
  26:24  (reserved)   
@@ -1789,7 +1796,8 @@ table read, dret should honor {inhv}.
  scause with ssclic extension
  Bits    Field        Description
  XLEN-1 Interrupt     Interrupt=1, Exception=0
-    30  sinhv         Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    30  sinhv        When 1, indicates sepc is the address of a table entry. 
+                     When 0, indicates sepc is the address of an instruction.
     29  (reserved)
     28  spp           Previous privilege mode, same as sstatus.spp
     27  spie          Previous interrupt enable, same as sstatus.spie
@@ -1801,7 +1809,8 @@ table read, dret should honor {inhv}.
  ucause with suclic extension
  Bits    Field       Description
  XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  uinhv        Set by hardware at start of hardware vectoring, cleared by hardware at end of successful hardware vectoring
+    30  uinhv        When 1, indicates uepc is the address of a table entry. 
+                     When 0, indicates uepc is the address of an instruction.
  29:28  (reserved)
     27  upie         Previous interrupt enable, same as ustatus.upie
  26:24  (reserved)
@@ -1816,7 +1825,7 @@ switching to CLINT mode the new CLIC {cause} state fields
 
 Note: For now all privilege modes must run in either CLIC mode or all privilege modes must run in non-CLIC mode so switching to CLINT mode from CLIC mode causes {inhv} and {pil} in all privilege modes to be zeroed.
 
-In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated ({inhv} is set by hardware at start of hardware vectoring, cleared at end of successful hardware vectoring, no change otherwise).
+In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated.
 On the other hand, when not in CLIC mode, {cause} has the CLINT mode format.
 
 ==== smclicshv Changes to Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
