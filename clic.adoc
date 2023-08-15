@@ -1369,6 +1369,12 @@ additions for CLIC mode described in the following sections.
 
 ----
 
+==== State Enable
+If the Smstateen extension is implemented, then bit X in mstateen0 is
+implemented. If bit X of a controlling stateen0 CSR is zero, then access to the 
+new CSRs (stvt, snxti, sintstatus, sintthresh, sscratchcsw, sscratchcswl)
+by a lower privilege level results in appearing hardwired to zero on reads and writes are ignored and will not trap (i.e., no access faults).
+
 ==== ssclic Changes to {cause} CSRs
 
 [source]
