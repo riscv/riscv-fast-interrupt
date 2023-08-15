@@ -899,7 +899,7 @@ interrupt for the same privilege mode when it has greater level than
 the saved interrupt context (held in {cause}`.pil`) and greater level
 than the interrupt threshold of the corresponding privilege mode, without incurring
 the full cost of an interrupt pipeline flush and context save/restore.
-The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
+The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI/CSRRS
 instructions, where the value read is a pointer to an entry in the
 trap handler table and the write back updates the interrupt-enable
 status. In addition, writes to the {nxti} have side-effects that
@@ -909,7 +909,7 @@ NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
 operation.
  
-These CSRs are only designed to be used with the CSRR (CSRRS rd,csr,x0), CSRRSI, and CSRRCI instructions. Accessing the {nxti} CSR using any other CSR instruction form (CSRRW/CSRRS,rs1!=x0/CSRRC/CSRRWI) is reserved.
+These CSRs are only designed to be used with the CSRR (CSRRS rd,csr,x0), CSRRSI/CSRRS, and CSRRCI instructions. Accessing the {nxti} CSR using any other CSR instruction form (CSRRW/CSRRC/CSRRWI) is reserved.
 Note: Use of xnxti with CSRRSI with non-zero uimm values for bits 0, 2, and 4 are reserved for future use.
 
 A read of the {nxti} CSR using CSRR returns either zero, indicating there is no
@@ -969,7 +969,33 @@ selection and execution of interrupts using `{nxti}`.
  // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
  // corresponding privileges CSRs.
 ----
-
+[source]
+----
+ // Pseudo-code for csrrs rd, mnxti, rs1 in M mode.
+ // clic.priv, clic.level, clic.id represent the highest-ranked interrupt currently present in the CLIC
+ mstatus |= rs1[4:0]; // Performed regardless of interrupt readiness.
+ if (clic.priv==M && clic.level > rs1[23:16] && clic.level > mintthresh.th) {
+   // There is an available interrupt.
+   if (uimm[4:0] != 0) {  // Side-effects should occur.
+     // Commit to servicing the available interrupt.
+     mintstatus.mil = clic.level; // Update hart's interrupt level.
+     mcause.exccode = clic.id;   // Update interrupt id in mcause.
+     mcause.interrupt = 1;       // Set interrupt bit in mcause.
+     if (clicintattr[clic.id][1] == 1) { // If edge interrupt,
+       clicintip[clic.id] = 0;           // clear edge interrupt
+     }
+   }
+   rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
+ } else {
+   // No interrupt or in non-CLIC mode.
+   rd = 0;
+ }
+ // When a different CSR instruction is used, the update of mstatus and the test
+ // for whether side-effects should occur are modified accordingly.
+ // When a different privileges xnxti CSR is accessed then clic.priv is compared with
+ // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
+ // corresponding privileges CSRs.
+----
 NOTE: Vertical interrupts to different privilege modes will be taken
 preemptively by the hardware, so {nxti} effectively only ever handles
 the next interrupt in the same privilege mode.
