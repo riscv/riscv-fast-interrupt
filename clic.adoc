@@ -1715,7 +1715,7 @@ function exception_handler(cur_priv, xret, pc) {
 
       if xinhv 
       then {  
-        if (check_fetch_permissions(xepc) = Addr_OK)
+        if (check_fetch_permissions(xepc & ~((XLEN/8)-1)) = Addr_OK) {
             next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
           } else {
             /* take table-fetch trap */
