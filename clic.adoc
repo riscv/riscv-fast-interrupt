@@ -1373,10 +1373,16 @@ additions for CLIC mode described in the following sections.
 ----
 
 ==== State Enable
+
 If the Smstateen extension is implemented, then bit X in mstateen0 is
-implemented. If bit X of a controlling stateen0 CSR is zero, then access to the 
-new CSRs (stvt, snxti, sintstatus, sintthresh, sscratchcsw, sscratchcswl)
-by a lower privilege level results in appearing hardwired to zero on reads and writes are ignored and will not trap (i.e., no access faults).
+implemented. If bit X of a controlling mstateen0 CSR is zero, then
+access to the new CSRs (stvt, snxti, sintstatus, sintthresh,
+sscratchcsw, sscratchcswl) by S-mode or a lower privilege level
+results in an illegal instruction exception, except if the hypervisor
+extension is implemented and the conditions for a virtual instruction
+exception apply, in which case a virtual instruction exception is
+raised when in VS or VU mode instead of an illegal instruction
+exception.
 
 ==== ssclic Changes to {cause} CSRs
 
