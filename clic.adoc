@@ -1044,7 +1044,7 @@ a qualified maximum interrupt with the highest privilege mode.
 ==== Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
 
 To accelerate interrupt handling with multiple privilege modes, a new
-CSR {scratchcsw} can be defined for all but the lowest privilege mode
+CSR {scratchcsw} is defined for all but the lowest privilege mode supported in a given implementation 
 to support conditional swapping of the {scratch} register when
 transitioning between privilege modes.  The CSR instruction is used
 once at the entry to a handler routine and once at handler exit, so
