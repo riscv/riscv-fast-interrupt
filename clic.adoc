@@ -878,7 +878,7 @@ when a trap is taken from privilege mode y into privilege mode x,
 xPIE is set to the value of x IE; xIE is set to 0; and
 xPP is set to y.  xepc is written with the virtual address of the instruction
 that was interrupted or that encountered the exception.  
-Additionally in CLIC mode, interrupt level (`xpil`) is set to xstatus.xil and
+Additionally in CLIC mode, interrupt level (`xpil`) is set to xintstatus.xil and
 xcause.exccode is written with a code indicating the event (the id of the
 interrupt or exception code) that caused the trap.
 
