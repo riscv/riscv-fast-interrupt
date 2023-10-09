@@ -1741,7 +1741,7 @@ function exception_handler(cur_priv, xret, pc) {
             /* other side effects of taking a trap */
         }
       } else { /* Standard MRET behavior - mepc becomes next_pc */
-        if (check_fetch_permissions(mepc_ihnv) = Addr_OK) {
+        if (check_fetch_permissions(mepc) = Addr_OK) {
           next_pc = mepc & ~1;
         } else {
           /* other side effects of taking a trap */
