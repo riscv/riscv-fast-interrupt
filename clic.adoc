@@ -337,7 +337,7 @@ Controller (CLIC) that receives interrupt signals and presents the next
 interrupt to be processed by the hart.
 
 The CLIC supports up to 4096 interrupt inputs per hart.
-Each interrupt input _i_ has four 8-bit memory-mapped control
+Each interrupt input _i_ has four control
 registers: an interrupt-pending bit (`clicintip[__i__]`),
 an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
 (`clicintattr[__i__]`) to specify privilege mode and trigger type,
@@ -377,7 +377,7 @@ The existing timer (`mtip`/`stip`), software
 (`msip`/`ssip`), and external interrupt inputs
 (`meip`/`seip`) are treated as additional local interrupt
 sources, where the privilege mode, interrupt level, and priority can
-be altered using memory-mapped `clicintattr[__i__]` and
+be altered using `clicintattr[__i__]` and
 `clicintctl[__i__]` registers.
 
 NOTE: In CLIC mode, interrupt delegation for these signals is achieved
@@ -387,9 +387,45 @@ interrupt input.
 
 == smclic M-mode CLIC extension
 
-=== CLIC Memory-Mapped Registers
+Implementations can provide access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
+by memory-mapped registers or by using the Indirect CSR Access method (Smcsrind/Sscsrind).  
+The clic register accesses method available to software is indicated by the parameters CLICMEMMAPPED and CLICCSRINDIRECT.
 
-==== CLIC Memory Map
+=== CLIC Register Access via Indirect CSR Access 
+
+The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
+
+[%autofit]
+----
+ miselect  |     mireg             |
+ offset    |register state         |
+
+  0x0       clicintattr[(XLEN/8)-1:0]
+  0x1       clicintattr[2*(XLEN/8)-1:(XLEN/8)]  
+  ...
+  0x400     clicintattr[(XLEN/8)-1:0]
+  0x101     clicintattr[2*(XLEN/8)-1:(XLEN/8)]
+  ...
+  0x800     clicintip[XLEN-1:0]       
+  0x801     clicintip[2*XLEN-1:XLEN]  
+  ...
+  0x880     clicintie[XLEN-1:0]       
+  0x881     clicintie[2*XLEN-1:XLEN]  
+  ...
+  0x900     clicinttrig[0]
+  0x901     clicinttrig[1]
+  ...
+  0x91F     clicinttrig[31}
+  0x920     reserved for smclicconfig extension
+----
+
+If an input _i_ is not present in the hardware, the corresponding
+`clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
+`clicintctl[__i__]` locations appear hardwired to zero.
+
+All CLIC registers are visible to M-mode.
+
+=== CLIC Register Access via Memory Mapped Registers
 
 Each hart has a separate CLIC accessed by a separate address region.
 The M-mode CLIC memory map region must be made accessible to
@@ -466,6 +502,8 @@ For example, it may desired that the base of each privilege mode CLIC
 region is naturally aligned to a virtual memory page (4KiB) so they can be
 mapped through the TLBs.
 
+=== CLIC Level/Priority Control
+
 ==== Specifying Interrupt Level
 
 A configurable number of upper bits in
@@ -525,9 +563,10 @@ or 255.
 === CLIC Interrupt Pending (`clicintip`)
 
 Each interrupt input has a dedicated interrupt pending bit
-(`clicintip[__i__]`) and occupies one byte in the memory map for ease
-of access.  The pending bit is located in bit 0 of the byte.  Software
-should assume `clicintip[__i__]=0` means no interrupt pending, and
+(`clicintip[__i__]`). 
+With memory-mapped accesses, it occupies one byte in the memory map for ease
+of access.  The pending bit is located in bit 0 of the byte.  
+Software should assume `clicintip[__i__]=0` means no interrupt pending, and
 `clicintip[__i__]!=0` indicates an interrupt is pending to accommodate
 possible future expansion of the `clicintip` field.
 
@@ -547,7 +586,7 @@ hardware after an edge of the appropriate polarity is observed on the
 interrupt input, as determined by the `clicintattr[i]` field.
 Software writes can set or
 clear edge-triggered pending bits directly by writes to the
-memory-mapped register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
+`clicintip[__i__]` register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
 
 NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
 an edge-triggered pending bit in non-vectored mode.  Additional detail
@@ -562,8 +601,9 @@ level-sensitive mode.
 
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
-and occupies one byte in the memory map for ease of access. This control bit is
-read-write to enable/disable the corresponding interrupt.  The enable bit is located in bit 0 of the byte. Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled to accommodate possible future expansion of the clicintie field.
+This control bit is read-write to enable/disable the corresponding interrupt.  
+With memory-mapped accesses, i occupies one byte in the memory map for ease of access.
+With memory-mapped accesses, the enable bit is located in bit 0 of the byte. Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled to accommodate possible future expansion of the clicintie field.
 
 NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
@@ -583,7 +623,7 @@ This is an 8-bit WARL read-write register to specify various attributes for each
 
 [source]
 ----
-  clicintattr register layout
+  clicintattr[i] register layout
 
   Bits    Field 
   7:6     mode
@@ -624,7 +664,7 @@ NOTE: For security purpose, the `mode` field can only be set to a privilege leve
 
 === CLIC Interrupt Input Control (`clicintctl`)
 
-`clicintctl[__i__]` is an 8-bit memory-mapped WARL control register
+`clicintctl[__i__]` is an 8-bit WARL control register
 to specify interrupt level and interrupt priority.
 
 To select an interrupt to present to the core, the CLIC hardware
@@ -664,7 +704,7 @@ Optional interrupt triggers (`clicinttrig[__i__]`) are used to generate
 a breakpoint exception, entry into Debug Mode, or a trace action.
 If these registers are not implemented, they appear as hard-wired zeros.
 
-Each interrupt trigger is a 32-bit memory-mapped WARL register with the
+Each interrupt trigger is a 32-bit WARL register with the
 following layout:
 
 [source]
@@ -739,10 +779,10 @@ switching between CLIC and CLINT interrupt modes.
 ==== Changes to {ie}/{ip} CSRs
 
 The {ie} CSR appears hardwired to zero in CLIC mode, replaced by separate
-memory-mapped interrupt enables (`clicintie[__i__]`).
+interrupt enables (`clicintie[__i__]`).
 
 The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
-separate memory-mapped interrupt pendings (`clicintip[__i__]`).
+separate interrupt pendings (`clicintip[__i__]`).
 
 Writes to {ie}/{ip} will be ignored and will not trap (i.e., no access faults).
 {ie}/{ip} always appear to be zero in CLIC mode.
@@ -1963,6 +2003,8 @@ CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
                                                  cliccfg.nlbits
 CLICMTVECALIGN >= 6                            Number of hardwired-zero least
                                                  significant bits in mtvec address.
+CLICMEMMAPPED    0-1                           Implements memory-mapped access to clicintip/ie/attr/ctl/trig?                              
+CLICCSRINDIRECT  0-1                           Implements indirect CSR access to clicintip/ie/attr/ctl/trig?
 ----
 NOTE: These parameters are likely to be available by the general
 discovery mechanism that is in development.
