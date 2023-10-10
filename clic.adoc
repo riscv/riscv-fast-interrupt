@@ -1720,49 +1720,37 @@ address.
 [source]
 ----
 /* MRET pseudo-code */
-set_next_pc(exception_handler(cur_privilege, MRET, PC));
-
 function exception_handler(cur_priv, xret, pc) {
   match (xret) {
 ...
-      MRET =>  {
-      let xepc = prepare_xret_target(cur_priv);
-      let xinhv = prepare_xinhv_target(cur_priv);
-
+    MRET =>  {
+      /* standard MRET behavior */
       let prev_priv = cur_priv;
       mstatus.MIE   = mstatus.MPIE;
       mstatus.MPIE  = 1;
       cur_priv      = mstatus.MPP;
       ... /* additional standard MRET behavior */
 
-      if xinhv 
-      then {  
-        if (check_fetch_permissions(xepc) = Addr_OK)
-            next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
-          } else {
+      if (minhv) {
+        let mepc_inhv = mepc & inhv_pc_alignment_mask(); /* align xepc value to XLEN/8 byte boundary by ignoring low-order bits. */
+        if (check_fetch_permissions(mepc_ihnv) = Addr_OK) {
+            next_pc = mem_read(mepc_inhv) & ~1; /* mepc_inhv contains an address of a table entry */
+        } else {
             /* take table-fetch trap */
-          }
-        } else { /* Standard xRET behavior - xepc becomes next_pc */
-          next_pc = xepc & ~1;
+            mcause.minhv = 1;
+            /* other side effects of taking a trap */
+        }
+      } else { /* Standard MRET behavior - mepc becomes next_pc */
+        if (check_fetch_permissions(mepc) = Addr_OK) {
+          next_pc = mepc & ~1;
+        } else {
+          /* other side effects of taking a trap */
         }
       }
-    },
+    }
+  },
 ...
 }
-
-function prepare_xret_target(p) =
-  match p {
-    Machine    => mepc,
-    Supervisor => sepc,
-    User       => uepc
-  }
-
-function prepare_xinhv_target(p) =
-  match p {
-    Machine    => mcause.MINHV,
-    Supervisor => scause.SINHV,
-    User       => ucause.UINHV
-  }
 ----
 
 NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of page faults and can handle them using exactly the same code.
