@@ -1725,31 +1725,32 @@ function exception_handler(cur_priv, xret, pc) {
 ...
     MRET =>  {
       /* standard MRET behavior */
-      let prev_priv = cur_priv;
       mstatus.MIE   = mstatus.MPIE;
       mstatus.MPIE  = 1;
       cur_priv      = mstatus.MPP;
       ... /* additional standard MRET behavior */
 
       if (minhv) {
-        let mepc_inhv = mepc & inhv_pc_alignment_mask(); /* align xepc value to XLEN/8 byte boundary by ignoring low-order bits. */
-        if (check_fetch_permissions(mepc_ihnv) = Addr_OK) {
-            next_pc = mem_read(mepc_inhv) & ~1; /* mepc_inhv contains an address of a table entry */
+        /* align mepc value to XLEN/8 byte boundary by ignoring low-order bits. */
+        let table_addr = mepc & inhv_pc_alignment_mask();
+        if (check_fetch_permissions(table_addr) = Addr_OK) {
+            next_pc = mem_read(table_addr);
         } else {
-            /* take table-fetch trap */
+            /* take table-fetch horizontal trap */
             mcause.minhv = 1;
             /* other side effects of taking a trap */
         }
       } else { /* Standard MRET behavior - mepc becomes next_pc */
-        if (check_fetch_permissions(mepc) = Addr_OK) {
-          next_pc = mepc & ~1;
-        } else {
-          /* other side effects of taking a trap */
-        }
+          next_pc = mepc;
+          /* mcause.minhv unchanged */
       }
     }
   },
-...
+
+  /* Note, next_pc is passed to fetch unit which will ignore 1 or 2
+   LSBs depending to IALIGN, so the masking is not shown above.
+   Similarly, permission checks on the ultimate instruction fetch
+   are not shown here. */
 }
 ----
 
