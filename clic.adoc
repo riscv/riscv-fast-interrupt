@@ -976,7 +976,7 @@ selection and execution of interrupts using `{nxti}`.
  mstatus |= rs1[4:0]; // Performed regardless of interrupt readiness.
  if (clic.priv==M && clic.level > rs1[23:16] && clic.level > mintthresh.th) {
    // There is an available interrupt.
-   if (uimm[4:0] != 0) {  // Side-effects should occur.
+   if (rs1[4:0] != 0) {  // Side-effects should occur.
      // Commit to servicing the available interrupt.
      mintstatus.mil = clic.level; // Update hart's interrupt level.
      mcause.exccode = clic.id;   // Update interrupt id in mcause.
