@@ -697,7 +697,7 @@ This section describes the CLIC-related hart-specific Control and Status Registe
 CLINT interrupt mode, the behavior is intended to be software
 compatible with CLINT-mode-only systems.  
 
-Unless explicitly specified differently below, CSR state bits retain their value when switching between CLIC and CLINT modes.  New CLIC CSRs and new CLIC CSR fields appear to be zero for both reads and implicit reads in CLINT mode.   
+Unless explicitly specified differently below, when not in CLIC mode, behavior of CLIC-only CSRs should be same as if CLIC was not implemented, so should be treated as a "reserved" operation. The value in the CSRs after switching from CLIC->CLINT->CLIC mode should be treated as "reserved" also, i.e., the value is undefined.   
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -838,9 +838,6 @@ The {tvt} WARL XLEN-bit CSR holds the base address of the trap vector
 table, aligned on a 64-byte or greater power-of-two boundary. The actual
 alignment can be determined by writing ones to the low-order bits then reading
 them back. Values other than 0 in the low 6 bits of {tvt} are reserved.
-
-In systems that support both CLINT and CLIC modes, the {tvt} CSR is
-still accessible in basic mode (but does not have any effect).
 
 ==== Changes to {cause} CSRs
 
