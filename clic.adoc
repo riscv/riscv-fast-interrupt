@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 10/10/2023
+:revdate: 12/19/2023
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -109,6 +109,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [source]
 ----
 Date           	Description
+12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
 10/10/2023  issue #307 - NUM_INTERRUPT parameter text cleanup
 10/10/2023  issue #355 - updated text clarifying clic interaction with rnmi spec
 10/10/2023  issue #347/356/357/358 - updated mret/inhv pseudo-code
@@ -697,7 +698,11 @@ This section describes the CLIC-related hart-specific Control and Status Registe
 CLINT interrupt mode, the behavior is intended to be software
 compatible with CLINT-mode-only systems.  
 
-Unless explicitly specified differently below, when not in CLIC mode, behavior of CLIC-only CSRs should be same as if CLIC was not implemented, so should be treated as a "reserved" operation. The value in the CSRs after switching from CLIC->CLINT->CLIC mode should be treated as "reserved" also, i.e., the value is undefined.   
+Unless explicitly specified differently below, when not in CLIC mode, behavior of CLIC-only CSRs should be same as if CLIC was not implemented, so should be treated as a "reserved" operation. The value in the CSRs after switching from CLIC->CLINT->CLIC mode should be treated as "reserved" also, i.e., the value is undefined.
+
+NOTE: It is recommended that implementations raise illegal instruction
+exceptions when accessing a CSR that should not be visible in a given
+interrupt mode.
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
