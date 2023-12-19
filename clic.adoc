@@ -385,54 +385,69 @@ via changing the interrupt's privilege mode in the CLIC Interrupt
 Attribute Register (`clicintattr`), as with any other CLIC
 interrupt input.
 
-== CLIC register access via memory map or indirect CSR Access
+== CLIC register access via indirect CSR Access
 
-Clic extensions Smclicindir/Ssclicindir and Smclicmemmap/Ssclicmemmap are specified to provide access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
-by memory-mapped registers or by using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  
-Implementations with only indirect CLIC register access, only memory-mapped CLIC register access, or both indirect and memory-mapped CLIC register access are allowed.
-
-== Smclicindir CLIC Register Access via Indirect CSR Access 
+Access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
+is specified using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  A CSR accessible via one
+method may or may not be accessible via the other method such as memory-mapped access.
 
 The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
 
 [%autofit]
-----
- miselect  |     mireg     |  mireg                 |
- offset    |     bits      |  register state        |
 
-  0x1*i          7:0         R or RW   clicintip[i]
-  0x1*i         15:8         RW        clicintie[i]
-  0x1*i         23:16        RW        clicintattr[i]
-  0x1*i         31:24        RW        clicintctl[i]
-  ...
-  0xFFF          7:0         R or RW   clicintip[4095]
-  0xFFF         15:8         RW        clicintie[4095]
-  0xFFF         23:16        RW        clicintattr[4095]
-  0xFFF         31:24        RW        clicintctl[4095]
+----
+ miselect  |     mireg     |  mireg                      |     description    |
+ offset    |     bits      |  register state             |                    |
+
+  0x0      |     31:0     |   R or RW   clicintip[31:0]  |  clic interrupt pending for interrupts 31-0 |
+  0x1      |     31:0     |   R or RW   clicintip[63:32] |  clic interrupt pending for interrupts 63:32|
+ ...
+  0x7F     |     31:0     |   R or RW   clicintip[4095:4064] |  clic interrupt pending for interrupts 4095-4064  |
 ----
 
 ----
- miselect  |     mireg2     |  mireg2                |
- offset    |     bits       |  register state        |
+ miselect  |     mireg2    |  mireg2                     |     description    |
+ offset    |     bits      |  register state             |                    |
 
-  0x0            31:0          RW        reserved for smclicconfig extension 
-  0x10           31:0          RW        clicinttrig[0]
-  0x11           31:0          RW        clicinttrig[1]
-  0x12           31:0          RW        clicinttrig[2]
+  0x0      |     31:0     |   R or RW   clicintie[31:0]  |  clic interrupt enable for interrupts 31-0 |
+  0x1      |     31:0     |   R or RW   clicintie[63:32] |  clic interrupt enable for interrupts 63:32|
+ ...
+  0x7F     |     31:0     |   R or RW   clicintie[4095:4064] |  clic interrupt enable for interrupts 4095-4064  |
+----
+
+----
+ miselect  |     mireg3    |  mireg3                     |     description    |
+ offset    |     bits      |  register state             |                    |
+
+  0x0      |     31:0     |   RW   clicinttrig[0]  |  clic interrupt trigger 0 |
+  0x0 + i  |     31:0     |   RW   clicinttrig[i]  |  clic interrupt trigger i |
 ...
-  0x2D           31:0          RW        clicinttrig[29]
-  0x2E           31:0          RW        clicinttrig[30]
-  0x2F           31:0          RW        clicinttrig[31]
+  0x1F     |     31:0     |   RW   clicinttrig[31] |  clic interrupt trigger 31|
 ----
 
 ----
- miselect  |     mireg6    |  mireg6                |mireg5    |  mireg5                |mireg4    |  mireg4                |mireg3    |  mireg3                |
- offset    |     bits      |  register state        |bits      |  register state        |bits      |  register state        |bits      |  register state        |
-
- 0x0            31:0         RW clicintie[127:96]    31:0       RW clicintie[95:64]      31:0        RW clicintie[63:32]     31:0        RW clicintie[31:0]
-...
- 0x19           31:0         RW clicintie[4095:4064] 31:0       RW clicintie[4063:4032]  31:0        RW clicintie[4031:4000] 31:0        RW clicintie[3999:3968]       
+ miselect  |     mireg4    |  mireg4                     |    
+ offset    |     bits      |  register state             |    
+  0x0      |     31:0     |   reserved for smclicconfig extension |
 ----
+
+----
+ miselect  |     mireg     |  mireg                         |    description                                       |
+ offset    |     bits      |  register state                |                                                      |
+  0x80+i   |      7:0      |     RW  clicintctrl[i x 4]     |  clic level/priority setting for interrupt i x 4     | 
+  0x80+i   |      15:8     |     RW  clicintctrl[i x 4 + 1] |  clic level/priority setting for interrupt i x 4 + 1 |    
+  0x80+i   |      23:16    |     RW  clicintctrl[i x 4 + 2] |  clic level/priority setting for interrupt i x 4 + 1 |    
+  0x80+i   |      31:24    |     RW  clicintctrl[i x 4 + 3] |  clic level/priority setting for interrupt i x 4 + 1 |    
+---
+----
+ miselect  |     mireg2     |  mireg2                       |    description                                  |
+ offset    |     bits      |  register state                |                                                 |
+  0x80+i   |      7:0      |     RW  clicintattr[i x 4]     |  clic attribute setting for interrupt i x 4     | 
+  0x80+i   |      15:8     |     RW  clicintattr[i x 4 + 1] |  clic attribute setting for interrupt i x 4 + 1 |    
+  0x80+i   |      23:16    |     RW  clicintattr[i x 4 + 2] |  clic attribute setting for interrupt i x 4 + 1 |    
+  0x80+i   |      31:24    |     RW  clicintattr[i x 4 + 3] |  clic attribute setting for interrupt i x 4 + 1 |    
+---
+
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
@@ -440,48 +455,54 @@ If an input _i_ is not present in the hardware, the corresponding
 
 All CLIC registers are visible to M-mode.
 
-== Ssclicindir CLIC Register Access via Indirect CSR Access 
+== S-mode CLIC Register Access via Indirect CSR Access 
 
 The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
 
 [%autofit]
-----
- siselect  |     sireg     |  sireg                 |
- offset    |     bits      |  register state        |
 
-  0x1*i          7:0         R or RW   clicintip[i]
-  0x1*i         15:8         RW        clicintie[i]
-  0x1*i         23:16        RW        clicintattr[i]
-  0x1*i         31:24        RW        clicintctl[i]
-  ...
-  0xFFF          7:0         R or RW   clicintip[4095]
-  0xFFF         15:8         RW        clicintie[4095]
-  0xFFF         23:16        RW        clicintattr[4095]
-  0xFFF         31:24        RW        clicintctl[4095]
+----
+ siselect  |     sireg     |  sireg                      |     description    |
+ offset    |     bits      |  register state             |                    |
+
+  0x0      |     31:0     |   R or RW   clicintip[31:0]  |  clic interrupt pending for interrupts 31-0 |
+  0x1      |     31:0     |   R or RW   clicintip[63:32] |  clic interrupt pending for interrupts 63:32|
+ ...
+  0x7F     |     31:0     |   R or RW   clicintip[4095:4064] |  clic interrupt pending for interrupts 4095-4064  |
 ----
 
 ----
- siselect  |     sireg2     |  sireg2                |
- offset    |     bits       |  register state        |
+ siselect  |     sireg2    |  sireg2                     |     description    |
+ offset    |     bits      |  register state             |                    |
 
-  0x0            31:0          RW        reserved for smclicconfig extension 
-  0x10           31:0          RW        clicinttrig[0]
-  0x11           31:0          RW        clicinttrig[1]
-  0x12           31:0          RW        clicinttrig[2]
-...
-  0x2D           31:0          RW        clicinttrig[29]
-  0x2E           31:0          RW        clicinttrig[30]
-  0x2F           31:0          RW        clicinttrig[31]
+  0x0      |     31:0     |   R or RW   clicintie[31:0]  |  clic interrupt enable for interrupts 31-0 |
+  0x1      |     31:0     |   R or RW   clicintie[63:32] |  clic interrupt enable for interrupts 63:32|
+ ...
+  0x7F     |     31:0     |   R or RW   clicintie[4095:4064] |  clic interrupt enable for interrupts 4095-4064  |
 ----
 
 ----
- siselect  |     sireg6    |  sireg6                |sireg5    |  sireg5                |sireg4    |  sireg4                |sireg3    |  sireg3                |
- offset    |     bits      |  register state        |bits      |  register state        |bits      |  register state        |bits      |  register state        |
-
- 0x0            31:0         RW clicintie[127:96]    31:0       RW clicintie[95:64]      31:0        RW clicintie[63:32]     31:0        RW clicintie[31:0]
-...
- 0x19           31:0         RW clicintie[4095:4064] 31:0       RW clicintie[4063:4032]  31:0        RW clicintie[4031:4000] 31:0        RW clicintie[3999:3968]       
+ siselect  |     sireg4    |  sireg4                     |    
+ offset    |     bits      |  register state             |    
+  0x0      |     31:0     |   reserved for ssclicconfig extension |
 ----
+
+----
+ siselect  |     sireg     |  sireg                         |    description                                       |
+ offset    |     bits      |  register state                |                                                      |
+  0x80+i   |      7:0      |     RW  clicintctrl[i x 4]     |  clic level/priority setting for interrupt i x 4     | 
+  0x80+i   |      15:8     |     RW  clicintctrl[i x 4 + 1] |  clic level/priority setting for interrupt i x 4 + 1 |    
+  0x80+i   |      23:16    |     RW  clicintctrl[i x 4 + 2] |  clic level/priority setting for interrupt i x 4 + 1 |    
+  0x80+i   |      31:24    |     RW  clicintctrl[i x 4 + 3] |  clic level/priority setting for interrupt i x 4 + 1 |    
+---
+----
+ siselect  |     sireg2     |  sireg2                       |    description                                  |
+ offset    |     bits      |  register state                |                                                 |
+  0x80+i   |      7:0      |     RW  clicintattr[i x 4]     |  clic attribute setting for interrupt i x 4     | 
+  0x80+i   |      15:8     |     RW  clicintattr[i x 4 + 1] |  clic attribute setting for interrupt i x 4 + 1 |    
+  0x80+i   |      23:16    |     RW  clicintattr[i x 4 + 2] |  clic attribute setting for interrupt i x 4 + 1 |    
+  0x80+i   |      31:24    |     RW  clicintattr[i x 4 + 3] |  clic attribute setting for interrupt i x 4 + 1 |    
+---
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
@@ -490,123 +511,6 @@ If an input _i_ is not present in the hardware, the corresponding
 In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
 `clicintctl[__i__]`.
-
-== Smclicmemmap - CLIC Register Access via Memory Mapped Registers
-
-Each hart has a separate CLIC accessed by a separate address region.
-The M-mode CLIC memory map region must be made accessible to
-the M-mode software running on the hart.
-
-NOTE: A bus memory map or locked PMP entries could prevent M-mode
-software on a particular hart from reaching the CLIC memory map.
-
-NOTE: For reserved memory regions, specific trap behavior is not specified. Depending on system bus architecture, the system can ignore the access (e.g., read zero/write ignored) or cause a bus error (usually imprecise interrupt), or some other platform-specific behavior. The "reserved" annotation here implies that future standards might place additional standard registers in that space, and so using the space for non-standard features is inadvisable.
-
-The base address of M-mode and the base addresses of any other privilege mode CLIC memory-mapped registers is specified via the general RISC-V discovery mechanism that is in development. See the CLIC Parameters section for additional detail.
-
-The CLIC memory map supports up to 4096 total interrupt inputs.
-
-[source]
-----
-M-mode CLIC memory map
-  Offset
-  ###   0x0004-0x003F              reserved    ###
-  ###   0x00C0-0x07FF              reserved    ###
-  ###   0x0800-0x0FFF              custom      ###
-  
-  0x0000         4B          RW        reserved for smclicconfig extension 
-
-  0x0040         4B          RW        clicinttrig[0]
-  0x0044         4B          RW        clicinttrig[1]
-  0x0048         4B          RW        clicinttrig[2]
-  ...
-  0x00B4         4B          RW        clicinttrig[29]
-  0x00B8         4B          RW        clicinttrig[30]
-  0x00BC         4B          RW        clicinttrig[31]
-
-
-  0x1000+4*i     1B/input    R or RW   clicintip[i]
-  0x1001+4*i     1B/input    RW        clicintie[i]
-  0x1002+4*i     1B/input    RW        clicintattr[i]
-  0x1003+4*i     1B/input    RW        clicintctl[i]
-  ...
-  0x4FFC         1B/input    R or RW   clicintip[4095]
-  0x4FFD         1B/input    RW        clicintie[4095]
-  0x4FFE         1B/input    RW        clicintattr[4095]
-  0x4FFF         1B/input    RW        clicintctl[4095]
-
-----
-
-NOTE: Discovery mechanisms are still in development.
-
-8b, 16b, and 32b stores to CLIC memory-mapped registers are atomic, however, there is no specified order in which the effects of the individual field updates take effect.  For RV64, naturally aligned 64-bit memory accesses to the CLIC memory-mapped registers are
-additionally supported but 64b accesses can be broken into two 32b accesses in any order.
-
-If an input _i_ is not present in the hardware, the corresponding
-`clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
-`clicintctl[__i__]` memory locations appear hardwired to zero.
-
-All CLIC-memory mapped registers are visible to M-mode.
-
-The intent is that only the necessary address regions are made accessible
-to each privilege mode using the system's standard memory protection
-mechanisms. This can be done either using PMPs in microcontroller
-systems, or page tables (and/or PMPs) in harts with virtual
-memory support. 
-
-The location of the M-mode CLIC region is
-specified by the platform specification and made visible via the
-discovery mechanism for that platform.  
-
-The CLIC specification does not dictate how CLIC memory-mapped
-registers are split between privilege regions as well as the layout of
-multiple harts as this is generally a platform issue and each platform
-needs to define a discovery mechanism to determine the memory map
-locations. Some considerations for platforms to consider are selecting
-regions that allow for efficient PMP and virtual memory configuration.
-For example, it may desired that the base of each privilege mode CLIC
-region is naturally aligned to a virtual memory page (4KiB) so they can be
-mapped through the TLBs.
-
-== Ssclicmemmap CLIC Memory Map
-Supervisor-mode CLIC regions only expose interrupts that have been
-configured to be supervisor-accessible via the M-mode CLIC region.
-
-[source]
-----
-Offset
-  ###   0x0004-0x07FF              reserved    ###
-  ###   0x0800-0x0FFF              custom      ###
-Layout of Supervisor-mode CLIC regions
-0x0000       4B          RW        reserved for Smclicconfig extension 
-0x1000+4*i   1B/input    R or RW   clicintip[i]
-0x1001+4*i   1B/input    RW        clicintie[i]
-0x1002+4*i   1B/input    RW        clicintattr[i]
-0x1003+4*i   1B/input    RW        clicintctl[i]
-----
-
-The location of the S-mode CLIC regions are independent of
-the location of the M-mode CLIC region, and their base addresses are
-specified by the platform specification and made visible via the
-discovery mechanism for that platform.  
-
-NOTE: It may desired that the base of each privilege mode CLIC region
-is aligned to a virtual memory page (4KiB) so they can be mapped
-through the TLBs.
-
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as M-mode interrupts are not acessible to S-mode.
-
-In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
-
-It is not intended that the interconnect to the CLIC memory-mapped
-interrupt regions be required to carry the privilege mode of the
-initiator.  A possible implementation of the CLIC memory map would be
-to alias the same physical CLIC memory-mapped registers to different
-address ranges, with each address range given different permissions
-for each privilege mode.  Interrupts configured as M-mode interrupts
-appear as hard-wired zeros in the S-mode address range. 
 
 == smclic M-mode CLIC extension
 
@@ -672,11 +576,8 @@ or 255.
 
 Each interrupt input has a dedicated interrupt pending bit
 (`clicintip[__i__]`). 
-With memory-mapped accesses, it occupies one byte in the memory map for ease
-of access.  The pending bit is located in bit 0 of the byte.  
 Software should assume `clicintip[__i__]=0` means no interrupt pending, and
-`clicintip[__i__]!=0` indicates an interrupt is pending to accommodate
-possible future expansion of the `clicintip` field.
+`clicintip[__i__]!=0` indicates an interrupt is pending.
 
 The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
 from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the MIP/MIE CSRs, there is no requirement that clicintie or clicintip are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
@@ -710,8 +611,7 @@ level-sensitive mode.
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
 This control bit is read-write to enable/disable the corresponding interrupt.  
-With memory-mapped accesses, i occupies one byte in the memory map for ease of access.
-With memory-mapped accesses, the enable bit is located in bit 0 of the byte. Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled to accommodate possible future expansion of the clicintie field.
+Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled.
 
 NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
@@ -1569,41 +1469,6 @@ in S-mode.
 The suclic extension depnds on the smclic extension and the draft N-extension.
 Note: The proposed N-extension would add user-mode interrupts and traps, but has not been ratified and is not currently being advanced.
 
-=== suclic CLIC Memory-Mapped Registers
-
-==== suclic CLIC Memory Map
-User-mode CLIC regions only expose interrupts that have been
-configured to be user-accessible via the higher privilege mode CLIC regions.  
-
-[source]
-----
-Offset
-  ###   0x0004-0x07FF              reserved    ###
-  ###   0x0800-0x0FFF              custom      ###
-Layout of user-mode CLIC regions
-0x0000       4B          RW        reserved for smclicconfig extension 
-0x1000+4*i   1B/input    R or RW   clicintip[i]
-0x1001+4*i   1B/input    RW        clicintie[i]
-0x1002+4*i   1B/input    RW        clicintattr[i]
-0x1003+4*i   1B/input    RW        clicintctl[i]
-----
-
-The location of the U-mode CLIC regions are independent of
-the location of other privilege mode CLIC regions, and their base addresses are
-specified by the platform specification and made visible via the
-discovery mechanism for that platform.  
-
-Note: It may desired that the bases of each privilege mode CLIC region is VM page (4k) aligned so they can be mapped through the TLBs.
-
-Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as higher privilege mode interrupts are not acessible to U-mode.
-
-Likewise, in U-mode, any interrupt _i_ that is not accessible to U-mode appears as
-hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
-`clicintctl[__i__]`.
-
-Interrupts configured as higher privilege modes would appear as hard-wired
-zeros in the U-mode address range.
-
 === suclic CLIC CSRs
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -1684,7 +1549,7 @@ non-vectoring has the advantage of smaller code size (by sharing and
 reusing one copy of common code to save/restore contexts) at the price of
 slightly slower interrupt response.
 
-=== smclicshv Changes to CLIC Memory-Mapped Registers
+=== smclicshv Changes to CLIC Registers
 
 ==== smclicshv Changes to CLIC Interrupt Pending (`clicintip`)
 
@@ -2008,18 +1873,6 @@ the no-interrupt case.
 
 
 == CLIC Parameters
-=== MCLICBASE
-
-The MCLICBASE parameter
-provides the base address of the m-mode CLIC memory mapped registers.
-Its value should be configured or set up at the platform level to indicate
-the starting address of m-mode CLIC memory mapped registers. 
-
-Since the CLIC memory map must be aligned at a 4KiB boundary, the MCLICBASE parameter
-has its 12 least-significant bits hardwired to zero. It is used
-to inform software about the location of CLIC m-mode memory mapped registers.
-
-Systems with CLIC memory mapped registers for additional privilege modes will provide additional xCLICBASE parameters for each of those CLIC x-mode memory mapped register regions.
 
 === NVBITS Parameter - Specifying Support for smclicshv Selective Interrupt Hardware Vectoring Extension
 
@@ -2078,11 +1931,11 @@ discovery mechanism that is in development.
 == smclicconfig CLIC configuration extension
 Hardware implementations may wish to have a single implementation support different parameterizations of clic extensions. This extension defines that programmability.
 
-=== CLIC Memory-Mapped Registers
+=== CLIC Configuration Registers
 
 ==== CLIC Configuration ({cliccfg} registers)
 
-The CLIC has a single memory-mapped 32-bit global configuration
+The CLIC has a single 32-bit global configuration
 register per privilege mode, {cliccfg}, that defines 
 how the `clicintctl[__i__]` registers are subdivided into level and
 priority fields.  `mcliccfg` has an additional field that defines interrupt privilege mode configuration.
@@ -2097,7 +1950,6 @@ not furnish these fields must hardwire them to zero.
 [source]
 ----
   mcliccfg register layout
-  located at MCLICBASE if smclicmemmap is supported
 
   Bits    Field
   31:28   reserved (WPRI 0)
@@ -2112,7 +1964,6 @@ not furnish these fields must hardwire them to zero.
 [source]
 ----
   scliccfg register layout - dependent on ssclic extension
-  located at SCLICBASE if ssclicmemmap is supported
 
   Bits    Field
   31:28   reserved (WPRI 0)
@@ -2125,7 +1976,6 @@ not furnish these fields must hardwire them to zero.
 [source]
 ----
   ucliccfg register layout - dependent on suclic extension
-  located at UCLICBASE if suclicmemmap is supported
 
   Bits    Field
   31:28   reserved (WPRI 0)
