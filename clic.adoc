@@ -393,60 +393,51 @@ method may or may not be accessible via the other method such as memory-mapped a
 
 The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
 
+
 [%autofit]
 
 ----
- miselect  |     mireg     |  mireg                      |     description    |
- offset    |     bits      |  register state             |                    |
+ miselect  |  mireg |  mireg                     |  mireg2 |  mireg2                    |    description                   |
+ offset    |  bits  |  register state            |  bits   |  register state            |                                  |
+  0x80+i   |  7:0   | RW  clicintctrl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x80+i   | 15:8   | RW  clicintctrl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x80+i   | 23:16  | RW  clicintctrl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x80+i   | 31:24  | RW  clicintctrl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+----
 
-  0x0      |     31:0     |   R or RW   clicintip[31:0]  |  clic interrupt pending for interrupts 31-0 |
-  0x1      |     31:0     |   R or RW   clicintip[63:32] |  clic interrupt pending for interrupts 63:32|
+In this miselect offset range, 
+Each mireg register controls the clic level/priority setting of four interrupts
+Each mireg2 register controls the clic attribute setting of four interrupts
+
+----
+ miselect  |   mireg  | mireg register state    |   mireg2  | mireg2 register state    |    description                            |
+ offset    |   bits   |                         |   bits    |                          |                                           |
+  0x400    |   31:0   | RW clicintip[31:0]      |   31:0    | RW clicintie[31:0]       | settings for interrupts 31 through 0      | 
+  0x401    |   31:0   | RW clicintip[63:32]     |   31:0    | RW clicintie[63:32]      | settings for interrupts 63 through 32     | 
  ...
-  0x7F     |     31:0     |   R or RW   clicintip[4095:4064] |  clic interrupt pending for interrupts 4095-4064  |
+  0x47F    |   31:0   | RW clicintip[4095:4064] |   31:0    | RW clicintie[4095:4064]  | settings for interrupts 4095 through 4064 |  
 ----
 
-----
- miselect  |     mireg2    |  mireg2                     |     description    |
- offset    |     bits      |  register state             |                    |
-
-  0x0      |     31:0     |   R or RW   clicintie[31:0]  |  clic interrupt enable for interrupts 31-0 |
-  0x1      |     31:0     |   R or RW   clicintie[63:32] |  clic interrupt enable for interrupts 63:32|
- ...
-  0x7F     |     31:0     |   R or RW   clicintie[4095:4064] |  clic interrupt enable for interrupts 4095-4064  |
-----
+In this miselect offset range, 
+Each mireg register controls the interrput pending of thirty-two interrupts.
+Each mireg2 register controls the interrupt enable of thrity-two interrupts.
 
 ----
- miselect  |     mireg3    |  mireg3                     |     description    |
- offset    |     bits      |  register state             |                    |
-
-  0x0      |     31:0     |   RW   clicinttrig[0]  |  clic interrupt trigger 0 |
-  0x0 + i  |     31:0     |   RW   clicinttrig[i]  |  clic interrupt trigger i |
+ miselect   |     mireg     |  mireg                |     description    |
+ offset     |     bits      |  register state       |                    |
+  0x480     |     31:0     |   RW   clicinttrig[0]  |  clic interrupt trigger 0 |
+  0x480 + i |     31:0     |   RW   clicinttrig[i]  |  clic interrupt trigger i |
 ...
-  0x1F     |     31:0     |   RW   clicinttrig[31] |  clic interrupt trigger 31|
+  0x49F     |     31:0     |   RW   clicinttrig[31] |  clic interrupt trigger 31|
 ----
 
-----
- miselect  |     mireg4    |  mireg4                     |    
- offset    |     bits      |  register state             |    
-  0x0      |     31:0     |   reserved for smclicconfig extension |
-----
+In this miselect offset range, each mireg register controls an interrput trigger register.
 
 ----
- miselect  |     mireg     |  mireg                         |    description                                       |
- offset    |     bits      |  register state                |                                                      |
-  0x80+i   |      7:0      |     RW  clicintctrl[i x 4]     |  clic level/priority setting for interrupt i x 4     | 
-  0x80+i   |      15:8     |     RW  clicintctrl[i x 4 + 1] |  clic level/priority setting for interrupt i x 4 + 1 |    
-  0x80+i   |      23:16    |     RW  clicintctrl[i x 4 + 2] |  clic level/priority setting for interrupt i x 4 + 1 |    
-  0x80+i   |      31:24    |     RW  clicintctrl[i x 4 + 3] |  clic level/priority setting for interrupt i x 4 + 1 |    
----
+ miselect  |     mireg    |  mireg                                           |    
+ offset    |     bits     |  register state                                  |    
+  0x4A0    |     31:0     |  reserved for mcliccfg in smclicconfig extension |
 ----
- miselect  |     mireg2     |  mireg2                       |    description                                  |
- offset    |     bits      |  register state                |                                                 |
-  0x80+i   |      7:0      |     RW  clicintattr[i x 4]     |  clic attribute setting for interrupt i x 4     | 
-  0x80+i   |      15:8     |     RW  clicintattr[i x 4 + 1] |  clic attribute setting for interrupt i x 4 + 1 |    
-  0x80+i   |      23:16    |     RW  clicintattr[i x 4 + 2] |  clic attribute setting for interrupt i x 4 + 1 |    
-  0x80+i   |      31:24    |     RW  clicintattr[i x 4 + 3] |  clic attribute setting for interrupt i x 4 + 1 |    
----
 
 
 If an input _i_ is not present in the hardware, the corresponding
@@ -462,47 +453,47 @@ The Indirect CSR Access allocated range for CLIC is TBD.  These address provided
 [%autofit]
 
 ----
- siselect  |     sireg     |  sireg                      |     description    |
- offset    |     bits      |  register state             |                    |
+ siselect  |  sireg |  sireg                     |  sireg2 |  sireg2                    |    description                   |
+ offset    |  bits  |  register state            |  bits   |  register state            |                                  |
+  0x80+i   |  7:0   | RW  clicintctrl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x80+i   | 15:8   | RW  clicintctrl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x80+i   | 23:16  | RW  clicintctrl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x80+i   | 31:24  | RW  clicintctrl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+----
 
-  0x0      |     31:0     |   R or RW   clicintip[31:0]  |  clic interrupt pending for interrupts 31-0 |
-  0x1      |     31:0     |   R or RW   clicintip[63:32] |  clic interrupt pending for interrupts 63:32|
+In this siselect offset range, 
+Each sireg register controls the clic level/priority setting of four interrupts
+Each sireg2 register controls the clic attribute setting of four interrupts
+
+----
+ siselect  |   sireg  | sireg register state    |   sireg2  | sireg2 register state    |    description                            |
+ offset    |   bits   |                         |   bits    |                          |                                           |
+  0x400    |   31:0   | RW clicintip[31:0]      |   31:0    | RW clicintie[31:0]       | settings for interrupts 31 through 0      | 
+  0x401    |   31:0   | RW clicintip[63:32]     |   31:0    | RW clicintie[63:32]      | settings for interrupts 63 through 32     | 
  ...
-  0x7F     |     31:0     |   R or RW   clicintip[4095:4064] |  clic interrupt pending for interrupts 4095-4064  |
+  0x47F    |   31:0   | RW clicintip[4095:4064] |   31:0    | RW clicintie[4095:4064]  | settings for interrupts 4095 through 4064 |  
 ----
 
-----
- siselect  |     sireg2    |  sireg2                     |     description    |
- offset    |     bits      |  register state             |                    |
-
-  0x0      |     31:0     |   R or RW   clicintie[31:0]  |  clic interrupt enable for interrupts 31-0 |
-  0x1      |     31:0     |   R or RW   clicintie[63:32] |  clic interrupt enable for interrupts 63:32|
- ...
-  0x7F     |     31:0     |   R or RW   clicintie[4095:4064] |  clic interrupt enable for interrupts 4095-4064  |
-----
+In this siselect offset range, 
+Each mireg register controls the interrput pending of thirty-two interrupts.
+Each mireg2 register controls the interrupt enable of thrity-two interrupts.
 
 ----
- siselect  |     sireg4    |  sireg4                     |    
- offset    |     bits      |  register state             |    
-  0x0      |     31:0     |   reserved for ssclicconfig extension |
+ siselect   |     sireg     |  sireg                |     description    |
+ offset     |     bits      |  register state       |                    |
+  0x480     |     31:0      |   RW   clicinttrig[0] |  clic interrupt trigger 0 |
+  0x480 + i |     31:0      |   RW   clicinttrig[i] |  clic interrupt trigger i |
+...
+  0x49F     |     31:0      |   RW   clicinttrig[31]|  clic interrupt trigger 31|
 ----
 
+In this siselect offset range, each mireg register controls an interrput trigger register.
+
 ----
- siselect  |     sireg     |  sireg                         |    description                                       |
- offset    |     bits      |  register state                |                                                      |
-  0x80+i   |      7:0      |     RW  clicintctrl[i x 4]     |  clic level/priority setting for interrupt i x 4     | 
-  0x80+i   |      15:8     |     RW  clicintctrl[i x 4 + 1] |  clic level/priority setting for interrupt i x 4 + 1 |    
-  0x80+i   |      23:16    |     RW  clicintctrl[i x 4 + 2] |  clic level/priority setting for interrupt i x 4 + 1 |    
-  0x80+i   |      31:24    |     RW  clicintctrl[i x 4 + 3] |  clic level/priority setting for interrupt i x 4 + 1 |    
----
+ siselect  |     sireg    |  sireg                                           |    
+ offset    |     bits     |  register state                                  |    
+  0x4A0    |     31:0     |  reserved for scliccfg in smclicconfig extension |
 ----
- siselect  |     sireg2     |  sireg2                       |    description                                  |
- offset    |     bits      |  register state                |                                                 |
-  0x80+i   |      7:0      |     RW  clicintattr[i x 4]     |  clic attribute setting for interrupt i x 4     | 
-  0x80+i   |      15:8     |     RW  clicintattr[i x 4 + 1] |  clic attribute setting for interrupt i x 4 + 1 |    
-  0x80+i   |      23:16    |     RW  clicintattr[i x 4 + 2] |  clic attribute setting for interrupt i x 4 + 1 |    
-  0x80+i   |      31:24    |     RW  clicintattr[i x 4 + 3] |  clic attribute setting for interrupt i x 4 + 1 |    
----
 
 If an input _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
@@ -577,7 +568,7 @@ or 255.
 Each interrupt input has a dedicated interrupt pending bit
 (`clicintip[__i__]`). 
 Software should assume `clicintip[__i__]=0` means no interrupt pending, and
-`clicintip[__i__]!=0` indicates an interrupt is pending.
+`clicintip[__i__]=1` indicates an interrupt is pending.
 
 The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
 from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the MIP/MIE CSRs, there is no requirement that clicintie or clicintip are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
@@ -611,7 +602,7 @@ level-sensitive mode.
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
 This control bit is read-write to enable/disable the corresponding interrupt.  
-Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]!=0 indicates an interrupt is enabled.
+Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]=1 indicates an interrupt is enabled.
 
 NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
