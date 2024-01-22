@@ -549,9 +549,10 @@ When the input is configured for edge-sensitive input,
 by hardware interrupt inputs and by software.  The bit is set by
 hardware after an edge of the appropriate polarity is observed on the
 interrupt input, as determined by the `clicintattr[i]` field.
-Software writes can set or
+Software writes to `clicintip[__i__]` can set or
 clear edge-triggered pending bits directly by writes to the
 memory-mapped register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
+`clicintip[__i__]` behavior is unaffected by `clicintie[__i__]` setting.
 
 NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
 an edge-triggered pending bit in non-vectored mode.  Additional detail
