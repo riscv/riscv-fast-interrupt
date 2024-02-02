@@ -472,33 +472,10 @@ mapped through the TLBs.
 
 ==== Specifying Interrupt Level
 
-A configurable number of upper bits in
+A parameterized number of upper bits in
 `clicintctl[__i__]` are assigned to encode the interrupt level.
 
-Only 0 or 8 level bits are currently supported, with other values
-currently reserved.
-
-NOTE: In effect, this switches the control bits from being used only
-for level or only for priority.  The design supports a wider range of
-level-bit settings but this is not currently being standardized.
-
-If the actual bits assigned or implemented are fewer than 8, then these bits
-are left-justified and appended with 1's for the lower missing bits.
-The following table shows how levels are encoded
-for these cases.
-
-[source]
-----
- #bits   encoding          interrupt levels
-     0    ........                                                        255
-     1    l.......                        127,                            255
-     2    ll......           63,          127,            191,            255
-     3    lll.....     31,   63,   95,    127,    159,    191,    223,    255
-     4    llll....  15,31,47,63,79,95,111,127,143,159,175,191,207,223,239,255
-
- "l" bits are available variable bits in level specification
- "." bits are non-existent bits for level encoding, assumed to be 1
-----
+NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
 
 ==== Specifying Interrupt Priority
 
@@ -518,13 +495,6 @@ Notice that the 8-bit interrupt level is used to determine preemption
 (for nesting interrupts). In contrast, the 8-bit interrupt priority
 does not affect preemption but is only used as a tie-breaker
 when there are multiple pending interrupts with the same interrupt level.
-
-Any implemented priority bits are treated as the most-significant bits
-of a 8-bit unsigned integer with lower unimplemented bits set to 1.
-For example, with one priority bit (`p111_1111`), interrupts can be
-set to have priorities 127 or 255, and with two priority bits
-(`pp11_1111`), interrupts can be set to have priorities 63, 127, 191,
-or 255.
 
 === CLIC Interrupt Pending (`clicintip`)
 
@@ -1903,6 +1873,13 @@ the no-interrupt case.
 
 
 == CLIC Parameters
+
+Although these are described as parameters, it is understood that hardware implementations may wish to 
+have a single implementation support different parameterizations of CLIC extensions and may make
+these values configurable and initialized prior to CLIC operation.  The smclicconfig extension is provided for that purpose.
+However, these parameters should functionally be considered static. If the value of these parameters are changed 
+during CLIC operation, CLIC behavior is undefined.  
+
 === MCLICBASE
 
 The MCLICBASE parameter
@@ -1936,14 +1913,71 @@ The VERSION 8-bit parameter specifies the implementation version of CLIC. The up
 4-bit specifies the architecture version, and the lower 4-bit specifies
 the implementation version.
 
-The CLICINTCTLBITS 4-bit parameter specifies how many hardware bits are actually
-implemented in the `clicintctl` registers, with 0 {le} `CLICINTCTLBITS` {le} 8.
+The NUM_TRIGGER 6-bit parameter specifies the number of maximum interrupt
+triggers supported in this implementation. Valid values are 0 to 32.
+
+=== CLICINTCTRL Parameters
+
+The parameter xNLBITS (MNLBITS, SNLBITS, etc) defines for each privilege mode how many upper bits in
+`clicintctl[__i__]` are assigned to encode the interrupt level at that privilege level, 
+the remaining lower bits of `clicintctl[__i__]` encode the priority.
+
+Only 0 or 8 level bits are currently supported, with other values
+currently reserved.
+
+NOTE: In effect, this switches the control bits from being used only
+for level or only for priority.  The design supports a wider range of
+level-bit settings but this is not currently being standardized.
+
+
+The parameter xCLICINTCTLVAULES (MCLICINTCTLVALUES, SCLICINTCTLVALUES, etc.) defines for each 
+privilege mode the range of legal values that `clicintctl[__i__]` can be written.
+
+For implementations that choose to implement all 8-bits in the `clicintctl` registers,
+xCLICINTCTLVALUES would be the set [0-255].
+
+Implementations that assign non-overlapping xCLICINTCTLVALUES ranges to different privilege modes may 
+be able to implement fewer `clicintattr[__i__].mode`.  
+For example by limiting MCLICINTCTLVALUES to the set of [240-255] and SCLICINTCTLVALUES to the set of [0-239] 
+`clicintattr[__i__].mode` reflects an m-mode setting when `clicintattr[__i__].mode` bits 7:4 are all 1s otherwise s-mode.
+
+The smclicconfig extension uses the following scheme for implementations that choose to implement fewer 
+than 8-bits in the `clicintctl` registers is as follows.
 The implemented bits are kept left-justified in the most-significant bits of
 each 8-bit `clicintctl[__i__]` register, with the lower unimplemented bits
 treated as hardwired to 1.
+The parameter `CLICINTCTLBITS` represents the number of implemented bits in this scheme.
 
-The NUM_TRIGGER 6-bit parameter specifies the number of maximum interrupt
-triggers supported in this implementation. Valid values are 0 to 32.
+If the actual bits assigned or implemented are fewer than 8, then these bits
+are left-justified and appended with 1's for the lower missing bits.
+The following table shows how levels are encoded
+for these cases.
+
+[source]
+----
+ CLICINTCTL
+ #bits   encoding          interrupt levels (xCLICINTCTLVALUES)
+     0    ........                                                        255
+     1    l.......                        127,                            255
+     2    ll......           63,          127,            191,            255
+     3    lll.....     31,   63,   95,    127,    159,    191,    223,    255
+     4    llll....  15,31,47,63,79,95,111,127,143,159,175,191,207,223,239,255
+
+ "l" bits are available variable bits in level specification
+ "." bits are non-existent bits for level encoding, assumed to be 1
+----
+
+Any implemented priority bits are treated as the most-significant bits
+of a 8-bit unsigned integer with lower unimplemented bits set to 1.
+For example, with one priority bit (`p111_1111`), interrupts can be
+set to have priorities 127 or 255, and with two priority bits
+(`pp11_1111`), interrupts can be set to have priorities 63, 127, 191,
+or 255.
+
+The smclicconfig extension also has a configuration option nmbits to select the number of supported CLIC privilege modes.
+For example, when nmbits is 0, all CLIC interrupts will be m-mode. 
+Implementations may choose to reallocate interrupt priority-tree control bits that had been assigned to supporting `clicintattr[__i__].mode` control, 
+to instead add additional control bits to `clicintctl[__i__]` registers.
 
 === Additional CLIC Parameters
 
@@ -1957,10 +1991,6 @@ CLICLEVELS     2-256                           Number of interrupt levels includ
 CLICMAXID      12-4095                         Largest interrupt ID
 
 INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
-CLICCFGMBITS   0-ceil(lg2(CLICPRIVMODES))      Number of bits implemented for
-                                                 cliccfg.nmbits
-CLICCFGLBITS   0-ceil(lg2(CLICLEVELS))         Number of bits implemented for
-                                                 cliccfg.nlbits
 CLICMTVECALIGN >= 6                            Number of hardwired-zero least
                                                  significant bits in mtvec address.
 ----
@@ -2142,16 +2172,6 @@ the setting in the CLIC Configuration register (`mcliccfg.xnlbits`).
 ==== smclicconfig Changes to Interrupt-Level Threshold ({intthresh}) CSRs
 If the number of bits actually implemented in the `th` field is less than 8 (e.g. an implementation option when `CLICINTCTLBITS` is less than 8), the number of implemented bits `INTTHRESHBITS` must be greater than `CLICINTCTLBITS` and the implemented bits should be kept left-justified in the most-significant bits of the 8-bit field, with the lower unimplemented bits treated as hardwired to 1.  
 For example, if `CLICINTCTLBITS` is 1 and `INTTHRESHBITS` is 2, interrupts can be set to level 127 or 255 and {intthresh}.`th` can be set to 63, 127, 191, or 255.
-
-
-
-
-
-
-
-
-
-
 
 
 
