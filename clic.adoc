@@ -446,6 +446,9 @@ If an input _i_ is not present in the hardware, the corresponding
 
 All CLIC registers are visible to M-mode.
 
+NOTE: Since accessing `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
+`clicintctl[__i__]` via indirect CSR access is not atomic, indirect CSR access of these registers while same privilege level mstatus.xie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore, although this is expected to be an atypical need for most interrupt handlers.
+
 == S-mode CLIC Register Access via Indirect CSR Access 
 
 The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
@@ -2188,6 +2191,9 @@ NOTE: The above entire handler executes in 13 instructions.  The
 build up a global address.  A simple pipeline would encounter two
 pipeline flushes (on entry and on exit), plus the cycles taken to fetch
 the hardware vector entry.
+
+NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
+edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege level mstatus.mie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore.
 
 These inline handlers can be used with the CLINT mode as
 well as CLIC mode.
