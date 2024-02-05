@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 9/01/2023
+:revdate: 02/05/2024
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -104,11 +104,40 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :lt: &#60;
 :gt: &#62;
 
+// SPDX-License-Identifier: CC-BY-4.0
+//
+// licensing.adoc: licensing information
+//
+// Copyright and licensing information for the specification.
+//
+
+[Preface]
+== Copyright and license information
+
+This RISC-V CLIC specification is © 2018-2024 RISC-V international
+
+This document is released under a Creative Commons Attribution 4.0
+International License. +
+https://creativecommons.org/licenses/by/4.0/.
+
+Please cite as: “Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions",  RISC-V International
+
+This document is a derivative of the "The RISC-V Instruction Set Manual, Volume II: Privileged Architecture, Document
+version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
+Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
+Creative Commons Attribution 4.0 International License.
+
+[Preface]
 == Revision History
 
 [source]
 ----
 Date           	Description
+02/05/2024  issue #367 - clicintip/ie clarification
+12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
+10/10/2023  issue #307 - NUM_INTERRUPT parameter text cleanup
+10/10/2023  issue #355 - updated text clarifying clic interaction with rnmi spec
+10/10/2023  issue #347/356/357/358 - updated mret/inhv pseudo-code
 09/01/2023  issue #339 - typo changed xstatus.il to xintstatus.il
 08/29/2023  issue #345 - stateen register required to block access to new ssclic CSRs?
 08/29/2023  issue #350 - clarify which privilege modes will have mscratchcsw
@@ -587,9 +616,12 @@ When the input is configured for edge-sensitive input,
 by hardware interrupt inputs and by software.  The bit is set by
 hardware after an edge of the appropriate polarity is observed on the
 interrupt input, as determined by the `clicintattr[i]` field.
-Software writes can set or
+Software writes to `clicintip[__i__]` can set or
 clear edge-triggered pending bits directly by writes to the
+
 `clicintip[__i__]` register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
+`clicintip[__i__]` behavior is unaffected by `clicintie[__i__]` setting.
+
 
 NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
 an edge-triggered pending bit in non-vectored mode.  Additional detail
@@ -736,7 +768,11 @@ This section describes the CLIC-related hart-specific Control and Status Registe
 CLINT interrupt mode, the behavior is intended to be software
 compatible with CLINT-mode-only systems.  
 
-Unless explicitly specified differently below, CSR state bits retain their value when switching between CLIC and CLINT modes.  New CLIC CSRs and new CLIC CSR fields appear to be zero for both reads and implicit reads in CLINT mode.   
+Unless explicitly specified differently below, when not in CLIC mode, behavior of CLIC-only CSRs should be same as if CLIC was not implemented, so should be treated as a "reserved" operation. The value in the CSRs after switching from CLIC->CLINT->CLIC mode should be treated as "reserved" also, i.e., the value is undefined.
+
+NOTE: It is recommended that implementations raise illegal instruction
+exceptions when accessing a CSR that should not be visible in a given
+interrupt mode.
 
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
@@ -878,9 +914,6 @@ table, aligned on a 64-byte or greater power-of-two boundary. The actual
 alignment can be determined by writing ones to the low-order bits then reading
 them back. Values other than 0 in the low 6 bits of {tvt} are reserved.
 
-In systems that support both CLINT and CLIC modes, the {tvt} CSR is
-still accessible in basic mode (but does not have any effect).
-
 ==== Changes to {cause} CSRs
 
 In both CLINT and CLIC modes, the {cause} CSR is written at the
@@ -945,7 +978,7 @@ interrupt for the same privilege mode when it has greater level than
 the saved interrupt context (held in {cause}`.pil`) and greater level
 than the interrupt threshold of the corresponding privilege mode, without incurring
 the full cost of an interrupt pipeline flush and context save/restore.
-The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI
+The {nxti} CSR is designed to be accessed using CSRRSI/CSRRCI/CSRRS
 instructions, where the value read is a pointer to an entry in the
 trap handler table and the write back updates the interrupt-enable
 status. In addition, writes to the {nxti} have side-effects that
@@ -955,7 +988,7 @@ NOTE: This is different than a regular CSR instruction as the value
 returned is different from the value used in the read-modify-write
 operation.
  
-These CSRs are only designed to be used with the CSRR (CSRRS rd,csr,x0), CSRRSI, and CSRRCI instructions. Accessing the {nxti} CSR using any other CSR instruction form (CSRRW/CSRRS,rs1!=x0/CSRRC/CSRRWI) is reserved.
+These CSRs are only designed to be used with the CSRR (CSRRS rd,csr,x0), CSRRSI/CSRRS, and CSRRCI instructions. Accessing the {nxti} CSR using any other CSR instruction form (CSRRW/CSRRC/CSRRWI) is reserved.
 Note: Use of xnxti with CSRRSI with non-zero uimm values for bits 0, 2, and 4 are reserved for future use.
 
 A read of the {nxti} CSR using CSRR returns either zero, indicating there is no
@@ -1015,7 +1048,37 @@ selection and execution of interrupts using `{nxti}`.
  // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
  // corresponding privileges CSRs.
 ----
+[source]
+----
+ // Pseudo-code for csrrs rd, mnxti, rs1 in M mode.
+ // clic.priv, clic.level, clic.id represent the highest-ranked interrupt currently present in the CLIC
+   if (rs1 != x0)
+   {
+      mstatus |= rs1[4:0]; // Performed regardless of interrupt readiness.
+   }
+   if (clic.priv==M && clic.level > rs1[23:16] && clic.level > mintthresh.th) {
+     // There is an available interrupt.
+     if (rs1[4:0] != 0 && rs1 != x0) {  // Side-effects should occur.
+       // Commit to servicing the available interrupt.
+       mintstatus.mil = clic.level; // Update hart's interrupt level.
+       mcause.exccode = clic.id;   // Update interrupt id in mcause.
+       mcause.interrupt = 1;       // Set interrupt bit in mcause.
+       if (clicintattr[clic.id][1] == 1) { // If edge interrupt,
+         clicintip[clic.id] = 0;           // clear edge interrupt
+       }
+     }
+     rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
+   } else {
+     // No interrupt or in non-CLIC mode.
+     rd = 0;
+   }
 
+ // When a different CSR instruction is used, the update of mstatus and the test
+ // for whether side-effects should occur are modified accordingly.
+ // When a different privileges xnxti CSR is accessed then clic.priv is compared with
+ // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
+ // corresponding privileges CSRs.
+----
 NOTE: Vertical interrupts to different privilege modes will be taken
 preemptively by the hardware, so {nxti} effectively only ever handles
 the next interrupt in the same privilege mode.
@@ -1308,37 +1371,14 @@ The handling of NMIs is implementation-specific, but NMIs are always
 handled in M-mode and can overwrite `mepc` and `mcause` of an active
 M-mode CLIC interrupt handler.
 
-=== Resumable Non-Maskable Interrupts
+==== Resumable Non-Maskable Interrupts
 
 NOTE: This section describes the interaction of the CLIC with the
 proposed new RNMI specification.
 
 The resumable NMI (RNMI) extension adds additional `mnepc`, `mncause`,
-and `mnstatus` CSRs.  When in CLIC mode, `mncause` is similarly extended to 
-include `mnstatus` state and CLIC state.
-
-[source]
-----
- mncause
- Bits    Field      Description
- XLEN-1 Interrupt    Interrupt=1, Exception=0
-    30  (reserved)
- 29:28  mpp[1:0]     Previous privilege mode, same as mnstatus.mpp
-    27  mpie         Previous interrupt enable, same as mnstatus.mpie
- 26:24  (reserved)   
- 23:16  mpil[7:0]    Previous interrupt level
- 15:12  (reserved)
- 11:0  Exccode[11:0] Exception/interrupt code
-----
-
-The `mncause.mpp` and `mncause.mpie` fields mirror the `mnstatus.mpp` and
-`mnstatus.mpie` fields, and are aliased into `mncause`.
-
-The RNMI is taken at the highest interrupt level, which only has an
-effect if software enables RNMIs inside the RNMI handler.
-
-An MNRET instruction will set `mintthresh` to the lowest supported `mintthresh` value if returning to a lower
-privilege mode.
+and `mnstatus` CSRs.  The RNMI CSRs are separate from the CLIC CSRs and so CLIC state does not need to be saved in RNMI CSRs. 
+This makes the design of the RNMI extension orthogonal to the hart's general interrupt scheme.
 
 ==== Returns from Handlers
 
@@ -1685,49 +1725,38 @@ address.
 [source]
 ----
 /* MRET pseudo-code */
-set_next_pc(exception_handler(cur_privilege, MRET, PC));
-
 function exception_handler(cur_priv, xret, pc) {
   match (xret) {
 ...
-      MRET =>  {
-      let xepc = prepare_xret_target(cur_priv);
-      let xinhv = prepare_xinhv_target(cur_priv);
-
-      let prev_priv = cur_priv;
+    MRET =>  {
+      /* standard MRET behavior */
       mstatus.MIE   = mstatus.MPIE;
       mstatus.MPIE  = 1;
       cur_priv      = mstatus.MPP;
       ... /* additional standard MRET behavior */
 
-      if xinhv 
-      then {  
-        if (check_fetch_permissions(xepc) = Addr_OK)
-            next_pc = mem_read(xepc) & ~1; /* xepc contains an address of a table entry */
-          } else {
-            /* take table-fetch trap */
-          }
-        } else { /* Standard xRET behavior - xepc becomes next_pc */
-          next_pc = xepc & ~1;
+      if (minhv) {
+        /* align mepc value to XLEN/8 byte boundary by ignoring low-order bits. */
+        let table_addr = mepc & inhv_pc_alignment_mask();
+        if (check_fetch_permissions(table_addr) = Addr_OK) {
+            next_pc = mem_read(table_addr);
+        } else {
+            /* take table-fetch horizontal trap */
+            mcause.minhv = 1;
+            /* other side effects of taking a trap */
         }
+      } else { /* Standard MRET behavior - mepc becomes next_pc */
+          next_pc = mepc;
+          /* mcause.minhv unchanged */
       }
-    },
-...
+    }
+  },
+
+  /* Note, next_pc is passed to fetch unit which will ignore 1 or 2
+   LSBs depending to IALIGN, so the masking is not shown above.
+   Similarly, permission checks on the ultimate instruction fetch
+   are not shown here. */
 }
-
-function prepare_xret_target(p) =
-  match p {
-    Machine    => mepc,
-    Supervisor => sepc,
-    User       => uepc
-  }
-
-function prepare_xinhv_target(p) =
-  match p {
-    Machine    => mcause.MINHV,
-    Supervisor => scause.SINHV,
-    User       => ucause.UINHV
-  }
 ----
 
 NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of page faults and can handle them using exactly the same code.
@@ -1881,8 +1910,8 @@ When NVBITS is 1, smclicshv extension is implemented.
 
 === CLICINFO Parameters
 
-The NUM_INTERRUPT 13-bit parameter specifies the actual number of maximum interrupt
-inputs supported in this implementation.
+The NUM_INTERRUPT 13-bit parameter from 2-4096 that specifies the actual number of maximum interrupt
+inputs supported in this implementation. MSIP, MTIP are always included.
 
 The VERSION 8-bit parameter specifies the implementation version of CLIC. The upper
 4-bit specifies the architecture version, and the lower 4-bit specifies
@@ -1906,7 +1935,6 @@ CLICANDBASIC   0-1                             Implements CLINT mode also?
 CLICPRIVMODES  1-3                             Number privilege modes: 1=M, 2=M/U,
                                                                        3=M/S/U
 CLICLEVELS     2-256                           Number of interrupt levels including 0
-NUM_INTERRUPT  2-4096                          Always has MSIP, MTIP
 CLICMAXID      12-4095                         Largest interrupt ID
 
 INTTHRESHBITS  1-8                             Number of bits implemented in {intthresh}.th
