@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 12/19/2023
+:revdate: 02/05/2024
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -104,11 +104,36 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :lt: &#60;
 :gt: &#62;
 
+// SPDX-License-Identifier: CC-BY-4.0
+//
+// licensing.adoc: licensing information
+//
+// Copyright and licensing information for the specification.
+//
+
+[Preface]
+== Copyright and license information
+
+This RISC-V CLIC specification is © 2018-2024 RISC-V international
+
+This document is released under a Creative Commons Attribution 4.0
+International License. +
+https://creativecommons.org/licenses/by/4.0/.
+
+Please cite as: “Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions",  RISC-V International
+
+This document is a derivative of the "The RISC-V Instruction Set Manual, Volume II: Privileged Architecture, Document
+version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
+Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
+Creative Commons Attribution 4.0 International License.
+
+[Preface]
 == Revision History
 
 [source]
 ----
 Date           	Description
+02/05/2024  issue #367 - clicintip/ie clarification
 12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
 10/10/2023  issue #307 - NUM_INTERRUPT parameter text cleanup
 10/10/2023  issue #355 - updated text clarifying clic interaction with rnmi spec
