@@ -2907,6 +2907,9 @@ interrupts from the same privilege mode.
       mret                         # Return from handler using saved mepc.
 ----
 
+NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
+edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege level mstatus.mie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore.
+
 [source]
 ----
     # Example of inline preemptible interrupt with stack swapping.
