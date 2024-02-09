@@ -753,37 +753,3 @@ E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.  No exte
 
 * No u-mode interrupts checked
 
-Coverage Summary
-
-* mtime -> interrupt -> trigger, clear, retrigger
-* msip -> interrupt -> trigger, clear, retrigger, enable, disable
-* clint -> pending -> trigger, clear, retrigger (both vectored and direct)
-* clint -> enable -> combination of xie and xstataus.xie
-* clint -> xtvec -> mode (direct vs. vector)
-* clint -> ordering -> interrupt (MSI, MTI, SSI, STI)
-* clint -> privilege -> delegation -> delegate -> machine/supervisor -> handling/ordering
-* clint -> privilege -> pending -> m-mode -> visible, trigger, clear
-* clint -> privilege -> pending -> s-mode -> visible, invisible, trigger, clear  (missing sip STI, SEI is read_only in s-mode?)
-
-* clint -> privilege -> enable -> m-mode int, in m-mode -> mie=0 -> not taken
-* clint -> privilege -> enable -> m-mode int, in m-mode -> mstatus.mie=0 -> not taken
-* clint -> privilege -> enable -> m-mode int, in m-mode -> mie=1 && mstatus.mie=1 -> taken
-
-* clint -> privilege -> enable -> m-mode int, in s-mode -> mie=0 -> not taken
-* clint -> privilege -> enable -> m-mode int, in s-mode -> mstatus.mie=0 -> taken
-* clint -> privilege -> enable -> m-mode int, in s-mode -> mie=1 && mstatus.mie=1 -> taken
-
-* clint -> privilege -> enable -> s-mode int, in s-mode -> sie=0 -> not taken
-* clint -> privilege -> enable -> s-mode int, in s-mode -> mstatus.sie=0 -> not taken
-* clint -> privilege -> enable -> s-mode int, in s-mode -> sie=1 && mstatus.sie=1 -> taken
-
-* clint -> privilege -> enable -> s-mode int, in m-mode -> sie=1 && mstatus.sie=1 -> not taken
-
-* clint -> privilege -> xtvec -> m-mode uses mtvec, s-mode uses stvec (direct vs vectored)
-* clint -> nested -> m-mode to m-mode
-* clint -> nested -> m-mode to s-mode
-* clint -> nested -> s-mode to m-mode
-* clint -> sequenced interrupts -> m-mode to s-mode
-
-* wfi -> resume -> interrupt -> xie == 1 && mstatus.xie == 0
-
