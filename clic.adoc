@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 02/05/2024
+:revdate: 02/09/2024
 :revnumber: 0.9-draft
 :revremark: This document is in the Development state. Assume anything can change. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -133,6 +133,7 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date           	Description
+02/09/2024  issue #91  - Removed incorrect DTS entry. Moving DTS entry task to spike issue #242 instead of being in CLIC spec.
 02/05/2024  issue #367 - clicintip/ie clarification
 12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
 10/10/2023  issue #307 - NUM_INTERRUPT parameter text cleanup
@@ -3153,32 +3154,6 @@ ID  Interrupt
 
 [appendix]
 == Appendix
-
-=== Prototype DTS Entry
-Modified from Example at https://elinux.org/Device_Tree_Usage
-
-[source]
-----
-/dts-v1/;
-
-/ {
-    ...
-    
-    interrupt-parent = <&intc>;
-    
-    ...
-
-    intc: interrupt-controller@MCLICBASE {
-        compatible = "xxx,xxx";
-        reg = <MCLICBASE 0x5000 >;
-        interrupt-controller;
-        #interrupt-cells = <NUM_INTERRUPT>;
-    };
-    
-    ...
-    
-};
-----
 
 [[bibliography]]
 == Bibliography
