@@ -133,6 +133,7 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date           	Description
+02/09/2024  issue #360 - CLIC is allocated bit 53 in the stateen0 registers with the presumed bit name of CLIC.
 02/09/2024  issue #91  - Removed incorrect DTS entry. Moving DTS entry task to spike issue #242 instead of being in CLIC spec.
 02/05/2024  issue #367 - clicintip/ie clarification
 12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
@@ -1417,8 +1418,8 @@ additions for CLIC mode described in the following sections.
 
 ==== State Enable
 
-If the Smstateen extension is implemented, then bit X in mstateen0 is
-implemented. If bit X of a controlling mstateen0 CSR is zero, then
+If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
+implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
 access to the new CSRs (stvt, snxti, sintstatus, sintthresh,
 sscratchcsw, sscratchcswl) by S-mode or a lower privilege level
 results in an illegal instruction exception, except if the hypervisor
