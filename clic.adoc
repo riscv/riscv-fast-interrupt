@@ -1206,7 +1206,7 @@ out of reset.
 
 ==== CLIC mandatory reset state
 
-{intstatus}.{il} fields reset to 0.  Interrupt level 0 corresponds to regular
+{intstatus}.{il} and {cause}.{pil} fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
 
 The reset behavior of other fields is platform-specific.
