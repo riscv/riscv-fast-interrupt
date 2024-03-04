@@ -1898,6 +1898,17 @@ the no-interrupt case.
 
 
 == CLIC Parameters
+=== MCLICBASE
+The MCLICBASE parameter
+provides the base address of the m-mode CLIC memory mapped registers.
+Its value should be configured or set up at the platform level to indicate
+the starting address of m-mode CLIC memory mapped registers. 
+
+Since the CLIC memory map must be aligned at a 4KiB boundary, the MCLICBASE parameter
+has its 12 least-significant bits hardwired to zero. It is used
+to inform software about the location of CLIC m-mode memory mapped registers.
+
+Systems with CLIC memory mapped registers for additional privilege modes will provide additional xCLICBASE parameters for each of those CLIC x-mode memory mapped register regions.
 
 === NVBITS Parameter - Specifying Support for smclicshv Selective Interrupt Hardware Vectoring Extension
 
