@@ -738,6 +738,8 @@ Optional interrupt triggers (`clicinttrig[__i__]`) are used to generate
 a breakpoint exception, entry into Debug Mode, or a trace action.
 If these registers are not implemented, they appear as hard-wired zeros.
 
+This logic is intended to be used with tmexttrigger.intctl as described in the RISC-V debug specification.
+
 Each interrupt trigger is a 32-bit WARL register with the
 following layout:
 
@@ -746,8 +748,9 @@ following layout:
   clicinttrig register layout
 
   Bits    Field
-  31      enable
-  30:13   reserved (WARL 0)
+  31      interrupt_trap_enable
+  30      nxti_enable
+  29:13   reserved (WARL 0)
   12:0    interrupt_number
   
 ----
@@ -755,12 +758,11 @@ following layout:
 The `interrupt_number` field selects which number of interrupt input
 is used as the source for this interrupt trigger.
 
-The `enable` control bit is read-write to enable/disable this
-interrupt trigger.
+The `nxti_enable` control bit is read-write to enable/disable this
+interrupt trigger when using accesses of {nxti} that include writes.  A trigger is signaled to the debug module if the interrupt code from a write access to {nxti} matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.nxti_enable is set.
 
-This logic is intended to be used with tmexttrigger.intctl as described in the RISC-V debug specification.
-
-A trigger is signaled to the debug module if an interrupt is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.enable is set.
+The `interrupt_trap_enable` control bit is read-write to enable/disable this
+interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.interrupt_trap_enable is set.
 
 === CLIC CSRs
 
