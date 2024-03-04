@@ -1013,10 +1013,6 @@ NOTE: Vertical interrupts to different privilege modes will be taken
 preemptively by the hardware, so {nxti} effectively only ever handles
 the next interrupt in the same privilege mode.
 
-In CLINT mode, reads of {nxti} return 0, updates to {status} proceed
-as in CLIC mode, but updates to {intstatus} and {cause} do not take
-effect.
-
 ==== New Interrupt Status ({intstatus}) CSRs
 
 A new M-mode CSR, `mintstatus`, holds the active interrupt level for
