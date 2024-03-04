@@ -1880,55 +1880,15 @@ Note: For now all privilege modes must run in either CLIC mode or all privilege 
 In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated.
 On the other hand, when not in CLIC mode, {cause} has the CLINT mode format.
 
-==== smclicshv Changes to Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
+==== smclicshv and the Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
 
-A read of the {nxti} CSR using CSRR returns either zero, indicating there is no
-suitable interrupt to service or that the highest ranked interrupt is
-SHV or that the system is not in a CLIC mode, or returns a non-zero
-address of the entry in the trap handler table for software trap
-vectoring.
+With the smclicshv extension, if the highest ranked interrupt is SHV, {nxti} returns a pointer to the hardware-vectored trap-handler entry. 
 
-NOTE: The {tvt} CSR could be set to memory addresses such that a table
-entry was at address zero, and this would be indistinguishable from
-the no-interrupt case.
-
-
-[source]
-----
- // Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode.
- // clic.priv, clic.level, clic.id represent the highest-ranked interrupt currently present in the CLIC
- mstatus |= uimm[4:0]; // Performed regardless of interrupt readiness.
- if (clic.priv==M && clic.level > mcause.pil && clic.level > mintthresh.th
-     && (clicintattr.shv==0) ) {
-   // There is an available, non-hardware-vectored interrupt.
-   if (uimm[4:0] != 0) {  // Side-effects should occur.
-     // Commit to servicing the available interrupt.
-     mintstatus.mil = clic.level; // Update hart's interrupt level.
-     mcause.exccode = clic.id;   // Update interrupt id in mcause.
-     mcause.interrupt = 1;       // Set interrupt bit in mcause.
-     if (clicintattr[clic.id][1] == 1) { // If edge interrupt,
-       clicintip[clic.id] = 0;           // clear edge interrupt
-     }
-   }
-   rd = TBASE + XLEN/8 * clic.id; // Return pointer to trap handler entry.
- } else {
-   // No interrupt, or a selectively hardware vectored interrupt, or in non-CLIC mode.
-   rd = 0;
- }
- // When a different CSR instruction is used, the update of mstatus and the test
- // for whether side-effects should occur are modified accordingly.
- // When a different privileges xnxti CSR is accessed then clic.priv is compared with
- // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the 
- // corresponding privileges CSRs.
-----
-
-
-
-
-
-
-
-
+NOTE: Hardware-vectored and software handlers may have different software interfaces. 
+The assumption is that hardware vectoring would have customized context save/restore, whereas the software vectoring would use a generic context save/restore.
+For example, after saving general context, the software handler could keep processing pending interrupts in a pending-interrupt service loop using {nxti} to claim pending interrupts.
+If the highest ranked interrupt is SHV, this could result in performing unnecessary customized context save/restore if the hardware-vectored handler always saves/restores context. 
+Software implementations may choose to have hardware-vectored handlers check {cause}.{pil} to determine if the customized context save/restore is necessary.
 
 == CLIC Parameters
 === MCLICBASE
