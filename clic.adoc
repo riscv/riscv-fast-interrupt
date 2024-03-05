@@ -435,10 +435,10 @@ The Indirect CSR Access allocated range for CLIC is TBD.  These address provided
 ----
  miselect  |  mireg |  mireg                     |  mireg2 |  mireg2                    |    description                   |
  offset    |  bits  |  register state            |  bits   |  register state            |                                  |
-  0x80+i   |  7:0   | RW  clicintctrl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
-  0x80+i   | 15:8   | RW  clicintctrl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
-  0x80+i   | 23:16  | RW  clicintctrl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
-  0x80+i   | 31:24  | RW  clicintctrl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+  0x80+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x80+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x80+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x80+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
 ----
 
 In this miselect offset range, 
@@ -494,10 +494,10 @@ The Indirect CSR Access allocated range for CLIC is TBD.  These address provided
 ----
  siselect  |  sireg |  sireg                     |  sireg2 |  sireg2                    |    description                   |
  offset    |  bits  |  register state            |  bits   |  register state            |                                  |
-  0x80+i   |  7:0   | RW  clicintctrl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
-  0x80+i   | 15:8   | RW  clicintctrl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
-  0x80+i   | 23:16  | RW  clicintctrl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
-  0x80+i   | 31:24  | RW  clicintctrl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+  0x80+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x80+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x80+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x80+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
 ----
 
 In this siselect offset range, 
@@ -1861,7 +1861,7 @@ the implementation version.
 The NUM_TRIGGER 6-bit parameter specifies the number of maximum interrupt
 triggers supported in this implementation. Valid values are 0 to 32.
 
-=== CLICINTCTRL Parameters
+=== CLICINTCTL Parameters
 
 The parameter xNLBITS (MNLBITS, SNLBITS, etc) defines for each privilege mode how many upper bits in
 `clicintctl[__i__]` are assigned to encode the interrupt level at that privilege level, 
