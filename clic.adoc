@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 03/04/2024
+:revdate: 03/05/2024
 :revnumber: 0.9-draft
 :revremark: This document is in the Stable state. Assume anything could still change, but limited change should be expected. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -133,6 +133,9 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date           	Description
+03/05/2024  issue #383 - Rename title of m-mode indirect csr access
+03/05/2024  issue #381/379 - revert pull #370 merge. xnxti again does not return SHV trap-handler entries.
+03/05/2024  issue #380 - Fix clicintctl spelling
 03/04/2024  issue #349 - Change access to CLIC registers from memory mapped to indirect CSR
 03/04/2024  pull #369  - Redefine parameters to no longer specify number of bit implemented but instead specify legal WARL values.
 03/04/2024  pull #373  - Add xcause.xpil fields to mandatory reset state.
@@ -421,7 +424,7 @@ via changing the interrupt's privilege mode in the CLIC Interrupt
 Attribute Register (`clicintattr`), as with any other CLIC
 interrupt input.
 
-== M-mode CLIC register access via indirect CSR Access
+== M-mode CLIC Register Access via Indirect CSR Access
 
 Access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
 is specified using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  A CSR accessible via one
