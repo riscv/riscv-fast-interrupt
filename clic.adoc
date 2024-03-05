@@ -427,8 +427,8 @@ interrupt input.
 == M-mode CLIC Register Access via Indirect CSR Access
 
 Access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
-is specified using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  A CSR accessible via one
-method may or may not be accessible via the other method such as memory-mapped access.
+is specified using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  A CSR accessible via
+indirect CSR access may or may not be accessible via another method such as memory-mapped access.
 
 The Indirect CSR Access allocated range for CLIC is TBD.  These address provided below are relative to the base of that allocated range.
 
