@@ -133,6 +133,8 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date           	Description
+03/05/2024  issue #388 - Fix clicintctl/clicintattr miselect/siselect values
+03/05/2024  issue #377 - Clarify indirect CSR access text
 03/05/2024  issue #383 - Rename title of m-mode indirect csr access
 03/05/2024  issue #381/379 - revert pull #370 merge. xnxti again does not return SHV trap-handler entries.
 03/05/2024  issue #380 - Fix clicintctl spelling
@@ -438,10 +440,10 @@ The Indirect CSR Access allocated range for CLIC is TBD.  These address provided
 ----
  miselect  |  mireg |  mireg                     |  mireg2 |  mireg2                    |    description                   |
  offset    |  bits  |  register state            |  bits   |  register state            |                                  |
-  0x80+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
-  0x80+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
-  0x80+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
-  0x80+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+  0x00+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x00+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x00+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x00+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
 ----
 
 In this miselect offset range, 
@@ -497,10 +499,10 @@ The Indirect CSR Access allocated range for CLIC is TBD.  These address provided
 ----
  siselect  |  sireg |  sireg                     |  sireg2 |  sireg2                    |    description                   |
  offset    |  bits  |  register state            |  bits   |  register state            |                                  |
-  0x80+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
-  0x80+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
-  0x80+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
-  0x80+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
+  0x00+i   |  7:0   | RW  clicintctl[i x 4]     |   7:0   | RW  clicintattr[i x 4]     |  setting for interrupt i x 4     | 
+  0x00+i   | 15:8   | RW  clicintctl[i x 4 + 1] |  15:8   | RW  clicintattr[i x 4 + 1] |  setting for interrupt i x 4 + 1 |    
+  0x00+i   | 23:16  | RW  clicintctl[i x 4 + 2] |  23:16  | RW  clicintattr[i x 4 + 2] |  setting for interrupt i x 4 + 2 |    
+  0x00+i   | 31:24  | RW  clicintctl[i x 4 + 3] |  31:24  | RW  clicintattr[i x 4 + 3] |  setting for interrupt i x 4 + 3 |    
 ----
 
 In this siselect offset range, 
