@@ -421,7 +421,7 @@ via changing the interrupt's privilege mode in the CLIC Interrupt
 Attribute Register (`clicintattr`), as with any other CLIC
 interrupt input.
 
-== CLIC register access via indirect CSR Access
+== M-mode CLIC register access via indirect CSR Access
 
 Access to CLIC registers clicinttrig[i], clicintip[i], clicintie[i], clicintattr[i], clicintctl[i] 
 is specified using the Indirect CSR Access extension method (Smcsrind/Sscsrind).  A CSR accessible via one
