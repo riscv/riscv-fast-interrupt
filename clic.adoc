@@ -656,12 +656,11 @@ More specifically, there can be four possible combinations:
 positive level-triggered, negative level-triggered, positive edge-triggered,
 and negative edge-triggered.
 
-NOTE: Some implementations may want to save these bits so only certain trigger
-types are supported. In this case, these bits become hard-wired to fixed
-values (WARL).
-
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
 operates in. 
+
+NOTE: This register is defined as WARL as some implementations may want to hard-wire to fixed values
+only certain mode/trigger/shv types.
 
 [source]
 ----
@@ -700,6 +699,8 @@ interrupt at a lower privilege mode since the higher-privilege mode
 causes the interrupt signal to appear more urgent than any lower-privilege
 mode interrupt.
 
+NOTE: This register is defined as WARL as some implementations may want to support a limited number 
+of values in this register including hard-coding some bits to fixed values.
 
 ==== Interrupt Input Identification Number
 
