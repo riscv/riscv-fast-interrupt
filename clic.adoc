@@ -701,7 +701,7 @@ causes the interrupt signal to appear more urgent than any lower-privilege
 mode interrupt.
 
 NOTE: This register is defined as WARL as some implementations may want to support a limited number 
-of values in this register including hard-coding some bits to fixed values.
+of values in this register including hardwiring some bits to fixed values.
 
 ==== Interrupt Input Identification Number
 
