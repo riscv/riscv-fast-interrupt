@@ -617,7 +617,7 @@ register bits used in edge-triggered mode to hold state while in
 level-sensitive mode.
 
 === CLIC Interrupt Enable (`clicintie`)
-Each interrupt input has a dedicated interrupt-enable bit (`clicintie[__i__]`)
+Each interrupt input has a dedicated interrupt-enable WARL bit (`clicintie[__i__]`)
 This control bit is read-write to enable/disable the corresponding interrupt.  
 Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]=1 indicates an interrupt is enabled.
 
@@ -632,6 +632,7 @@ mode according to RISC-V convention, an interrupt `_i_` from a higher privilege 
 is enabled as long as `clicintie[__i__]` is set (regardless of the setting
 of {status}.{ie} in the higher privilege modes).
 
+NOTE: This register bit is defined as WARL as unimplemented interrupts appear hardwired to zero.
 
 === CLIC Interrupt Attribute (`clicintattr`)
 
@@ -656,12 +657,11 @@ More specifically, there can be four possible combinations:
 positive level-triggered, negative level-triggered, positive edge-triggered,
 and negative edge-triggered.
 
-NOTE: Some implementations may want to save these bits so only certain trigger
-types are supported. In this case, these bits become hard-wired to fixed
-values (WARL).
-
 The 2-bit `mode` WARL field specifies which privilege mode this interrupt
 operates in. 
+
+NOTE: This register is defined as WARL as some implementations may want to hardwire to fixed values
+only certain mode/trigger/shv types.
 
 [source]
 ----
@@ -700,6 +700,8 @@ interrupt at a lower privilege mode since the higher-privilege mode
 causes the interrupt signal to appear more urgent than any lower-privilege
 mode interrupt.
 
+NOTE: This register is defined as WARL as some implementations may want to support a limited number 
+of values in this register including hardwiring some bits to fixed values.
 
 ==== Interrupt Input Identification Number
 
