@@ -38,7 +38,7 @@
 :stem: latexmath
 :description: RISC-V Core-Local Interrupt Controller
 :company: RISC-V.org
-:revdate: 03/05/2024
+:revdate: 03/08/2024
 :revnumber: 0.9-draft
 :revremark: This document is in the Stable state. Assume anything could still change, but limited change should be expected. See https://wiki.riscv.org/display/HOME/Specification+States
 :url-riscv: http://riscv.org
@@ -133,6 +133,7 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date           	Description
+03/08/2024  issue #385 - Add WARL note to clicintctl/clicintattr/clicintie
 03/05/2024  issue #388 - Fix clicintctl/clicintattr miselect/siselect values
 03/05/2024  issue #377 - Clarify indirect CSR access text
 03/05/2024  issue #383 - Rename title of m-mode indirect csr access
