@@ -3133,6 +3133,128 @@ ID  Interrupt
 2+  other
 ----
 
+== CLIC register access via Memory-Mapped Registers Recommended Format
+If memory-mapped access is provided in addition to access via indirect CSR access, the following regions and access rules are recommended.
+
+=== M-Mode CLIC Register Memory Map Region
+
+Each hart has a separate CLIC accessed by a separate address region.
+The M-mode CLIC memory map region must be made accessible to
+the M-mode software running on the hart.
+
+NOTE: A bus memory map or locked PMP entries could prevent M-mode
+software on a particular hart from reaching the CLIC memory map.
+
+NOTE: For reserved memory regions, specific trap behavior is not specified. Depending on system bus architecture, the system can ignore the access (e.g., read zero/write ignored) or cause a bus error (usually imprecise interrupt), or some other platform-specific behavior. The "reserved" annotation here implies that future standards might place additional standard registers in that space, and so using the space for non-standard features is inadvisable.
+
+The base address of M-mode and the base addresses of any other privilege mode CLIC memory-mapped registers is specified via the general RISC-V discovery mechanism that is in development. See the CLIC Parameters section for additional detail.
+
+The CLIC memory map supports up to 4096 total interrupt inputs.
+
+[source]
+----
+M-mode CLIC memory map
+  Offset
+  ###   0x0004-0x003F              reserved    ###
+  ###   0x00C0-0x07FF              reserved    ###
+  ###   0x0800-0x0FFF              custom      ###
+  
+  0x0000         4B          RW        mcliccfg - dependent on the smclicconfig extension 
+
+  0x0040         4B          RW        clicinttrig[0]
+  0x0044         4B          RW        clicinttrig[1]
+  0x0048         4B          RW        clicinttrig[2]
+  ...
+  0x00B4         4B          RW        clicinttrig[29]
+  0x00B8         4B          RW        clicinttrig[30]
+  0x00BC         4B          RW        clicinttrig[31]
+
+
+  0x1000+4*i     1B/input    R or RW   clicintip[i]
+  0x1001+4*i     1B/input    RW        clicintie[i]
+  0x1002+4*i     1B/input    RW        clicintattr[i]
+  0x1003+4*i     1B/input    RW        clicintctl[i]
+  ...
+  0x4FFC         1B/input    R or RW   clicintip[4095]
+  0x4FFD         1B/input    RW        clicintie[4095]
+  0x4FFE         1B/input    RW        clicintattr[4095]
+  0x4FFF         1B/input    RW        clicintctl[4095]
+
+----
+
+The pending bit of clicintip[i] is located in bit 0 of the byte.
+The enable bit of clicintie[i] is located in bit 0 of the byte.
+
+NOTE: Discovery mechanisms are still in development.
+
+8b, 16b, and 32b stores to CLIC memory-mapped registers are atomic, however, there is no specified order in which the effects of the individual field updates take effect.  For RV64, naturally aligned 64-bit memory accesses to the CLIC memory-mapped registers are
+additionally supported but 64b accesses can be broken into two 32b accesses in any order.
+
+If an input _i_ is not present in the hardware, the corresponding
+`clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
+`clicintctl[__i__]` memory locations appear hardwired to zero.
+
+All CLIC-memory mapped registers are visible to M-mode.
+
+The intent is that only the necessary address regions are made accessible
+to each privilege mode using the system's standard memory protection
+mechanisms. This can be done either using PMPs in microcontroller
+systems, or page tables (and/or PMPs) in harts with virtual
+memory support. 
+
+The location of the M-mode CLIC region is
+specified by the platform specification and made visible via the
+discovery mechanism for that platform.  
+
+It is generally a platform issue to determine how CLIC memory-mapped
+registers are split between privilege regions as well as the layout of
+multiple harts. Each platform with memory-mapped access to CLIC registers
+needs to define a discovery mechanism to determine the memory map
+locations. Some considerations for platforms to consider are selecting
+regions that allow for efficient PMP and virtual memory configuration.
+For example, it may desired that the base of each privilege mode CLIC
+region is naturally aligned to a virtual memory page (4KiB) so they can be
+mapped through the TLBs.
+
+=== S-Mode CLIC Register Memory Map Region
+Dependent on ssclic extension, supervisor-mode CLIC regions only expose interrupts that have been
+configured to be supervisor-accessible via the M-mode CLIC region.
+
+[source]
+----
+Offset
+  ###   0x0004-0x07FF              reserved    ###
+  ###   0x0800-0x0FFF              custom      ###
+Layout of Supervisor-mode CLIC regions
+0x0000       4B          RW        scliccfg - dependent on the smclicconfig extension 
+0x1000+4*i   1B/input    R or RW   clicintip[i]
+0x1001+4*i   1B/input    RW        clicintie[i]
+0x1002+4*i   1B/input    RW        clicintattr[i]
+0x1003+4*i   1B/input    RW        clicintctl[i]
+----
+
+The location of the S-mode CLIC regions are independent of
+the location of the M-mode CLIC region, and their base addresses are
+specified by the platform specification and made visible via the
+discovery mechanism for that platform.  
+
+NOTE: It may desired that the base of each privilege mode CLIC region
+is aligned to a virtual memory page (4KiB) so they can be mapped
+through the TLBs.
+
+Interrupt registers `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, `clicintctl[__i__]` configured as M-mode interrupts are not acessible to S-mode.
+
+In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
+hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
+`clicintctl[__i__]`.
+
+It is not intended that the interconnect to the CLIC memory-mapped
+interrupt regions carry the privilege mode of the
+initiator.  A possible implementation of the CLIC memory map would be
+to alias the same physical CLIC memory-mapped registers to different
+address ranges, with each address range given different permissions
+for each privilege mode.  Interrupts configured as M-mode interrupts
+appear as hard-wired zeros in the S-mode address range.  
 
 [appendix]
 == Appendix
