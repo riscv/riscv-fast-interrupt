@@ -1258,11 +1258,11 @@ privilege mode.
 
 The overall behavior is summarized in the following table: the Current
 `p/ie/il` fields represent the current privilege mode `P` (not
-software visible), interrupt enable `ie` = 
-({status}.{ie} & `clicintie[__i__]`)  and interrupt
+software visible), new privilege mode global interrupt enable `ie` and interrupt
 level `L` = max({intstatus}.{il}, {intthresh}.`th`);
 the CLIC `priv`,`level`, and `id` fields
-represent the highest-ranked interrupt currently present in the CLIC
+represent the highest-ranked pending and enabled interrupt 
+(`clicintip[__i__]` & `clicintie[__i__]` == 1) currently present in the CLIC
 with `nP` representing the new privilege mode, `nL` representing the
 new interrupt level, and `id` representing the interrupt's id;
 Current' shows the `p/ie/il` context in the handler's privilege mode;
