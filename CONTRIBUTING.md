@@ -1,26 +1,23 @@
 # Contribution Guidelines
 
-As an open-source project, we welcome and encourage the community to submit patches directly to the project. In our collaborative open source environment, standards and methods for submitting changes help reduce the chaos that can result from an active development community.
+As an open-source project, we appreciate and encourage community members to submit patches directly to the project. To maintain a well-organized development environment, we have established standards and methods for submitting changes. This document outlines the process for submitting patches to the project, ensuring that your contribution is swiftly incorporated into the codebase.
 
-This document explains how to submit patches to the project so your patch will be accepted quickly in the codebase.
+# Licensing
 
-## Licensing
+Licensing is crucial for open-source projects, as it guarantees that the software remains available under the conditions specified by the author.
 
-Licensing is very important to open source projects. It helps ensure the software continues to be available under the terms that the author desired.
+This project employs the Creative Commons Attribution 4.0 International license, which can be found in the LICENSE file within the project's repository.
 
-This project uses the Creative Commons Attribution 4.0 International license, as found in the [LICENSE](https://github.com/riscv/docs-spec-template/blob/main/LICENSE) file in the project's repo.
+Licensing defines the rights granted to you as an author by the copyright holder. It is essential for contributors to fully understand and accept these licensing rights. In some cases, the copyright holder may not be the contributor, such as when the contributor is working on behalf of a company.
 
-A license tells you what rights you have as an author, as provided by the copyright holder. It is important that the contributor fully understands the licensing rights and agrees to them. Sometimes the copyright holder isn't the contributor, such as when the contributor is doing work on behalf of a company.
+# Developer Certificate of Origin (DCO)
+To uphold licensing criteria and demonstrate good faith, this project mandates adherence to the Developer Certificate of Origin (DCO) process.
 
-## Developer Certification of Origin (DCO)
+The DCO is an attestation appended to every contribution from each author. In the commit message of the contribution (explained in greater detail later in this document), the author adds a Signed-off-by statement, thereby accepting the DCO.
 
-To make a good faith effort to ensure licensing criteria are met, this project requires the Developer Certificate of Origin (DCO) process to be followed.
+When an author submits a patch, they affirm that they possess the right to submit the patch under the designated license. The DCO agreement is displayed below and at https://developercertificate.org.
 
-The DCO is an attestation attached to every contribution made by every author. In the commit message of the contribution (described more fully later in this document), the author simply adds a ``Signed-off-by`` statement and thereby agrees to the DCO.
 
-When an author submits a patch, it is a commitment that the contributor has the right to submit the patch per the license. The DCO agreement is shown below and at https://developercertificate.org.
-
-```
 Developer's Certificate of Origin 1.1
 
 By making a contribution to this project, I certify that:
@@ -38,7 +35,7 @@ By making a contribution to this project, I certify that:
     in the file; or
 
 (c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
+    person who certified (a), (b), or (c), and I have not modified
     it.
 
 (d) I understand and agree that this project and the contribution
@@ -46,19 +43,16 @@ By making a contribution to this project, I certify that:
     personal information I submit with it, including my sign-off) is
     maintained indefinitely and may be redistributed consistent with
     this project or the open source license(s) involved.
-```
 
-### DCO Sign-Off Methods
+# DCO Sign-Off Methods
+The DCO necessitates the inclusion of a sign-off message in the following format for each commit within the pull request:
 
-The DCO requires that a sign-off message, in the following format, appears on each commit in the pull request:
+Signed-off-by: Stephano Cetola <scetola@linuxfoundation.org>
 
-`Signed-off-by: Stephano Cetola <scetola@linuxfoundation.org>`
+Please use your real name in the sign-off message.
 
-You are required to use your real name in the sign-off message.
+You can manually add the DCO text to your commit body or include either -s or --signoff in your standard Git commit commands. If you forget to incorporate the sign-off, you can also amend a previous commit with the sign-off by executing git commit --amend -s. If you have already pushed your changes to GitHub, you will need to force push your branch afterward using git push -f.
 
-The DCO text can either be manually added to your commit body, or you can add either ``-s`` or ``--signoff`` to your usual Git commit commands. If you forget to add the sign-off you can also amend a previous commit with the sign-off by running ``git commit --amend -s``. If you've pushed your changes to GitHub already you'll need to force push your branch after this with ``git push -f``.
+Note:
 
-
-**Note:**
-
-The name and email address of the account you use to submit your PR must match the name and email address on the ``Signed-off-by`` line in your commit message.
+Ensure that the name and email address associated with your GitHub account match the name and email address in the Signed-off-by line of your commit message.
