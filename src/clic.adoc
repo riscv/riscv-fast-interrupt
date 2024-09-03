@@ -2155,7 +2155,172 @@ If the number of bits actually implemented in the `th` field is less than 8 (e.g
 For example, if `CLICINTCTLBITS` is 1 and `INTTHRESHBITS` is 2, interrupts can be set to level 127 or 255 and {intthresh}.`th` can be set to 63, 127, 191, or 255.
 
 
+== Interrupt Handling Software
 
+=== Interrupt Stack Software Conventions
+
+The CLIC supports multiple nested interrupt handlers, and each handler
+requires some working registers. To make registers available, each
+handler typically saves and restores registers from the interrupted
+context on a memory-resident stack.  In addition, the memory-resident
+stack is used to hold other interrupted context information, such as
+{epc} and {cause}, which are required by the {ret} instruction.
+
+The standard RISC-V ABI convention is that stacks grow downwards, and
+that memory addresses below the current stack pointer can be
+dynamically altered by another agent, such as an interrupt handler.
+
+When interrupts are taken horizontally within the same privilege mode,
+the interrupt handler may be able to use the same stack as the
+interrupted thread, by allocating a new stack frame below the current
+stack pointer.
+
+When interrupts are taken vertically into a higher privilege mode, the
+stack pointer must be swapped to a stack within the higher privilege
+mode to avoid a security hole.  The {scratch} registers can be used to
+hold the stack pointer of a higher-privilege mode while
+lower-privilege code is executing, or {scratch} can be used to point
+to more extensive thread-local context that might contain a stack
+pointer.
+
+
+== Separating Stack per Interrupt Level
+
+Within a single privilege mode, it can be useful to separate interrupt
+handler tasks from application tasks to increase robustness, reduce
+space usage, and aid in system debugging.  Interrupt handler tasks
+have non-zero interrupt levels, while application tasks have an
+interrupt level of zero.
+
+
+
+== CLIC Interrupt ID ordering recommendations
+
+The specific numbering of interrupts is defined by the platform.  A
+platform definition will often be based on a specific RISC-V ISA
+profile, where RISC-V ISA profiles specify a common set of ISA choices
+that capture the most value for most users to enable software
+compatibility.
+
+The current RVA profiles (RVA20/RVA22/RVA23) include the CLINT
+interrupt scheme.
+
+Certain RISC-V profiles may include the CLIC as an option.
+
+NOTE: The CLIC is not included in RVA series of profiles as mandatory
+or supported optional.
+
+Four different CLIC interrupt ID orderings are enumerated below for
+ease of reference in profile specifications.
+
+=== CLIC-mode interrupt-map for systems retaining interrupt ID compatible with CLINT mode:
+
+The CLINT-mode interrupts retain their interrupt ID in CLIC mode.
+The `clicintattr` settings are now used to delegate these interrupts as
+required.
+
+We recommend allocating an edge-triggered CLIC software interrupt bit
+(`csip`) with the lowest number (16) among the local interrupts to
+provide support for a local background interrupt thread, e.g. context
+switching.  By placing the `csip` interrupt at the lowest number among
+local interrupts, we avoid requiring another interrupt level to
+ensure this only runs when there are no other interrupts.
+
+The existing CLINT software interrupt bits are primarily intended for
+inter-hart interrupt signaling, and so are retained for that purpose.
+The software interrupts can have their priority changed using their
+`clicintctl` setting.
+
+CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
+Any fast local interrupts that would have been connected at interrupt
+ID 16 and above should now be mapped into corresponding inputs of the
+CLIC.
+
+[source]
+----
+ID  Interrupt   Note
+
+ 0  usip        User software Interrupt
+ 1  ssip        Supervisor software Interrupt
+ 2  reserved
+ 3  msip        Machine software interrupt
+
+ 4  utip        User timer interrupt
+ 5  stip        Supervisor timer interrupt
+ 6  reserved
+ 7  mtip        Machine timer interrupt
+
+ 8  ueip        User external (PLIC/APLIC) interrupt
+ 9  seip        Supervisor external (PLIC/APLIC) interrupt
+10  reserved
+11  meip        Machine external (PLIC/APLIC) interrupt
+
+12  reserved
+13  reserved
+14  reserved
+15  reserved
+
+16  csip        CLIC software interrupt
+17+ inputs      CLIC local inputs
+----
+
+In CLINT mode, as stated in the RISC-V privilege specification, each
+individual bit in CSR register {ip} may be software writable or may be
+software read-only. When bit _i_ in {ip} is writable, a pending
+interrupt _i_ can be cleared by writing `0` to this bit. STIP is
+writable in `mip`, and may be written by M-mode software to deliver
+timer interrupts to S-mode.
+
+However, in CLIC mode, {ip} bits cannot be updated in software when
+they are in level-sensitive mode.  One possible equivalent
+implementation to deliver timer interrupts would be to hardwire the
+STIP input to 0 and then M-mode software can deliver timer interrupts to
+S-mode by setting `clicintattr[stip].trig` to `00`
+(positive-edge-triggered) and writing `clicintip[stip]` to `1`.
+
+The following optional recommendations remove unused interrupt inputs
+and compress the map to simplify hardware implementations.
+
+=== CLIC-mode interrupt-map recommendation for single-hart systems with PLIC/APLIC:
+
+[source]
+----
+ID  Interrupt
+0   S-mode software interrupt
+1   S-mode timer interrupt
+2   S-mode external (PLIC/APLIC) interrupt
+3   M-mode software interrupt
+4   M-mode timer interrupt
+5   M-mode external (PLIC/APLIC) interrupt
+6+  local
+----
+
+=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N-extension with no PLIC/APLIC:
+
+[source]
+----
+ID  Interrupt
+0   S-mode software interrupt
+1   S-mode timer interrupt
+2   M-mode software interrupt
+3   M-mode timer interrupt
+4+  other
+----
+
+=== CLIC-mode interrupt-map recommendation for single-hart M-mode only or M/U mode
+systems without N extension and no PLIC/APLIC:
+
+[source]
+----
+ID  Interrupt   
+0   M-mode software interrupt
+1   M-mode timer interrupt
+2+  other
+----
+
+
+[appendix]
+== Appendix
 == Interrupt Handling Software
 
 === Interrupt Stack Software Conventions
@@ -2996,144 +3161,6 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
 In all cases, conditionally swapping the stack to account for
 potential privilege-mode changes adds two extra instructions to all
 interrupt handlers.
-
-== Separating Stack per Interrupt Level
-
-Within a single privilege mode, it can be useful to separate interrupt
-handler tasks from application tasks to increase robustness, reduce
-space usage, and aid in system debugging.  Interrupt handler tasks
-have non-zero interrupt levels, while application tasks have an
-interrupt level of zero.
-
-
-
-== CLIC Interrupt ID ordering recommendations
-
-The specific numbering of interrupts is defined by the platform.  A
-platform definition will often be based on a specific RISC-V ISA
-profile, where RISC-V ISA profiles specify a common set of ISA choices
-that capture the most value for most users to enable software
-compatibility.
-
-The current RVA profiles (RVA20/RVA22/RVA23) include the CLINT
-interrupt scheme.
-
-Certain RISC-V profiles may include the CLIC as an option.
-
-NOTE: The CLIC is not included in RVA series of profiles as mandatory
-or supported optional.
-
-Four different CLIC interrupt ID orderings are enumerated below for
-ease of reference in profile specifications.
-
-=== CLIC-mode interrupt-map for systems retaining interrupt ID compatible with CLINT mode:
-
-The CLINT-mode interrupts retain their interrupt ID in CLIC mode.
-The `clicintattr` settings are now used to delegate these interrupts as
-required.
-
-We recommend allocating an edge-triggered CLIC software interrupt bit
-(`csip`) with the lowest number (16) among the local interrupts to
-provide support for a local background interrupt thread, e.g. context
-switching.  By placing the `csip` interrupt at the lowest number among
-local interrupts, we avoid requiring another interrupt level to
-ensure this only runs when there are no other interrupts.
-
-The existing CLINT software interrupt bits are primarily intended for
-inter-hart interrupt signaling, and so are retained for that purpose.
-The software interrupts can have their priority changed using their
-`clicintctl` setting.
-
-CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
-Any fast local interrupts that would have been connected at interrupt
-ID 16 and above should now be mapped into corresponding inputs of the
-CLIC.
-
-[source]
-----
-ID  Interrupt   Note
-
- 0  usip        User software Interrupt
- 1  ssip        Supervisor software Interrupt
- 2  reserved
- 3  msip        Machine software interrupt
-
- 4  utip        User timer interrupt
- 5  stip        Supervisor timer interrupt
- 6  reserved
- 7  mtip        Machine timer interrupt
-
- 8  ueip        User external (PLIC/APLIC) interrupt
- 9  seip        Supervisor external (PLIC/APLIC) interrupt
-10  reserved
-11  meip        Machine external (PLIC/APLIC) interrupt
-
-12  reserved
-13  reserved
-14  reserved
-15  reserved
-
-16  csip        CLIC software interrupt
-17+ inputs      CLIC local inputs
-----
-
-In CLINT mode, as stated in the RISC-V privilege specification, each
-individual bit in CSR register {ip} may be software writable or may be
-software read-only. When bit _i_ in {ip} is writable, a pending
-interrupt _i_ can be cleared by writing `0` to this bit. STIP is
-writable in `mip`, and may be written by M-mode software to deliver
-timer interrupts to S-mode.
-
-However, in CLIC mode, {ip} bits cannot be updated in software when
-they are in level-sensitive mode.  One possible equivalent
-implementation to deliver timer interrupts would be to hardwire the
-STIP input to 0 and then M-mode software can deliver timer interrupts to
-S-mode by setting `clicintattr[stip].trig` to `00`
-(positive-edge-triggered) and writing `clicintip[stip]` to `1`.
-
-The following optional recommendations remove unused interrupt inputs
-and compress the map to simplify hardware implementations.
-
-=== CLIC-mode interrupt-map recommendation for single-hart systems with PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt
-0   S-mode software interrupt
-1   S-mode timer interrupt
-2   S-mode external (PLIC/APLIC) interrupt
-3   M-mode software interrupt
-4   M-mode timer interrupt
-5   M-mode external (PLIC/APLIC) interrupt
-6+  local
-----
-
-=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems without N-extension with no PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt
-0   S-mode software interrupt
-1   S-mode timer interrupt
-2   M-mode software interrupt
-3   M-mode timer interrupt
-4+  other
-----
-
-=== CLIC-mode interrupt-map recommendation for single-hart M-mode only or M/U mode
-systems without N extension and no PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt   
-0   M-mode software interrupt
-1   M-mode timer interrupt
-2+  other
-----
-
-
-[appendix]
-== Appendix
 
 [[bibliography]]
 == Bibliography
