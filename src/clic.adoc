@@ -443,7 +443,6 @@ This table provides a summary of the extensions supported by the CLIC.
 | ssclic | CLIC support for S-mode
 | smclicshv | Selective Hardware Vectoring for M-mode
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
-|
 |===
 
 
