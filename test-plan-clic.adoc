@@ -15,7 +15,7 @@ The point of this test plan is to:
   and for the fast interrupt architecture in particular.
 
 * Act as a starting point for verification engineers writing
-  verification plans. 
+  verification plans.
 
 Some useful links:
 
@@ -25,11 +25,11 @@ Some useful links:
 
 == Test bench setup and deterministic sequences
 
-The framework for architectural tests is to load a test (binary) and start a hart, 
+The framework for architectural tests is to load a test (binary) and start a hart,
 the hart signals finished, results are extraced from memory and verified against a signature.
-Since interrupts can occur asynchronously it is limiting to create deterministic tests for 
+Since interrupts can occur asynchronously it is limiting to create deterministic tests for
 different implementations with results that can be compared with SAIL model results.  For example,
-with different implementation, a different number of instructions will occur before the pending interrupt bit 
+with different implementation, a different number of instructions will occur before the pending interrupt bit
 actually gets set.  Depending on the implementation, the execution pc could be a different value than the SAIL model.
 The following deterministic test sequences are only designed to test understanding and expected behavior of the CLIC spec.
 
@@ -39,13 +39,13 @@ https://github.com/riscv-non-isa/riscv-arch-test/pull/436
 === smclic testcases
 smclic testcases work for implementations that support m-mode.
 
-generic test pseudo code that is used by most clic tests to stimulate different behavior.  
+generic test pseudo code that is used by most clic tests to stimulate different behavior.
 anything in ALL_CAPS are defines that can be overwritten with -D or at top of test or in model_test.h
 
 [%autofit]
 ----
-/* to stimulate different test behavior using the same generic test pseudo code, 
-   individual tests will #define different default values here */ 
+/* to stimulate different test behavior using the same generic test pseudo code,
+   individual tests will #define different default values here */
 
 #include "model_test.h"
 #include "arch_test.h"
@@ -111,8 +111,8 @@ RVMODEL_WFI nop
  RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
  RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
- RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
- RVMODEL_WFI = nop  
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
+ RVMODEL_WFI = nop
 ----
 Coverage
 ----
@@ -127,13 +127,13 @@ mstatus.mie | verify no interrupt occurs in m-mode if mstatus.mie is 0
 - jump to finish
 [%autofit]
 ----
- RVMODEL_INT1_CLICINTIE = 0 
- RVMODEL_INT2_CLICINTIE = 0 
+ RVMODEL_INT1_CLICINTIE = 0
+ RVMODEL_INT2_CLICINTIE = 0
  RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
  RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
- RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
- RVMODEL_WFI = nop  
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
+ RVMODEL_WFI = nop
 ----
 Coverage
 ----
@@ -141,7 +141,7 @@ clicintie[msw]    | verify no msw interrupt occurs if clicintie[msw] is 0
 clicintie[mtimer] | verify no mtimer interrupt occurs if clicintie[mtimer] is 0
 ----
 ==== clicnomint-03.S
-.Description: expect interrupts will not trigger in m-mode unless clicintctrl.x > mintthresh 
+.Description: expect interrupts will not trigger in m-mode unless clicintctrl.x > mintthresh
 - enable clicintie (default)
 - generate interrupt1
 - enable mstatus.mie
@@ -153,8 +153,8 @@ clicintie[mtimer] | verify no mtimer interrupt occurs if clicintie[mtimer] is 0
  RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
  RVMODEL_SET_INT2 = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
- RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT 
- RVMODEL_WFI = nop  
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
+ RVMODEL_WFI = nop
 ----
 Coverage
 ----
@@ -181,7 +181,7 @@ mstatus.mie | verify no interrupt occurs in m-mode if mstatus.mie is 0
 wfi | verify wakeup/nop occurs with mstatus.mie = 0
 wfi | verify wakeup/nop occurs with pending interrupt
 ----
-==== clicdirect-01.S 
+==== clicdirect-01.S
 .Description: trigger, clear, no retrigger of same interrupt.  Will hang if no interrupt occurs
 - enable clicintie (default)
 - generate interrupt1
@@ -196,9 +196,9 @@ wfi | verify wakeup/nop occurs with pending interrupt
  RVMODEL_SET_INT1 = RVMODEL_SET_MSW_INT
  RVMODEL_SET_INT2 = RVMODEL_SET_MSW_INT
  RVMODEL_CLEAR_INT1 = RVMODEL_CLEAR_MSW_INT
- RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT 
+ RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MSW_INT
  RVMODEL_MINTTHRESH = RVMODEL_MINTTHRESH_MIN
- RVMODEL_WFI = jump_to_self  
+ RVMODEL_WFI = jump_to_self
 ----
 Coverage
 ----
@@ -231,7 +231,7 @@ mepc         | verify mepc location is jump_to_self location
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_INT1_CLICINTCTL = RVMODEL_CLICINTCTL_MIN
- RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MAX  
+ RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MAX
 ----
 Coverage
 ----
@@ -258,7 +258,7 @@ Interrupt ordering - both interrupts asserted in first interrupt handler
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_INT1_CLICINTCTL = RVMODEL_CLICINTCTL_MIN
  RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MAX
- RVMODEL_MNXTI_SIMMED = 0  
+ RVMODEL_MNXTI_SIMMED = 0
 ----
 Coverage
 ----
@@ -273,7 +273,7 @@ Interrupt ordering - both interrupts asserted in first interrupt handler
 - trigger m-mode handler
 - generate interrupt 2 (both interrupts now pending)
 - if clicintctrl represents levels, 2nd interrupt is lower than current interupt level, no 2nd interrupt occurs.
-- if clicintctrl represents priority, 2nd interrupt is same level, no 2nd interrupt occurs. 
+- if clicintctrl represents priority, 2nd interrupt is same level, no 2nd interrupt occurs.
 - set mepc to finish
 - clear mstatus.mpie
 - mret to finish
@@ -284,7 +284,7 @@ Interrupt ordering - both interrupts asserted in first interrupt handler
  RVMODEL_CLEAR_INT1 = <EMPTY>
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_INT1_CLICINTCTL = RVMODEL_CLICINTCTL_MAX
- RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MIN  
+ RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MIN
 ----
 Coverage
 ----
@@ -311,7 +311,7 @@ Interrupt ordering - both interrupts asserted in first interrupt handler
  RVMODEL_CLEAR_INT2 = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_INT1_CLICINTCTL = RVMODEL_CLICINTCTL_MIN
  RVMODEL_INT2_CLICINTCTL = RVMODEL_CLICINTCTL_MAX
- RVMODEL_MINTTHRESH_HNDLR1 = RVMODEL_MINTTHRESH_MAX  
+ RVMODEL_MINTTHRESH_HNDLR1 = RVMODEL_MINTTHRESH_MAX
 ----
 Coverage
 ----
@@ -321,7 +321,7 @@ Interrupt ordering - both interrupts asserted in first interrupt handler
 
 === ssclic testcases
 
-==== sclicnodeleg-01.S 
+==== sclicnodeleg-01.S
 .Description: Verify when executing in s-mode, the m-mode interrupt will be handled even though mstatus.mie is 0:
 - generate m-mode interrupt (msw)
 - switch to s-mode (mstatus.mie disabled),
@@ -342,7 +342,7 @@ clicintattr[msw].mode == 11 | verify interrupt is handled in m-mode
 mstatus.mie=0     | verify m-mode interrupt will occur in s-mode when mstatus.mie=0
 mcause signature  | verify msw cause signature
 ----
-==== sclicdeleg-01.S 
+==== sclicdeleg-01.S
 .Description: Verify when executing in s-mode, an s-mode interrupt will be handled when mstatus.sie is 1:
 - generate s-mode interrupt (sint1),
 - switch to s-mode,
@@ -364,7 +364,7 @@ mstatus.sie=1     | verify s-mode interrupt will occur in s-mode when mstatus.si
 scause signature  | verify msw signature
 mcause signature  | verify ecall signature
 ----
-==== sclicorder-01.S 
+==== sclicorder-01.S
 .Description: Verify order of 2 s-mode interrupts
 - generate 2 s-mode interrupts (msw, mtimer),
 - switch to s-mode,
@@ -381,7 +381,7 @@ mcause signature  | verify ecall signature
  RVMODEL_SET_SINT2         = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_SINT2       = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_SINT1_CLICINTCTL  = RVMODEL_CLICINTCTL_MAX
- RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN  
+ RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN
  RVMODEL_SINT1_EXCCODE     = 0x3
  RVMODEL_SINT2_EXCCODE     = 0x7
 ----
@@ -389,7 +389,7 @@ Coverage
 ----
 scause signature  | verify priority of int1/int2
 ----
-==== sclicorder-02.S 
+==== sclicorder-02.S
 .Description:
 - generate 2 s-mode interrupts (msw, mtimer),
 - switch to s-mode,
@@ -407,7 +407,7 @@ scause signature  | verify priority of int1/int2
  RVMODEL_SINT2_CLICINTATTR = RVMODEL_CLICINTATTR_SMODE
  RVMODEL_SET_SINT2         = RVMODEL_SET_MTIMER_INT
  RVMODEL_SINT1_CLICINTCTL  = RVMODEL_CLICINTCTL_MAX
- RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN  
+ RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN
  RVMODEL_SINT1_EXCCODE     = 0x3
  RVMODEL_SINT2_EXCCODE     = 0x7
  RVMODEL_CLEAR_SSTATUS_SPIE = 0
@@ -416,7 +416,7 @@ Coverage - same as order-01.S except
 ----
 scause 2nd signature | verify sti occurs after ssi cleared and sret
 ----
-==== sclicorder-03.S 
+==== sclicorder-03.S
 .Description:
 - generate 2 s-mode interrupts (msw, mtimer),
 - switch to s-mode,
@@ -444,7 +444,7 @@ Coverage - same as order-01.S except
 ----
 scause 2nd signature | verify sti only occurs after ssi cleared and sret if sti level > sintthresh
 ----
-==== sclicorder-04.S 
+==== sclicorder-04.S
 .Description:
 - generate 2 s-mode interrupts (msw, mtimer),
 - switch to s-mode,
@@ -462,7 +462,7 @@ scause 2nd signature | verify sti only occurs after ssi cleared and sret if sti 
  RVMODEL_SET_SINT2         = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_SINT2       = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_SINT1_CLICINTCTL  = RVMODEL_CLICINTCTL_MAX
- RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN  
+ RVMODEL_SINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN
  RVMODEL_SINT1_EXCCODE     = 0x3
  RVMODEL_SINT2_EXCCODE     = 0x7
  RVMODEL_CLEAR_SSTATUS_SPIE = 0
@@ -471,7 +471,7 @@ Coverage - verify uncleared ssi interrupt will retrigger after sret
 ----
 scause 2nd signature | verify 2nd signature
 ----
-==== sclicprivorder-01.S 
+==== sclicprivorder-01.S
 .Description: Verify m-mode interrupt is handled before s-mode interrupt
 - generate 1 m-mode interrupt (mtimer) and 1 s-mode interrupt (msw),
 - switch to s-mode,
@@ -492,7 +492,7 @@ scause 2nd signature | verify 2nd signature
  RVMODEL_SET_MINT2         = RVMODEL_SET_MTIMER_INT
  RVMODEL_CLEAR_MINT2       = RVMODEL_CLEAR_MTIMER_INT
  RVMODEL_SINT1_CLICINTCTL  = RVMODEL_CLICINTCTL_MAX
- RVMODEL_MINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN  
+ RVMODEL_MINT2_CLICINTCTL  = RVMODEL_CLICINTCTL_MIN
  RVMODEL_SINT1_EXCCODE     = 0x3
  RVMODEL_MINT2_EXCCODE     = 0x7
 ----
@@ -501,7 +501,7 @@ Coverage - same as order-04.S except
 mcause 1st signature | verify m-mode int 1st signature
 scause 2nd signature | verify s-mode int 2nd signature
 ----
-==== sclicprivorder-02.S 
+==== sclicprivorder-02.S
 .Description: Verify m-mode interrupt is handled before s-mode interrupt setting sintthresh to max
 - generate 1 m-mode interrupt (mtimer) and 1 s-mode interrupt (msw),
 - switch to s-mode,
@@ -532,7 +532,7 @@ Coverage
 mcause 1st signature | verify m-mode int 1st signature
 scause 2nd signature | verify s-mode int 2nd signature
 ----
-==== sclicprivorder-03.S 
+==== sclicprivorder-03.S
 .Description: Verify m-mode interrupt is handled before s-mode interrupt setting mintthresh to max
 - generate 1 m-mode interrupt (mtimer) and 1 s-mode interrupt (msw),
 - switch to s-mode,
@@ -563,7 +563,7 @@ Coverage
 mcause 1st signature | verify m-mode int 1st signature
 scause 2nd signature | verify s-mode int 2nd signature
 ----
-==== sclicmdisable-01.S 
+==== sclicmdisable-01.S
 .Description: Verify m-mode interrupt not taken in m-mode when mstatus.mie is 0
 - generate m-mode interrupt (msw)
 - stay in m-mode
@@ -580,11 +580,11 @@ scause 2nd signature | verify s-mode int 2nd signature
  RVMODEL_CLEAR_MINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_MINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 mstatus.mie  | verify no m-mode interrupt taken when in m-mode and clicintie is 0
 ----
-==== sclicmdisable-02.S 
+==== sclicmdisable-02.S
 .Description: Verify m-mode interrupt not taken in m-mode when clicintie is 0
 - generate m-mode interrupt (msw)
 - stay in m-mode
@@ -603,11 +603,11 @@ mstatus.mie  | verify no m-mode interrupt taken when in m-mode and clicintie is 
  RVMODEL_CLEAR_MINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_MINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 clicintie=0  | verify m-mode interrupt not taken when in m-mode and clicintie is 0
 ----
-==== sclicmdisable-03.S 
+==== sclicmdisable-03.S
 .Description: Verify s-mode interrupt not taken in m-mode
 - generate s-mode interrupt (msw)
 - stay in m-mode
@@ -623,11 +623,11 @@ clicintie=0  | verify m-mode interrupt not taken when in m-mode and clicintie is
  RVMODEL_CLEAR_SINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_SINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 mstatus.sie=1  | verify s-mode interrupt not taken when in m-mode
 ----
-==== sclicsdisable-01.S 
+==== sclicsdisable-01.S
 .Description: Verify s-mode interrupt not taken in s-mode when mstatus.sie is 0
 - generate s-mode interrupt (msw)
 - switch to s-mode,
@@ -643,11 +643,11 @@ mstatus.sie=1  | verify s-mode interrupt not taken when in m-mode
  RVMODEL_CLEAR_SINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_SINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 mstatus.mie=1, mstatus.sie=0  | verify s-mode interrupt not taken when in s-mode when mstatus.sie is 0
 ----
-==== sclicsdisable-02.S 
+==== sclicsdisable-02.S
 .Description: Verify s-mode interrupt not taken in s-mode when clcintie is 0
 - generate s-mode interrupt (msw)
 - switch to s-mode,
@@ -664,11 +664,11 @@ mstatus.mie=1, mstatus.sie=0  | verify s-mode interrupt not taken when in s-mode
  RVMODEL_CLEAR_SINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_SINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 sie=0  | verify s-mode interrupt not taken when in s-mode when clicintie=0
 ----
-==== sclicsdisable-03.S 
+==== sclicsdisable-03.S
 .Description: Verify s-mode interrupt not taken in m-mode when mstatus.sie is 1 (but wfi acts as nop)
 - generate s-mode interrupt (msw)
 - wfi
@@ -683,7 +683,7 @@ sie=0  | verify s-mode interrupt not taken when in s-mode when clicintie=0
  RVMODEL_CLEAR_SINT1       = RVMODEL_CLEAR_MSW_INT
  RVMODEL_SINT1_EXCCODE     = 0x3
 ----
-Coverage 
+Coverage
 ----
 mstatus.sie=1, mstatus.sie=1  | verify s-mode interrupt not taken when in m-mode when mstatus.sie is 1
 ----
@@ -715,7 +715,7 @@ wfi | verify wakeup/nop occurs with pending interrupt
 TEST PLAN CASES
 [%autofit]
 ----
-verify shv auto-clears an edge triggered interrupt 
+verify shv auto-clears an edge triggered interrupt
 verify shv interrupt is handled at the correct index in the xtvt table
 verify exception is taken when xtvt table is in non-executable region
 verify scause.sinhv set with mret returning to s-mode treats mepc as addr in xtvt table
@@ -730,12 +730,12 @@ Coverage Holes
 
 * limited interrupt types tested
 ** Tests only compare up-to two interrupts at a time.
-** Only msw and mtimer interrupts are used.  MSW and Mtimer interrupts are only asserted and cleared by macros so no actual checking of CLINT msw and mtimer behavior is checked.  
+** Only msw and mtimer interrupts are used.  MSW and Mtimer interrupts are only asserted and cleared by macros so no actual checking of CLINT msw and mtimer behavior is checked.
 E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.  No external interrupts (SEI, MEI) checked by default. can be overridden with define.
 
 * clicintattr.trig is not testied, i.e., edge vs. level interrupts aren't tested.  interrupt positive-edge vs. negative-edge is not tested.
 
-* xtvec locations 
+* xtvec locations
 ** Locations aren't randomized, range of table jumps aren't randomized
 ** Handler address is always in executable memory so no exceptions will occur during interrupt.
 
@@ -744,12 +744,11 @@ E.g. No mtimer overflow, increment, mtimer/mtimerh rollover is checked.  No exte
 
 * wfi holes
 ** wfi only confirmed to continue/wakeup when mstatus.mie is 0.  Interrupts occur before wfi but do not occur while executing wfi.
-** situations where wfi is not required to wake up are not tested 
+** situations where wfi is not required to wake up are not tested
 ** wfi resume after interrupt is not checked
-** wfi priv-mode traps not checked 
+** wfi priv-mode traps not checked
 
 * WARL settings of implementation
 ** Only legal values are intended to be written to CSRs.  WARL behavior is not checked.
 
 * No u-mode interrupts checked
-

@@ -38,8 +38,3 @@ Consensus was that this needs clarification on how this will work.
 The original motiviation was to provide a software interrupt that was higher
 fixed priority than timer but lower than other interrupts.  The group
 is considering dropping this, but needs further discussion.
-
-
-
-
-

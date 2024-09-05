@@ -39,6 +39,3 @@ The group decided we need a logic diagram of the configurable
 level/edge input to help resolve questions around specification of
 what happens when edge/level configuration is changed during
 operation.
-
-
-
