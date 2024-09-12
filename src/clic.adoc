@@ -659,7 +659,7 @@ interrupt trigger when using accesses of {nxti} that include writes.  A trigger 
 The `interrupt_trap_enable` control bit is read-write to enable/disable this
 interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.interrupt_trap_enable is set.
 
-=== M-mode CLIC Register Access via Indirect CSR Access
+=== Indirect Access M-mode CSRs
 
 Access to CLIC registers clicintctl[i], clicintattr[i], clicintip[i], clicintie[i], and clicinttrig[i]
 utilizes the Indirect CSR Access extension (Smcsrind/Sscsrind). Implementations may support
