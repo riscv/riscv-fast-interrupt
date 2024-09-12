@@ -1353,7 +1353,7 @@ The {ret} instruction does not modify the {cause}.{pil} field in {cause}.
 == ssclic S-mode CLIC extension
 The ssclic extension depends on the smclic extension.
 
-=== S-mode CLIC Register Access via Indirect CSR Access
+=== Indirect Access S-mode CSRs
 
 If an interrupt _i_ is not present in the hardware, the corresponding
 `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
