@@ -1527,9 +1527,9 @@ The selective hardware vectoring extension adds the ability for each interrupt
 to be configured to use hardware vectoring or software vectoring.
 Interrupts are always software vectored if smclicshv isn't supported when in CLIC mode.
 When a hardware vectored interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to {tvt} CSR), 
+table entry for the associated interrupt (table pointed to {tvt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
-and then jumps to the masked address. 
+and then jumps to the masked address.
 The masked vector table entry bit(s) are reserved and should be zero (undefined what happens if they aren't zero).
 When a software vectored interrupt is taken, the hart jumps to the address in the {tvec} CSR and then
 it is software's responsibility to load the vector table entry for the associated interrupt
