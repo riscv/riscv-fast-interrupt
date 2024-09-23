@@ -134,7 +134,8 @@ Creative Commons Attribution 4.0 International License.
 
 [source]
 ----
-Date           	Description
+Date        Description
+09/10/2024  issue #411 - Clarify that smclicshv ignores 1 or 2 LSBs of vector table entry (depending on IALIGN)
 09/10/2024  pull  #404 - First round of reorganization of the document to move SW information to Appendix
 08/30/2024  issue #401 - First round of changes to improve clarity of document. Removed mention of U-mode interrupts.
 03/14/2024  issue #391 - Allocated indirect CSR numbers 0x1000-0x14A0 for clicint regs
@@ -1526,7 +1527,10 @@ The selective hardware vectoring extension adds the ability for each interrupt
 to be configured to use hardware vectoring or software vectoring.
 Interrupts are always software vectored if smclicshv isn't supported when in CLIC mode.
 When a hardware vectored interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to {tvt} CSR) and then jumps to the address in that entry.
+table entry for the associated interrupt (table pointed to {tvt} CSR), 
+masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
+and then jumps to the masked address. 
+The masked vector table entry bit(s) are reserved and should be zero (undefined what happens if they aren't zero).
 When a software vectored interrupt is taken, the hart jumps to the address in the {tvec} CSR and then
 it is software's responsibility to load the vector table entry for the associated interrupt
 and jump to the address in that entry.
@@ -1586,20 +1590,21 @@ by the additional {tvt} CSR.
 [source]
 ----
  mode submode PC on Interrupt
- 00   xxxx    OBASE                   # CLINT direct mode
- 01   xxxx    OBASE+4*exccode         # CLINT vectored mode
- 11   0000    shv ? M[VTBASE+XLEN/8*exccode)]&~1 : NBASE  # CLIC mode
+ 00   xxxx    OBASE                                             # CLINT direct mode
+ 01   xxxx    OBASE+4*exccode                                   # CLINT vectored mode
+ 11   0000    shv ? (M[VTBASE+XLEN/8*exccode)] & MASK) : NBASE  # CLIC mode
  10   0000    Reserved
  1x   yyyy    Reserved
 
 where:
   OBASE  = xtvec[XLEN-1:2]<<2   # CLINT mode vector base is at least 4-byte aligned
   NBASE  = xtvec[XLEN-1:6]<<6   # CLIC mode vector base is at least 64-byte aligned
-  VTBASE = xtvt[XLEN-1:6]<<6   # Vector table base is at least 64-byte aligned
+  VTBASE = xtvt[XLEN-1:6]<<6    # Vector table base is at least 64-byte aligned
   shv    = clicintrattr[i].shv
   x      = any value (don't care)
   yyyy   = any non-zero value
-
+  M[a]   = Contents of memory address at address "a"
+  MASK   = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
@@ -1624,7 +1629,7 @@ the exception handler privilege mode contains a trap handler function address in
 
 The overall effect is:
 
-     pc := M[VTBASE + XLEN/8 * exccode] & ~1
+     pc := M[VTBASE + XLEN/8 * exccode] & MASK
 
 [source]
 ----
@@ -1671,7 +1676,7 @@ The trap handler function address is obtained from the current
 privilege mode's `xepc` with the low bits of the address cleared to
 force the access to be naturally aligned to an XLEN/8-byte table entry.
 If the fetch is successful, the hart
-clears the low bit of the handler address and sets the PC to this handler
+clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
 address.
 
 [source]
@@ -1705,7 +1710,7 @@ function exception_handler(cur_priv, xret, pc) {
   },
 
   /* Note, next_pc is passed to fetch unit which will ignore 1 or 2
-   LSBs depending to IALIGN, so the masking is not shown above.
+   LSBs depending on IALIGN, so the masking is not shown above.
    Similarly, permission checks on the ultimate instruction fetch
    are not shown here. */
 }
