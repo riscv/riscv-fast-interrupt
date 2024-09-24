@@ -1590,9 +1590,9 @@ by the additional {tvt} CSR.
 [source]
 ----
  mode submode PC on Interrupt
- 00   xxxx    OBASE                                             # CLINT direct mode
- 01   xxxx    OBASE+4*exccode                                   # CLINT vectored mode
- 11   0000    shv ? (M[VTBASE+XLEN/8*exccode)] & MASK) : NBASE  # CLIC mode
+ 00   xxxx    OBASE                                               # CLINT direct mode
+ 01   xxxx    OBASE+4*exccode                                     # CLINT vectored mode
+ 11   0000    shv ? (M[VTBASE+XLEN/8*exccode)] & VTMASK) : NBASE  # CLIC mode
  10   0000    Reserved
  1x   yyyy    Reserved
 
@@ -1604,7 +1604,7 @@ where:
   x      = any value (don't care)
   yyyy   = any non-zero value
   M[a]   = Contents of memory address at address "a"
-  MASK   = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
+  VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
@@ -1629,7 +1629,7 @@ the exception handler privilege mode contains a trap handler function address in
 
 The overall effect is:
 
-     pc := M[VTBASE + XLEN/8 * exccode] & MASK
+     pc := M[VTBASE + XLEN/8 * exccode] & VTMASK
 
 [source]
 ----
