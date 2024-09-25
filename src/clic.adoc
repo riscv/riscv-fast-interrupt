@@ -909,13 +909,13 @@ through the trap handling process.
  11:0   exccode[11:0] Exception/interrupt code
 ----
 
-The `mcause.mpp` and `mcause.mpie` fields typically mirror the `mstatus.mpp` and
-`mstatus.mpie` fields, and are aliased into `mcause` to reduce context
-save/restore code. For backwards compatibility in implementations supporting both CLINT and CLIC modes, when
-switching to CLINT mode the new CLIC {cause} state field
-({pil}) is zeroed.  The other new CLIC {cause} fields,
-{pp} and {pie}, appear as zero in the {cause} CSR but the corresponding
-state bits in the `mstatus` register are not cleared.
+The `mcause.mpp` and `mcause.mpie` fields mirror the `mstatus.mpp` and
+`mstatus.mpie` fields when in CLIC mode to reduce context
+save/restore code.
+Else, these fields read as zero.
+For backwards compatibility in implementations supporting both CLINT and CLIC modes, when
+switching to CLINT mode the new CLIC {cause}.{pil} state field
+is zeroed.
 
 If the hart is currently running at some privilege mode (`pp`) at some
 interrupt level (`pil`) and an enabled interrupt becomes pending at
