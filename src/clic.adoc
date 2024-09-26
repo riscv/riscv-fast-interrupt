@@ -92,6 +92,39 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :intstatus: pass:q[``**__x__**intstatus``]
 :intthresh: pass:q[``**__x__**intthresh``]
 
+// Make M-mode and S-mode of monospace formatting substitutions for smclic and ssclic chapter references to CSRs.
+:mstatus: pass:q[``mstatus``]
+:mideleg: pass:q[``mideleg``]
+:mie: pass:q[``mie``]
+:mtvec: pass:q[``mtvec``]
+:mtvt: pass:q[``mtvt``]
+:mscratch: pass:q[``mscratch``]
+:mscratchcsw: pass:q[``mscratchcsw``]
+:mscratchcswl: pass:q[``mscratchcswl``]
+:mepc: pass:q[``mepc``]
+:mcause: pass:q[``mcause``]
+:mtval: pass:q[``mtval``]
+:mip: pass:q[``mip``]
+:mnxti: pass:q[``mnxti``]
+:mintstatus: pass:q[``mintstatus``]
+:mintthresh: pass:q[``mintthresh``]
+
+:sstatus: pass:q[``sstatus``]
+:sideleg: pass:q[``sideleg``]
+:sie: pass:q[``sie``]
+:stvec: pass:q[``stvec``]
+:stvt: pass:q[``stvt``]
+:sscratch: pass:q[``sscratch``]
+:sscratchcsw: pass:q[``sscratchcsw``]
+:sscratchcswl: pass:q[``sscratchcswl``]
+:sepc: pass:q[``sepc``]
+:scause: pass:q[``scause``]
+:stval: pass:q[``stval``]
+:sip: pass:q[``sip``]
+:snxti: pass:q[``snxti``]
+:sintstatus: pass:q[``sintstatus``]
+:sintthresh: pass:q[``sintthresh``]
+
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
 :il: pass:q[``**__x__**il``]
@@ -489,7 +522,8 @@ Software should assume `clicintip[__i__]=0` means no interrupt pending, and
 `clicintip[__i__]=1` indicates an interrupt is pending.
 
 The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
-from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the MIP/MIE CSRs, there is no requirement that clicintie or clicintip are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
+from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the {ip}/{ie} CSRs, there is no requirement 
+that `clicintie` or `clicintip` are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
 
 When the input is configured for level-sensitive input, the
 `clicintip[__i__]` bit reflects the value of an input signal to the
@@ -1356,7 +1390,8 @@ Additionally in CLIC mode, xRET sets xintstatus.xil to xcause.xpil.
 The {ret} instruction does not modify the {cause}.{pil} field in {cause}.
 
 == ssclic S-mode CLIC extension
-The ssclic extension depends on the smclic extension.
+The ssclic extension depends on the smclic extension. It provides S-mode access to the CLIC and uses
+S-mode versions of CSRs specified in the smclic chapter.
 
 === Indirect Access S-mode CSRs
 
@@ -1370,52 +1405,52 @@ hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`
 
 ==== `clicintctl[__i__]` and `clicintattr[__i__]`
 
-In this siselect offset range:
+In this `siselect` offset range:
 
-* Each sireg register controls the clic level/priority setting of four interrupts
-* Each sireg2 register controls the clic attribute setting of four interrupts
+* Each `sireg` register controls the clic level/priority setting of four interrupts
+* Each `sireg2` register controls the clic attribute setting of four interrupts
 
 [%autowidth]
 |===
-| siselect   |  sireg bits |  sireg state          |  sireg2 bits |  sireg2 state          | description
+| `siselect`   |  `sireg` bits |  `sireg` state          |  `sireg2` bits |  `sireg2` state          | description
 
-| 0x1000+i   |  7:0        | RW  clicintctl[i*4+0] |   7:0        | RW  clicintattr[i*4+0]   |  setting for interrupt i*4+0
-| 0x1000+i   | 15:8        | RW  clicintctl[i*4+1] |  15:8        | RW  clicintattr[i*4+1] |  setting for interrupt i*4+1
-| 0x1000+i   | 23:16       | RW  clicintctl[i*4+2] |  23:16       | RW  clicintattr[i*4+2] |  setting for interrupt i*4+2
-| 0x1000+i   | 31:24       | RW  clicintctl[i*4+3] |  31:24       | RW  clicintattr[i*4+3] |  setting for interrupt i*4+3
+| 0x1000+_i_   |  7:0        | RW  `clicintctl[_i_*4+0]` |   7:0        | RW  `clicintattr[_i_*4+0]` |  setting for interrupt _i_*4+0
+| 0x1000+_i_   | 15:8        | RW  `clicintctl[_i_*4+1]` |  15:8        | RW  `clicintattr[_i_*4+1]` |  setting for interrupt _i_*4+1
+| 0x1000+_i_   | 23:16       | RW  `clicintctl[_i_*4+2]` |  23:16       | RW  `clicintattr[_i_*4+2]` |  setting for interrupt _i_*4+2
+| 0x1000+_i_   | 31:24       | RW  `clicintctl[_i_*4+3]` |  31:24       | RW  `clicintattr[_i_*4+3]` |  setting for interrupt _i_*4+3
 |===
 
 ==== `clicintip[__i__]` and `clicintie[__i__]`
 
-In this siselect offset range:
+In this `siselect` offset range:
 
-* Each sireg register controls the interrupt pending of thirty-two interrupts.
-* Each sireg2 register controls the interrupt enable of thrity-two interrupts.
+* Each `sireg` register controls the interrupt pending of thirty-two interrupts.
+* Each `sireg2` register controls the interrupt enable of thrity-two interrupts.
 
 [%autowidth]
 |===
-| siselect   |  sireg bits |  sireg state          |  sireg2 bits |  sireg2 state          | description
+| `siselect`   |  `sireg` bits |  `sireg` state          |  `sireg2` bits |  `sireg2` state          | description
 
-| 0x1400    |   31:0   | RW clicintip[31:0]      |   31:0    | RW clicintie[31:0]       | settings for interrupts 31 through 0
-| 0x1401    |   31:0   | RW clicintip[63:32]     |   31:0    | RW clicintie[63:32]      | settings for interrupts 63 through 32
+| 0x1400    |   31:0   | RW `clicintip[31:0]`      |   31:0    | RW `clicintie[31:0]`       | settings for interrupts 31 through 0
+| 0x1401    |   31:0   | RW `clicintip[63:32]`     |   31:0    | RW `clicintie[63:32]`      | settings for interrupts 63 through 32
 6*^| ...
-| 0x147F    |   31:0   | RW clicintip[4095:4064] |   31:0    | RW clicintie[4095:4064]  | settings for interrupts 4095 through 4064
+| 0x147F    |   31:0   | RW `clicintip[4095:4064]` |   31:0    | RW `clicintie[4095:4064]`  | settings for interrupts 4095 through 4064
 |===
 
 ==== `clicinttrig[__i__]`
 
-In this siselect offset range:
+In this `siselect` offset range:
 
-* Each sireg register controls an interrupt trigger register.
+* Each `sireg` register controls an interrupt trigger register.
 
 [%autowidth]
 |===
-| siselect   |  sireg bits |  sireg state          |  description
+| `siselect`   |  `sireg` bits |  `sireg` state          |  description
 
-| 0x1480     |     31:0     |   RW   clicinttrig[0]  |  clic interrupt trigger 0
-| 0x1480 + i |     31:0     |   RW   clicinttrig[i]  |  clic interrupt trigger i
+| 0x1480     |     31:0     |   RW   `clicinttrig[0]`  |  clic interrupt trigger 0
+| 0x1480 + _i_ |     31:0     |   RW   `clicinttrig[_i_]`  |  clic interrupt trigger _i_
 4*^| ...
-| 0x149F     |     31:0     |   RW   clicinttrig[31] |  clic interrupt trigger 31
+| 0x149F     |     31:0     |   RW   `clicinttrig[31]` |  clic interrupt trigger 31
 |===
 
 
@@ -1423,7 +1458,7 @@ In this siselect offset range:
 
 [%autowidth]
 |===
-| siselect   |  sireg bits |  sireg state
+| `siselect`   |  `sireg` bits |  `sireg` state
 
 | 0x14A0     |     31:0    |  reserved for `scliccfg` in smclicconfig extension
 |===
@@ -1448,6 +1483,9 @@ additions for CLIC mode described in the following sections.
  (NEW) 0x147   sintthresh   Interrupt-level threshold
  (NEW) 0x148   sscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0x149   sscratchcswl Conditional scratch swap on level change
+       0x150   siselect     Indirect register select
+       0x151   sireg        Indirect register alias
+       0x152   sireg2       Indirect register alias2
 
 ----
 
