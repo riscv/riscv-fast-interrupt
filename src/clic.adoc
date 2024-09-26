@@ -135,6 +135,7 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date        Description
+09/25/2024  issue #409 - Renamed M-mode CSRs in smclic chapter from 'x' to 'm' prefix. Also fixed inconsistent formating of indirect CSR names.
 09/10/2024  issue #411 - Clarify that smclicshv ignores 1 or 2 LSBs of vector table entry (depending on IALIGN)
 09/10/2024  pull  #404 - First round of reorganization of the document to move SW information to Appendix
 08/30/2024  issue #401 - First round of changes to improve clarity of document. Removed mention of U-mode interrupts.
@@ -493,14 +494,14 @@ from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unl
 When the input is configured for level-sensitive input, the
 `clicintip[__i__]` bit reflects the value of an input signal to the
 interrupt controller after any conditional inversion specified by the
-`clicintattr[i]` field, and software writes to the bit are ignored.
+`clicintattr[__i__]` field, and software writes to the bit are ignored.
 Software clears the interrupt at the source device.
 
 When the input is configured for edge-sensitive input,
 `clicintip[__i__]` is a read-write register that can be updated both
 by hardware interrupt inputs and by software.  The bit is set by
 hardware after an edge of the appropriate polarity is observed on the
-interrupt input, as determined by the `clicintattr[i]` field.
+interrupt input, as determined by the `clicintattr[__i__]` field.
 Software writes to `clicintip[__i__]` can set or
 clear edge-triggered pending bits directly by writes to the
 
@@ -522,7 +523,7 @@ level-sensitive mode.
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable WARL bit (`clicintie[__i__]`)
 This control bit is read-write to enable/disable the corresponding interrupt.
-Software should assume clicintie[i]=0 means no interrupt enabled, and clicintie[i]=1 indicates an interrupt is enabled.
+Software should assume `clicintie[__i__]`=0 means no interrupt enabled, and `clicintie[__i__]`=1 indicates an interrupt is enabled.
 
 NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
 the global enable bit for the current privilege mode. Therefore, for an
@@ -662,7 +663,7 @@ interrupt trigger.  A trigger is signaled to the debug module if an interrupt tr
 
 === Indirect Access M-mode CSRs
 
-Access to CLIC registers clicintctl[i], clicintattr[i], clicintip[i], clicintie[i], and clicinttrig[i]
+Access to CLIC registers `clicintctl[__i__]`, `clicintattr[__i__]`, `clicintip[__i__]`, `clicintie[__i__]`, and `clicinttrig[__i__]`
 utilizes the Indirect CSR Access extension (Smcsrind/Sscsrind). Implementations may support
 another method to access these CSRs (e.g., via memory-mapped accesses) and any such a definition is outside the scope
 of the CLIC specification.
@@ -674,66 +675,66 @@ If an interrupt _i_ is not present in the hardware, the corresponding
 All CLIC registers are visible to M-mode.
 
 NOTE: Since accessing `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`,
-`clicintctl[__i__]` via indirect CSR access is not atomic, indirect CSR access of these registers while same privilege mode mstatus.xie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore, although this is expected to be an atypical need for most interrupt handlers.
+`clicintctl[__i__]` via indirect CSR access is not atomic, indirect CSR access of these registers while same privilege mode mstatus.xie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore, although this is expected to be an atypical need for most interrupt handlers.
 
-==== clicintctl[i] and clicintattr[i]
+==== `clicintctl[__i__]` and `clicintattr[__i__]`
 
-In this miselect offset range:
+In this `miselect` offset range:
 
-* Each mireg register controls the clic level/priority setting of four interrupts
-* Each mireg2 register controls the clic attribute setting of four interrupts
-
-[%autowidth]
-|===
-| miselect   |  mireg bits |  mireg state          |  mireg2 bits |  mireg2 state          | description
-
-| 0x1000+i   |  7:0        | RW  clicintctl[i*4+0] |   7:0        | RW  clicintattr[i*4+0]   |  setting for interrupt i*4+0
-| 0x1000+i   | 15:8        | RW  clicintctl[i*4+1] |  15:8        | RW  clicintattr[i*4+1] |  setting for interrupt i*4+1
-| 0x1000+i   | 23:16       | RW  clicintctl[i*4+2] |  23:16       | RW  clicintattr[i*4+2] |  setting for interrupt i*4+2
-| 0x1000+i   | 31:24       | RW  clicintctl[i*4+3] |  31:24       | RW  clicintattr[i*4+3] |  setting for interrupt i*4+3
-|===
-
-==== clicintip[i] and clicintie[i]
-
-In this miselect offset range:
-
-* Each mireg register controls the interrupt pending of thirty-two interrupts.
-* Each mireg2 register controls the interrupt enable of thrity-two interrupts.
+* Each `mireg` register controls the clic level/priority setting of four interrupts
+* Each `mireg2` register controls the clic attribute setting of four interrupts
 
 [%autowidth]
 |===
-| miselect   |  mireg bits |  mireg state          |  mireg2 bits |  mireg2 state          | description
+| `miselect` |  `mireg` bits |  `mireg` state              |  `mireg2` bits |  `mireg2` state              | description
 
-| 0x1400    |   31:0   | RW clicintip[31:0]      |   31:0    | RW clicintie[31:0]       | settings for interrupts 31 through 0
-| 0x1401    |   31:0   | RW clicintip[63:32]     |   31:0    | RW clicintie[63:32]      | settings for interrupts 63 through 32
+| 0x1000+i   |  7:0          | RW  `clicintctl[__i__*4+0]` |   7:0          | RW  `clicintattr[__i__*4+0]` |  setting for interrupt __i__*4+0
+| 0x1000+i   | 15:8          | RW  `clicintctl[__i__*4+1]` |  15:8          | RW  `clicintattr[__i__*4+1]` |  setting for interrupt __i__*4+1
+| 0x1000+i   | 23:16         | RW  `clicintctl[__i__*4+2]` |  23:16         | RW  `clicintattr[__i__*4+2]` |  setting for interrupt __i__*4+2
+| 0x1000+i   | 31:24         | RW  `clicintctl[__i__*4+3]` |  31:24         | RW  `clicintattr[__i__*4+3]` |  setting for interrupt __i__*4+3
+|===
+
+==== `clicintip[__i__]` and `clicintie[__i__]`
+
+In this `miselect` offset range:
+
+* Each `mireg` register controls the interrupt pending of thirty-two interrupts.
+* Each `mireg2` register controls the interrupt enable of thrity-two interrupts.
+
+[%autowidth]
+|===
+| `miselect` |  `mireg` bits |  `mireg` state            |  `mireg2` bits |  `mireg2` state           | description
+
+| 0x1400     |   31:0        | RW `clicintip[31:0]`      |   31:0         | RW `clicintie[31:0]`      | settings for interrupts 31 through 0
+| 0x1401     |   31:0        | RW `clicintip[63:32]`     |   31:0         | RW `clicintie[63:32]`     | settings for interrupts 63 through 32
 6*^| ...
-| 0x147F    |   31:0   | RW clicintip[4095:4064] |   31:0    | RW clicintie[4095:4064]  | settings for interrupts 4095 through 4064
+| 0x147F     |   31:0        | RW `clicintip[4095:4064]` |   31:0         | RW `clicintie[4095:4064]` | settings for interrupts 4095 through 4064
 |===
 
-==== clicinttrig[i]
+==== `clicinttrig[__i__]`
 
-In this miselect offset range:
+In this `miselect` offset range:
 
-* Each mireg register controls an interrupt trigger register.
+* Each `mireg` register controls an interrupt trigger register.
 
 [%autowidth]
 |===
-| miselect   |  mireg bits |  mireg state          |  description
+| `miselect`     |  `mireg` bits |  `mireg` state              |  description
 
-| 0x1480     |     31:0     |   RW   clicinttrig[0]  |  clic interrupt trigger 0
-| 0x1480 + i |     31:0     |   RW   clicinttrig[i]  |  clic interrupt trigger i
+| 0x1480         |     31:0      |   RW   `clicinttrig[0]`     |  clic interrupt trigger 0
+| 0x1480 + __i__ |     31:0      |   RW   `clicinttrig[__i__]` |  clic interrupt trigger __i__
 4*^| ...
-| 0x149F     |     31:0     |   RW   clicinttrig[31] |  clic interrupt trigger 31
+| 0x149F         |     31:0      |   RW   `clicinttrig[31]`    |  clic interrupt trigger 31
 |===
 
 
-==== mcliccfg
+==== `mcliccfg`
 
 [%autowidth]
 |===
-| miselect   |  mireg bits |  mireg state
+| miselect   |  `mireg` bits |  `mireg` state
 
-| 0x14A0     |     31:0    |  reserved for mcliccfg in smclicconfig extension
+| 0x14A0     |     31:0      |  reserved for `mcliccfg` in smclicconfig extension
 |===
 === CLIC CSRs
 
@@ -768,6 +769,9 @@ additions for CLIC mode described in the following sections.
  (NEW) 0x347   mintthresh   Interrupt-level threshold
  (NEW) 0x348   mscratchcsw  Conditional scratch swap on priv mode change
  (NEW) 0x349   mscratchcswl Conditional scratch swap on level change
+       0x350   miselect     Indirect register select
+       0x351   mireg        Indirect register alias
+       0x352   mireg2       Indirect register alias2
 
 ----
 
@@ -883,7 +887,7 @@ them back. Values other than 0 in the low 6 bits of {tvt} are reserved.
 
 The value of the {tvt} CSR is used when the {nxti} CSR is read.
 The value of {tvt} CSR is also used when the smclicshv exception is present
-and clicintrattr[i].shv = 1 (hardware vectored interrupt).
+and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 
 ==== Changes to {cause} CSRs
 
@@ -1364,7 +1368,7 @@ In S-mode, any interrupt _i_ that is not accessible to S-mode appears as
 hard-wired zeros in `clicintip[__i__]`, `clicintie[__i__]`, `clicintattr[__i__]`, and
 `clicintctl[__i__]`.
 
-==== clicintctl[i] and clicintattr[i]
+==== `clicintctl[__i__]` and `clicintattr[__i__]`
 
 In this siselect offset range:
 
@@ -1381,7 +1385,7 @@ In this siselect offset range:
 | 0x1000+i   | 31:24       | RW  clicintctl[i*4+3] |  31:24       | RW  clicintattr[i*4+3] |  setting for interrupt i*4+3
 |===
 
-==== clicintip[i] and clicintie[i]
+==== `clicintip[__i__]` and `clicintie[__i__]`
 
 In this siselect offset range:
 
@@ -1398,7 +1402,7 @@ In this siselect offset range:
 | 0x147F    |   31:0   | RW clicintip[4095:4064] |   31:0    | RW clicintie[4095:4064]  | settings for interrupts 4095 through 4064
 |===
 
-==== clicinttrig[i]
+==== `clicinttrig[__i__]`
 
 In this siselect offset range:
 
@@ -1415,13 +1419,13 @@ In this siselect offset range:
 |===
 
 
-==== scliccfg
+==== `scliccfg`
 
 [%autowidth]
 |===
 | siselect   |  sireg bits |  sireg state
 
-| 0x14A0     |     31:0    |  reserved for scliccfg in smclicconfig extension
+| 0x14A0     |     31:0    |  reserved for `scliccfg` in smclicconfig extension
 |===
 === ssclic CLIC CSRs
 The interrupt-handling CSRs are listed below, with changes and
@@ -1600,7 +1604,7 @@ where:
   OBASE  = xtvec[XLEN-1:2]<<2   # CLINT mode vector base is at least 4-byte aligned
   NBASE  = xtvec[XLEN-1:6]<<6   # CLIC mode vector base is at least 64-byte aligned
   VTBASE = xtvt[XLEN-1:6]<<6    # Vector table base is at least 64-byte aligned
-  shv    = clicintrattr[i].shv
+  shv    = clicintattr[i].shv
   x      = any value (don't care)
   yyyy   = any non-zero value
   M[a]   = Contents of memory address at address "a"
@@ -1982,11 +1986,11 @@ not furnish these fields must hardwire them to zero.
   15:0    reserved (WPRI 0)
 ----
 
-scliccfg is a subset of the mcliccfg register.
+`scliccfg` is a subset of the `mcliccfg` register.
 
 NOTE: In a straightforward implementation, reading or writing any field
-in scliccfg is equivalent to reading or writing the homonymous
-field in mcliccfg.
+in `scliccfg` is equivalent to reading or writing the homonymous
+field in `mcliccfg`.
 
 Detailed explanation for each field are described in the following sections.
 
@@ -2168,7 +2172,7 @@ pipeline flushes (on entry and on exit), plus the cycles taken to fetch
 the hardware vector entry.
 
 NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
-edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore.
+edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
 
 These inline handlers can be used with the CLINT mode as
 well as CLIC mode.
@@ -2859,7 +2863,7 @@ interrupts from the same privilege mode.
 ----
 
 NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
-edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires mireg register state to be part of the interrupt handler's overall context state save/restore.
+edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
 
 [source]
 ----
