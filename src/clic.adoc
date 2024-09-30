@@ -1,32 +1,6 @@
 :sectnums:
 :toc: left
 
-:cliccfg: pass:q[``**__x__**cliccfg``]
-:status: pass:q[``**__x__**status``]
-:ideleg: pass:q[``**__x__**ideleg``]
-:ie: pass:q[``**__x__**ie``]
-:tvec: pass:q[``**__x__**tvec``]
-:tvt: pass:q[``**__x__**tvt``]
-:scratch: pass:q[``**__x__**scratch``]
-:scratchcsw: pass:q[``**__x__**scratchcsw``]
-:scratchcswl: pass:q[``**__x__**scratchcswl``]
-:epc: pass:q[``**__x__**epc``]
-:cause: pass:q[``**__x__**cause``]
-:tval: pass:q[``**__x__**tval``]
-:ip: pass:q[``**__x__**ip``]
-:nxti: pass:q[``**__x__**nxti``]
-:intstatus: pass:q[``**__x__**intstatus``]
-:intthresh: pass:q[``**__x__**intthresh``]
-
-:pp: pass:q[``**__x__**pp``]
-:pie: pass:q[``**__x__**pie``]
-:il: pass:q[``**__x__**il``]
-
-:pil: pass:q[``**__x__**pil``]
-:inhv: pass:q[``**__x__**inhv``]
-
-:ret: pass:q[``**__x__**ret``]
-
 :le: &#8804;
 :ge: &#8805;
 :lt: &#60;
@@ -129,10 +103,18 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :pie: pass:q[``**__x__**pie``]
 :il: pass:q[``**__x__**il``]
 
+:mpp: pass:q[``mpp``]
+:mpie: pass:q[``mpie``]
+:mil: pass:q[``mil``]
+
 :pil: pass:q[``**__x__**pil``]
 :inhv: pass:q[``**__x__**inhv``]
 
+:mpil: pass:q[``mpil``]
+:minhv: pass:q[``minhv``]
+
 :ret: pass:q[``**__x__**ret``]
+:mret: pass:q[``mret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -481,9 +463,6 @@ This table provides a summary of the extensions supported by the CLIC.
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 |===
 
-
-
-
 == smclic M-mode CLIC extension
 
 === CLIC Level/Priority Control
@@ -522,7 +501,7 @@ Software should assume `clicintip[__i__]=0` means no interrupt pending, and
 `clicintip[__i__]=1` indicates an interrupt is pending.
 
 The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
-from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the {ip}/{ie} CSRs, there is no requirement 
+from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the {ip}/{ie} CSRs, there is no requirement
 that `clicintie` or `clicintip` are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
 
 When the input is configured for level-sensitive input, the
@@ -650,7 +629,7 @@ interrupt level of zero.
 ==== Interrupt Input Identification Number
 
 The 4096 CLIC interrupt inputs are given unique identification numbers
-with {cause} Exception Code (`exccode`) values.  When maintaining backward
+with {mcause} Exception Code (`exccode`) values.  When maintaining backward
 compatibility is desired, the CLINT mode interrupts retain their original
 cause values, while the new interrupts are numbered starting at 16.
 
@@ -669,7 +648,7 @@ If these registers are not implemented, they appear as hard-wired zeros.
 NOTE: The notation [__i__] for the clicinttrig register in this section treats __i__ not an interrupt number
 but is instead as a trigger number.
 
-This logic is intended to be used with tmexttrigger.intctl as described in the RISC-V debug specification.
+This logic is intended to be used with `tmexttrigger`.`intctl`` as described in the RISC-V debug specification.
 
 Each interrupt trigger is a 32-bit WARL register with the
 following layout:
@@ -809,50 +788,50 @@ additions for CLIC mode described in the following sections.
 
 ----
 
-==== Changes to {status} CSRs
+==== Changes to {mstatus} CSR
 
-When in CLINT interrupt mode, the {status} register behavior is unchanged
+When in CLINT interrupt mode, the {mstatus} register behavior is unchanged
 (i.e., backwards-compatible with CLINT mode).  When in CLIC mode,
-the {pp} and {pie} in {status} are now accessible
-via fields in the {cause} register.
+the {mpp} and {mpie} in {mstatus} are now accessible
+via fields in the {mcause} register.
 
-==== Changes to Delegation ({ideleg}) CSRs
+==== Changes to Delegation ({mideleg}) CSR
 
 In CLIC mode,
 the `mode` field in Interrupt Attribute Register (`clicintattr[__i__].mode`)
 specifies the privilege mode in which each interrupt should be taken.
-If {ideleg} exists, the {ideleg} CSR ceases to have effect in CLIC mode.  If {ideleg} exists, the {ideleg}
+If {mideleg} exists, the {mideleg} CSR ceases to have effect in CLIC mode.  If {mideleg} exists, the {mideleg}
 CSR is still accessible and state bits retain their values when
 switching between CLIC and CLINT interrupt modes.
 
-==== Changes to {ie}/{ip} CSRs
+==== Changes to {mie}/{mip} CSRs
 
-The {ie} CSR appears hardwired to zero in CLIC mode, replaced by separate
+The {mie} CSR appears hardwired to zero in CLIC mode, replaced by separate
 interrupt enables (`clicintie[__i__]`).
 
-The {ip} CSR appears hardwired to zero in CLIC mode, replaced by
+The {mip} CSR appears hardwired to zero in CLIC mode, replaced by
 separate interrupt pendings (`clicintip[__i__]`).
 
-Writes to {ie}/{ip} will be ignored and will not trap (i.e., no access faults).
-{ie}/{ip} always appear to be zero in CLIC mode.
+Writes to {mie}/{mip} will be ignored and will not trap (i.e., no access faults).
+{mie}/{mip} always appear to be zero in CLIC mode.
 
 In systems that support both CLINT and CLIC modes, the state bits in
-{ie} and {ip} retain their value when switching between modes.
+{mie} and {mip} retain their value when switching between modes.
 
-==== New {tvec} CSR Mode for CLIC
+==== New {mtvec} CSR Mode for CLIC
 
 The CLIC interrupt-handling mode is encoded as a new state in the
-existing {tvec} WARL register, where {tvec}.`mode` (the two
-least-significant bits) is `11`, and bits {tvec}[5:2]
-({tvec}.`submode`) are zero. The other encodings of {tvec}.`submode`
+existing {mtvec} WARL register, where {mtvec}.`mode` (the two
+least-significant bits) is `11`, and bits {mtvec}[5:2]
+({mtvec}.`submode`) are zero. The other encodings of {mtvec}.`submode`
 are reserved for future use.  The trap vector base address is
-specified as the upper XLEN-6 bits of {tvec} (`base`) with six
+specified as the upper XLEN-6 bits of {mtvec} (`base`) with six
 lower zero bits appended, which constrains alignment on a 64-byte or
 larger power-of-two boundary.
 
 [source]
 ----
- CLIC mode xtvec register layout
+ CLIC mode mtvec register layout
 
   Bits          Field
   XLEN-1:6      base (WARL)
@@ -868,20 +847,20 @@ NOTE: CLINT mode is defined as `mtvec.mode=00` or `mtvec.mode=01`.
 
 When `mtvec.mode` is set to `11` and `mtvec.submode` is set to `0000`,
 all privilege modes operate in CLIC mode.
-In CLIC mode, {tvec}.`mode` and {tvec}.`submode` in lower
+In CLIC mode, {mtvec}.`mode` and {mtvec}.`submode` in lower
 privilege modes are writeable but appear to be `11` and `0000`
 respectively when read or implicitly read in that privilege mode.
 
 If an implementation supports CLIC mode and any CLINT mode,
 when `mtvec.mode` is set to a CLINT mode, all privilege modes operate
-in CLINT mode.  In CLINT mode, both bits of {tvec}.`mode` are
-writeable in lower-privilege modes but {tvec}.`mode` bit 1 appears to
-be `0` when read or implicitly read in that privilege mode.  {tvec} operates as
+in CLINT mode.  In CLINT mode, both bits of {mtvec}.`mode` are
+writeable in lower-privilege modes but {mtvec}.`mode` bit 1 appears to
+be `0` when read or implicitly read in that privilege mode.  {mtvec} operates as
 before where each privilege mode can set their CLINT mode (direct or
 vectored) independently.
 
 NOTE: Although future CLIC versions may allow privileges to have
-different {tvec}.`mode` settings, for now all privilege modes must run
+different {mtvec}.`mode` settings, for now all privilege modes must run
 in either CLIC mode or all privilege modes must run in non-CLIC mode.
 These constraints might change if there are future additions to the
 CLIC or other new interrupt controller specs.
@@ -907,30 +886,30 @@ Implementations might support only one of CLINT or CLIC mode.
 If only basic mode is supported, writes to bit 1 are ignored and it is
 always set to zero (current behavior).  If only CLIC mode is supported,
 writes to bit 1 are also ignored and it is always set to one.  CLIC
-mode hardwires {tvec} bits 2-5 to zero (assuming no further CLIC
+mode hardwires {mtvec} bits 2-5 to zero (assuming no further CLIC
 extensions are supported).
 
 In CLIC mode, synchronous exception traps always jump to NBASE.
 
-==== New {tvt} CSRs
+==== New {mtvt} CSR
 
-The {tvt} WARL XLEN-bit CSR holds the base address of the trap vector
+The {mtvt} WARL XLEN-bit CSR holds the base address of the trap vector
 table, aligned on a 64-byte or greater power-of-two boundary. The actual
 alignment can be determined by writing ones to the low-order bits then reading
-them back. Values other than 0 in the low 6 bits of {tvt} are reserved.
+them back. Values other than 0 in the low 6 bits of {mtvt} are reserved.
 
-The value of the {tvt} CSR is used when the {nxti} CSR is read.
-The value of {tvt} CSR is also used when the smclicshv exception is present
+The value of the {mtvt} CSR is used when the {mnxti} CSR is read.
+The value of {mtvt} CSR is also used when the smclicshv exception is present
 and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 
-==== Changes to {cause} CSRs
+==== Changes to {mcause} CSR
 
-In both CLINT and CLIC modes, the {cause} CSR is written at the
+In both CLINT and CLIC modes, the {mcause} CSR is written at the
 time an interrupt or synchronous trap is taken, recording the reason for
-the interrupt or trap.  For CLIC mode, {cause} is also extended to record
+the interrupt or trap.  For CLIC mode, {mcause} is also extended to record
 more information about the interrupted context, which is used to
-reduce the overhead to save and restore that context for an {ret}
-instruction. CLIC mode {cause} also adds state to record progress
+reduce the overhead to save and restore that context for an `mret`
+instruction. CLIC mode {mcause} also adds state to record progress
 through the trap handling process.
 
 [source]
@@ -950,9 +929,9 @@ through the trap handling process.
 The `mcause.mpp` and `mcause.mpie` fields mirror the `mstatus.mpp` and
 `mstatus.mpie` fields when in CLIC mode to reduce context
 save/restore code.
-Else, these fields read as zero.
+Otherwise, these fields read as zero.
 For backwards compatibility in implementations supporting both CLINT and CLIC modes, when
-switching to CLINT mode the new CLIC {cause}.{pil} state field
+switching to CLINT mode the new CLIC {mcause}.{mpil} state field
 is zeroed.
 
 If the hart is currently running at some privilege mode (`pp`) at some
@@ -976,55 +955,54 @@ Note: For now all privilege modes must run in either CLIC mode or all
 privilege modes must run in non-CLIC mode so switching to CLINT mode
 from CLIC mode causes {pil} in all privilege modes to be zeroed.
 
-When not in CLIC mode, {cause} has the CLINT mode format.
+When not in CLIC mode, {mcause} has the CLINT mode format.
 
-==== Next Interrupt Handler Address and Interrupt-Enable CSRs ({nxti})
+==== Next Interrupt Handler Address and Interrupt-Enable CSR ({mnxti})
 
-The {nxti} CSR is used by software to improve the performance of handling back-to-back
+The {mnxti} CSR is used by software to improve the performance of handling back-to-back
 software vectored interrupts.  It does this by avoiding the overhead of additional interrupt pipeline
 flushes and redundant context save/restore for these back-to-back software vectored interrupts.
-The {nxti} CSR is intended to be used inside an interrupt handler
-after an initial interrupt has been taken and {cause} and {epc}
+The {mnxti} CSR is intended to be used inside an interrupt handler
+after an initial interrupt has been taken and {mcause} and {mepc}
 registers have been updated with the interrupted context and the id of the interrupt.
 
-NOTE: The {nxti} CSR is unusual in that there is actually no physical {nxti} CSR
+NOTE: The {mnxti} CSR is unusual in that there is actually no physical {mnxti} CSR
 and accesses to it actually access hart state in other CSRs.
 
-The value returned by a CSR read of {nxti} is the non-zero address of a vector
+The value returned by a CSR read of {mnxti} is the non-zero address of a vector
 table entry if there is a suitable pending interrupt and the hart is in CLIC mode.
 Otherwise zero is returned.
 For a pending interrupt to be considered "suitable", all the following must be true about the interrupt:
 
 * Must be a software vectored interrupt
 * Must be a horizontal interrupt
-* Must have a level greater than the saved interrupt level (held in {cause}.pil)
-* Must have a level greater than the interrupt threshold (held in {intthresh}) of the corresponding privilege mode
+* Must have a level greater than the saved interrupt level (held in {mcause}.pil)
+* Must have a level greater than the interrupt threshold (held in {mintthresh}) of the corresponding privilege mode
 
 NOTE: Hardware vectored and software vectored interrupts may have different software interfaces.
-The assumption is that hardware vectoring would have customized context save/restore finishing with {ret},
+The assumption is that hardware vectoring would have customized context save/restore finishing with {mret},
 whereas software vectoring would use a generic context save/restore and return with a ret instruction.
 To support these software interface differences, reads when the highest ranked interrupt is a hardware vectored interrupt return 0.
 
-If the CSR instruction that accesses {nxti} includes a write, the
-{status} CSR is used for the read-modify-write portion of the
-operation, while the {cause} register's `exccode` field and the
-{intstatus} register's {il} field can also be updated with the new interrupt id and level.
+If the CSR instruction that accesses {mnxti} includes a write, the
+{mstatus} CSR is used for the read-modify-write portion of the
+operation, while the {mcause} register's `exccode` field and the
+{mintstatus} register's {il} field can also be updated with the new interrupt id and level.
 If the interrupt is edge-triggered, then the pending bit is also zeroed.
 
-The {nxti} CSR may only be accessed with the CSRR (CSRRS rd,csr,x0), CSRRSI/CSRRS, or CSRRCI instructions.
-Accessing the {nxti} CSR using any other CSR instruction (i.e., CSRRW, CSRRC, or CSRRWI) is reserved.
-Also, accessing {nxti} with CSRRSI with non-zero immediate values for bits 0, 2, and 4 is reserved.
+The {mnxti} CSR may only be accessed with the CSRR (CSRRS rd,csr,x0), CSRRSI/CSRRS, or CSRRCI instructions.
+Accessing the {mnxti} CSR using any other CSR instruction (i.e., CSRRW, CSRRC, or CSRRWI) is reserved.
+Also, accessing {mnxti} with CSRRSI with non-zero immediate values for bits 0, 2, and 4 is reserved.
 
 NOTE: Following the usual convention for CSR instructions, if the CSR
-instruction does not include write side effects (e.g., `csrr t0, {nxti}`),
+instruction does not include write side effects (e.g., `csrr t0, {mnxti}`),
 then no state update on any CSR occurs.  This can be used to
 determine if an interrupt could be taken without actually updating
 {il} and `exccode`.
 
 NOTE: Vertical interrupts to higher privilege modes will be taken
-preemptively by the hardware, so {nxti} effectively only ever handles
+preemptively by the hardware, so {mnxti} effectively only ever handles
 the next interrupt in the same privilege mode.
-
 
 Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode:
 [source]
@@ -1082,12 +1060,12 @@ Pseudo-code for csrrs rd, mnxti, rs1 in M mode:
 
  // When a different CSR instruction is used, the update of mstatus and the test
  // for whether side-effects should occur are modified accordingly.
- // When a different privileges xnxti CSR is accessed then clic.priv is compared with
- // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the
+ // When a different privileges mnxti CSR is accessed then clic.priv is compared with
+ // the corresponding privilege and mstatus, mintstatus.mil, mcause.exccode are the
  // corresponding privileges CSRs.
 ----
 
-==== New Interrupt Status ({intstatus}) CSRs
+==== New Interrupt Status ({mintstatus}) CSRs
 
 A new M-mode CSR, `mintstatus`, holds the active interrupt level for
 each supported privilege mode.  These fields are read-only.  The
@@ -1103,12 +1081,11 @@ mintstatus fields
   7: 0   (reserved)
 ----
 
-The {intstatus} registers are accessible in CLINT mode for harts that
-support both CLINT and CLIC modes.
+The {mintstatus} CSR is accessible in CLINT mode for harts that support both CLINT and CLIC modes.
 
-==== New Interrupt-Level Threshold ({intthresh}) CSRs
+==== New Interrupt-Level Threshold ({mintthresh}) CSRs
 
-The interrupt-level threshold ({intthresh}) is a new read-write WARL CSR,
+The interrupt-level threshold ({mintthresh}) is a new read-write WARL CSR,
 which holds an 8-bit field (`th`) for the threshold level of the
 associated privilege mode.  The `th` field is held in the least-significant
 8 bits of the CSR, and zero should be written to the upper bits.
@@ -1119,19 +1096,19 @@ interrupt level to implement a critical section among a subset of levels,
 while still allowing higher interrupt levels to preempt.
 
 The current hart's effective interrupt level would then be:
-    effective_level = max({intstatus}.{il}, {intthresh}.`th`)
+    effective_level = max({mintstatus}.`mil``, {mintthresh}.`th`)
 
 The max is used to prevent a hart from dropping below its original level
 which would break assumptions in design, and also makes it
 simple for software to remove threshold without knowing its own level
-by simply setting {intthresh} to the lowest supported {intthresh} value.
+by simply setting {mintthresh} to the lowest supported {mintthresh} value.
 
 The interrupt-level threshold is only valid when running in associated
 privilege mode and not in other modes. This is because interrupts for
 lower privilege modes are always disabled, whereas interrupts for higher
 privilege modes are always enabled.
 
-If the hart is currently running at some privilege mode `x`, an MRET
+If the hart is currently running at some privilege mode `*x*`, an MRET
 or SRET instruction that changes the privilege mode to a mode less
 privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.
 This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
@@ -1151,25 +1128,25 @@ maximum interrupts (one for the current mode and one for each
 higher-privilege mode) qualified by the per-mode threshold, then pick
 a qualified maximum interrupt with the highest privilege mode.
 
-==== Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
+==== Scratch Swap CSRs ({mscratchcsw}) for Multiple Privilege Modes
 
 To accelerate interrupt handling with multiple privilege modes, a new
-CSR {scratchcsw} is defined for all but the lowest privilege mode supported in a given implementation
-to support conditional swapping of the {scratch} register when
+CSR {mscratchcsw} is defined for all but the lowest privilege mode supported in a given implementation
+to support conditional swapping of the {mscratch} register when
 transitioning between privilege modes.  The CSR instruction is used
 once at the entry to a handler routine and once at handler exit, so
 only adds two instructions to the interrupt code path.
 
 These CSRs are only designed to be used with the `csrrw` instruction
-with neither `rd` nor `rs1` set to `x0`.  Accessing the {scratchcsw}
+with neither `rd` nor `rs1` set to `x0`.  Accessing the {mscratchcsw}
 register with the `csrrw` instruction with either `rd` or `rs1` set to
 `x0`, or using any other CSR instruction form
 (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
 
-When using `csrrw` to access {scratchcsw}, the value written into `rd`
-is either {scratch} if {pp} is different than the current privilege
-mode, or `rs1` if {pp} is the same as the current privilege mode.  The
-{scratch} register is only written with the original value of `rs1` if
+When using `csrrw` to access {mscratchcsw}, the value written into `rd`
+is either {mscratch} if {mpp} is different than the current privilege
+mode, or `rs1` if {mpp} is the same as the current privilege mode.  The
+{mscratch} register is only written with the original value of `rs1` if
 there is a privilege mode difference.
 
 NOTE: This is different than a regular CSR instruction as the value
@@ -1177,11 +1154,11 @@ returned is different from the value used in the read-modify-write
 operation.
 
 NOTE: The CSR instructions are defined to always copy a result
-({scratch} or `rs1`) to the `rd` destination to simplify
+({mscratch} or `rs1`) to the `rd` destination to simplify
 implementations using register renaming, and in normal use the
 instructions set both `rs1` = `sp` and `rd` = `sp`.
 
-An example of normal usage of the {scratchcsw} CSR is as follows:
+An example of normal usage of the {mscratchcsw} CSR is as follows:
 
 [source]
 ----
@@ -1206,14 +1183,13 @@ match cur_privilege {
 
 NOTE: To avoid virtualization holes, software cannot directly read the
 hart's current privilege mode. Also, an instruction attempting to access
-a given mode's {scratchcsw} CSR from a lesser-privileged mode will trap
+a given mode's {mscratchcsw} CSR from a lesser-privileged mode will trap
 to avoid a virtualization hole.
 
-==== Scratch Swap CSR ({scratchcswl}) for Interrupt Levels
+==== Scratch Swap CSR ({mscratchcswl}) for Interrupt Levels
 
-A new {scratchcswl} CSR is added to support faster swapping of the
-stack pointer between interrupt and non-interrupt code running in the
-same privilege mode.
+A new {mscratchcswl} CSR is added to support faster swapping of the
+stack pointer between interrupt and non-interrupt code both running in M-mode.
 
 [source]
 ----
@@ -1229,12 +1205,12 @@ if ( (mcause.pil==0) != (mintstatus.mil==0) ) then {
 // Usual use: csrrw sp, mscratchcswl, sp
 ----
 
-This new CSR operates similarly to {scratchcsw} except that the swap
+This new CSR operates similarly to {mscratchcsw} except that the swap
 condition is true when the interrupter and interruptee are not both
 application tasks or not both interrupt handlers.
 
-As with {scratchcsw}, these CSRs are only designed to be used with the csrrw instruction with neither rd nor rs1 set to x0. Accessing the {scratchcswl} register with the csrrw instruction with either rd or rs1 set to x0, or using any other CSR instruction (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
-
+As with {mscratchcsw}, these CSRs are only designed to be used with the csrrw instruction with neither rd nor rs1 set to x0.
+Accessing the {mscratchcswl} register with the csrrw instruction with either rd or rs1 set to x0, or using any other CSR instruction (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
 
 === CLIC Reset Behavior
 
@@ -1246,7 +1222,7 @@ out of reset.
 
 ==== CLIC mandatory reset state
 
-{intstatus}.{il} and {cause}.{pil} fields reset to 0.  Interrupt level 0 corresponds to regular
+{mintstatus}.`mil` and {mcause}.`mpil`` fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
 
 The reset behavior of other fields is platform-specific.
@@ -1462,7 +1438,7 @@ In this `siselect` offset range:
 
 | 0x14A0     |     31:0    |  reserved for `scliccfg` in smclicconfig extension
 |===
-=== ssclic CLIC CSRs
+=== CLIC CSRs
 The interrupt-handling CSRs are listed below, with changes and
 additions for CLIC mode described in the following sections.
 
@@ -1493,15 +1469,15 @@ additions for CLIC mode described in the following sections.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs (stvt, snxti, sintstatus, sintthresh,
-sscratchcsw, sscratchcswl) by S-mode or a lower privilege mode
+access to the new CSRs ({stvt}, {snxti}, {sintstatus}, {sintthresh},
+{sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
 exception apply, in which case a virtual instruction exception is
 raised when in VS or VU mode instead of an illegal instruction
 exception.
 
-==== ssclic Changes to {cause} CSRs
+==== ssclic Changes to {scause} CSRs
 
 [source]
 ----
@@ -1518,23 +1494,22 @@ scause
  11:0   exccode[11:0] Exception/interrupt code
 ----
 
-The supervisor `scause` register has only a single `spp` bit (to
-indicate user/supervisor) mirrored from `sstatus.spp`
+The supervisor {scause} register has only a single `spp` bit (to
+indicate user/supervisor) mirrored from {sstatus}.`spp`.
 
-==== ssclic New Interrupt Status ({intstatus}) CSRs
+==== ssclic New Interrupt Status ({sintstatus}) CSRs
 
-A corresponding supervisor mode, `sintstatus` CSR
-provides restricted views of mintstatus.
+A corresponding supervisor mode, {sintstatus} CSR provides restricted views of {mintstatus}.
 
 [source]
 ----
 sintstatus fields
  31:16 (reserved)
  15: 8 sil
-  7: 0 uil if usclic is supported
+  7: 0 (reserved)
 ----
 
-==== ssclic Scratch Swap CSR ({scratchcsw}) for Multiple Privilege Modes
+==== ssclic Scratch Swap CSR ({sscratchcsw}) for Multiple Privilege Modes
 
 [source]
 ----
@@ -1559,7 +1534,7 @@ match cur_privilege {
 === ssclic CLIC Reset Behavior
 
 NOTE: For an S-mode execution environment, the EEI should specify
-that status.sie is also reset on entry. It is then responsibility of
+that {sstatus}.`sie` is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
@@ -1569,7 +1544,7 @@ The selective hardware vectoring extension adds the ability for each interrupt
 to be configured to use hardware vectoring or software vectoring.
 Interrupts are always software vectored if smclicshv isn't supported when in CLIC mode.
 When a hardware vectored interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to {tvt} CSR),
+table entry for the associated interrupt (table pointed to {mtvt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
 The masked vector table entry bit(s) are reserved and should be zero.
@@ -2144,9 +2119,9 @@ stack pointer.
 
 When interrupts are taken vertically into a higher privilege mode, the
 stack pointer must be swapped to a stack within the higher privilege
-mode to avoid a security hole.  The {scratch} registers can be used to
+mode to avoid a security hole.  The {mscratch} registers can be used to
 hold the stack pointer of a higher-privilege mode while
-lower-privilege code is executing, or {scratch} can be used to point
+lower-privilege code is executing, or {mscratch} can be used to point
 to more extensive thread-local context that might contain a stack
 pointer.
 
@@ -2344,14 +2319,14 @@ files when saving registers.
 ----
 
 <1> An initial interrupt (II) causes entry to the handler with
-interrupts disabled, and {epc} and {cause} CSRs hold values
+interrupts disabled, and {mepc} and {mcause} CSRs hold values
 representing the original interrupted context (OIC), including the PC
-in {epc}, the privilege mode in {pp} (visible in both {cause} and
-{status}), the interrupt level in {pil} (in {cause}) and the interrupt
-enable state in {pie} (visible in both {cause} and {status}).  The
-{cause} CSR and the {intstatus} CSRs additionally hold information on
-the interrupt to be handled, including `exccode` in {cause} and {il}
-in {intstatus}.
+in {mepc}, the privilege mode in {mpp} (visible in both {mcause} and
+{mstatus}), the interrupt level in {mpil} (in {mcause}) and the interrupt
+enable state in {mpie} (visible in both {mcause} and {mstatus}).  The
+{mcause} CSR and the {mintstatus} CSRs additionally hold information on
+the interrupt to be handled, including `exccode` in {mcause} and {mil}
+in {mintstatus}.
 
 <2> The interrupt trampoline needs sufficient space to store the OIC's
 caller-save registers as well as its `epc` and `cause` values, which
@@ -2362,7 +2337,7 @@ pointer `sp` is sufficient to provide space to store the OIC.
 
 <3> The trap handler could have been entered by a synchronous
 exception instead of an interrupt, which can be determined by
-examining the sign bit of the returned {cause} value.  If the trap was
+examining the sign bit of the returned {mcause} value.  If the trap was
 for an exception (sign bit zero), the code jumps to exception handler
 code while keeping interrupts disabled.
 
@@ -2375,25 +2350,25 @@ save all the caller-save registers to the stack.  This is done with
 interrupts disabled, as even if an interrupt arrived with a higher
 interrupt level it would still require all registers to be saved.
 
-<6> When {nxti} is read here, the interrupt inputs to the CLIC might
+<6> When {mnxti} is read here, the interrupt inputs to the CLIC might
 have changed from the time the handler was initially entered.  The
-return value of {nxti}, which holds a pointer to an entry in the trap
+return value of {mnxti}, which holds a pointer to an entry in the trap
 vector table, is saved in register `a0` so it can be passed as the
 first argument to the software vectored interrupt handler, where it
 can be used to reconstruct the original interrupt id in the case where
 multiple vector entries use a common handler.  There are multiple
 cases to consider, all of which are handled correctly by the
-definition of {nxti}:
+definition of {mnxti}:
 
 * The II is still the ranking interrupt (no change).  In this case, as
-the level of the II will still be higher than `pil` from the OIC, {il}
+the level of the II will still be higher than `pil` from the OIC, {mil}
 and `exccode` will be rewritten with the same value that they already
-had (effectively unchanged), and {nxti} will return the table entry
+had (effectively unchanged), and {mnxti} will return the table entry
 for the II.
 
 * The II has been superseded by a higher-level non-SHV interrupt.  In
-this case, {il} will be set to the new higher interrupt level,
-`exccode` will be updated to the new interrupt id, and {nxti} will
+this case, {mil} will be set to the new higher interrupt level,
+`exccode` will be updated to the new interrupt id, and {mnxti} will
 return the vector table entry for the new higher-level interrupt.  The
 OIC is not disturbed, retaining the original `epc` and the original
 `pil`.  This case reduces latency to service a more-important
@@ -2422,16 +2397,16 @@ earlier.
 
 * The II has disappeared and either there is no current interrupt from
 the CLIC, or the current ranking interrupt is a non-SHV interrupt with
-level lower than {pil}.  In this case, the {il} and `exccode` are not
-updated, and 0 is returned by {nxti}.  The following trampoline code
+level lower than {mpil}.  In this case, the {mil} and `exccode` are not
+updated, and 0 is returned by {mnxti}.  The following trampoline code
 will then not fetch a vector from the table, and instead just restore
 the OIC context and `mret` back to it.  This preserves the property
 that the OIC completes execution before servicing any new interrupt
 with a lower or equal interrupt level.
 
 * The II has been superseded by a higher-level SHV interrupt.  In this
-case, the {il} and `exccode` are not updated, and 0 is returned by
-{nxti}.  Once interrupts are reenabled for the following instruction,
+case, the {mil} and `exccode` are not updated, and 0 is returned by
+{mnxti}.  Once interrupts are reenabled for the following instruction,
 the hart will preempt the current handler and execute the vectored
 interrupt at a higher interrupt level using the function pointer
 stored in the vector table.
@@ -2450,11 +2425,11 @@ routine can skip past most of the register restore code.  This
 preserves the property that interrupts (SHV or non-SHV) at the same
 level do not preempt each other.
 
-<9> The value returned by {nxti} is used to index the vector table and
+<9> The value returned by {mnxti} is used to index the vector table and
 return the function pointer.
 
 <10> This `csrrsi` instruction enables interrupts and is redundant
-when proceeding sequentially from the first {nxti} read (6) or if
+when proceeding sequentially from the first {mnxti} read (6) or if
 looping back from the end of the `service_loop` (13).  However, it is
 required on the backward path from (16) to re-enable interrupts to
 allow preemption.  It is scheduled after the table lookup to use what
@@ -2463,15 +2438,15 @@ will often be a load-use delay slot.
 <11> The `jalr` instruction actually calls the C ABI function that
 implements the handler.  Interrupts are enabled at this point, so the
 C function can be preempted at any time by an interrupt with a higher
-level than current {il}.
+level than current {mil}.
 
-<12> Once the handler returns, another read of {nxti} checks if there
+<12> Once the handler returns, another read of {mnxti} checks if there
 are any more interrupts to service.  Interrupts remain enabled.  The
-`csrrsi` includes a redundant set of the {ie} interrupt enable to
+`csrrsi` includes a redundant set of the {mie} interrupt enable to
 force the CSR instruction to update CSR state.  Only non-SHV
 interrupts with a level greater than `pil` will be serviced in this
-loop.  Note that {il} can decrease from its current value on the
-{nxti} read.  {il} should not increase in this code, as interrupts are
+loop.  Note that {mil} can decrease from its current value on the
+{mnxti} read.  {mil} should not increase in this code, as interrupts are
 enabled here and if a higher-level interrupt was ready, it should have
 preempted this instruction.
 
@@ -2491,7 +2466,7 @@ enabled, so preemption is allowed during this restore.
 which requires loading `mcause` and `mepc` from the stacked values,
 and recovering the final register values from the OIC.
 
-<16> A final read of {nxti} is performed before returning, to reduce
+<16> A final read of {mnxti} is performed before returning, to reduce
 the maximum interrupt latency.  If a suitable interrupt arrives, it
 can be serviced without saving context.  The `csrrci` instruction
 includes a redundant clear of the interrupt enable bit to ensure the
@@ -2500,12 +2475,12 @@ the following branch to maintain the critical section used to restore
 the OIC in the case that there is no interrupt to service.
 
 The following table summarizes the machine state changes that occur at
-the first {nxti}:
+the first {mnxti}:
 
 [%autofit]
 [source]
 ----
-IC    at entry |->           |       at first nxti (6)
+IC    at entry |->           |       at first mnxti (6)
 il     CLIC                  |    CLIC
     level id V |->  mil code | level id V    |-> mil code rd
 p    e<=p  ? ? |->           |                               # Shouldn't happen
@@ -2525,7 +2500,7 @@ instead of 16 in the standard Unix ABI.
 
 This will result in 18 instructions executed in the trampoline code
 before arriving at the correct handler function, of which 9 are stores
-(saving 7 registers plus 2 words for {epc} and {cause}).
+(saving 7 registers plus 2 words for {mepc} and {mcause}).
 
 === Analysis of Worst-Case Interrupt Latencies for C-ABI Trampoline
 
@@ -2551,17 +2526,17 @@ execute in 20 cycles using the simple pipeline model.
 When interrupts are disabled, the arriving preempting handler could be
 delayed.  If the preempting interrupt arrives while interrupts are
 disabled during the initial entry sequence (1)--(6), there will be no
-additional delay as the first {nxti} instruction (6) will cause the
+additional delay as the first {mnxti} instruction (6) will cause the
 higher-level interrupt handler to be invoked, replacing the original
 interrupt cause.
 
 If the preempting interrupt arrives after interrupts are disabled (15)
-but before {nxti} is read (16), then the trampoline will observe the
-new interrupt during execution of the {nxti} read (16), and take a
+but before {mnxti} is read (16), then the trampoline will observe the
+new interrupt during execution of the {mnxti} read (16), and take a
 short branch back to the `service_loop`, which is lower latency than
 the interrupt-disabled case.
 
-If the preempting interrupt arrives after the read of {nxti} commits
+If the preempting interrupt arrives after the read of {mnxti} commits
 (16), then the interrupt has to wait an additional 4 instructions
 until the `mret` reenables interrupts, at which point the interrupt
 will be taken and the handler entered at `irq_enter`.  In the simple
@@ -2619,7 +2594,7 @@ interrupt occurs, the `wfi` retires.  Because interrupts are disabled,
 the hart does not jump to an interrupt handler but instead executes
 the next instruction, avoiding context save/restore overhead.
 
-<2> The read of {nxti} will determine if any non-SHV interrupt is
+<2> The read of {mnxti} will determine if any non-SHV interrupt is
 available, and if so return a pointer to the table entry.  Interrupts
 are enabled by this instruction to allow SHV interrupts to be taken
 via preemption.
@@ -2638,13 +2613,13 @@ handler, except that the previous interrupt level is 0, so all pending
 interrupts will be serviced in the loop before the loop exits.
 Interrupts are enabled, so preemption is allowed for both C-ABI
 trampoline and SHV interrupts.  When an SHV interrupt at the same or
-lower interrupt level is the next to be serviced, the {nxti}
+lower interrupt level is the next to be serviced, the {mnxti}
 instruction will return 0 causing execution to drop out of the loop.
 The following code will reinitialize the hart's interrupt level to 0,
 and disable interrupts for one instruction, to ensure the SHV
 interrupt will be taken.
 
-<5> This code initializes `mepc` and `mcause` then uses an `mret` to
+<5> This code initializes {mepc} and {mcause} then uses an `mret` to
 jump to the `sleep` loop while simultaneously resetting interrupt level
 to 0 and enabling interrupts.  This is also the entry point to
 initiate interrupt-driven execution.  Interrupts are enabled to allow
@@ -2659,7 +2634,7 @@ the C-ABI trampoline.
 
 Platforms may not implement the sclicshv extension, in which case, hardware vectoring can be emulated
 by a single software trampoline present at `NBASE` using the separate
-vector table address in {tvt}.  There are several different software
+vector table address in {mtvt}.  There are several different software
 approaches possible, depending on system requirements and constraints,
 as detailed in following subsections.
 
@@ -2707,7 +2682,7 @@ The code can be used with preemptible inline interrupt handlers.
 
 This section describes a more general software-trampoline scheme for
 calling preemptible inline handlers, which factors out the
-{epc}/{cause} save code into the trampoline, and which uses a
+{mepc}/{mcause} save code into the trampoline, and which uses a
 different interrupt handler calling convention.
 
 The interrupt handlers for this scheme have a calling convention where
@@ -2725,8 +2700,8 @@ returns with a regular `j ra`.
   # Handlers have two temporary registers available, a0, a1.
 handler_example:
   sw zero, INTERRUPT_FLAG, a0     # Clear interrupt flag.
-  la a0, COUNTER                # Get counter address.
-  li a1, 1                      # Increment value.
+  la a0, COUNTER                  # Get counter address.
+  li a1, 1                        # Increment value.
   amoadd.w zero, (a0), a1         # Bump counter.
   j ra
 
@@ -2786,16 +2761,16 @@ state to provide working registers for the handler code.  If a handler
 can be entered from a lower-privilege mode, a pointer to some safe
 memory for the context save must be swapped in at entry to the
 higher-privileged handler to avoid security holes. The RISC-V
-privileged architecture provides the {scratch} register to hold this
+privileged architecture provides the {mscratch} register to hold this
 information for a higher-privilege mode while executing in a
 lower-privilege mode.  For the following discussion and code examples,
-the assumption is that {scratch} is used to hold the
+the assumption is that {mscratch} is used to hold the
 higher-privilege-mode stack pointer but other software conventions are
-possible (e.g., {scratch} points to a thread context block).
+possible (e.g., {mscratch} points to a thread context block).
 
 Existing RISC-V ABIs allow addresses immediately below the stack
 pointer to be overwritten by interrupt service routines.  The current
-stack pointer in `sp` (`x2`) should be swapped with {scratch} whenever
+stack pointer in `sp` (`x2`) should be swapped with {mscratch} whenever
 a handler is entered from a lower-privilege mode, but should not be
 swapped if entered from another handler in the same privilege mode,
 including when preempting an existing interrupt handler.  At exit from
@@ -2805,8 +2780,8 @@ if transitioning back to the lower-privilege mode.
 === Software Privileged Stack Swap
 
 In this convention, when code is running in a lower privilege mode,
-{scratch} holds the stack pointer for the higher-privilege mode.  When
-the higher-privilege mode is entered, {scratch} is set to zero to
+{mscratch} holds the stack pointer for the higher-privilege mode.  When
+the higher-privilege mode is entered, {mscratch} is set to zero to
 signal to any preempting handlers that the stack pointer has already
 been swapped.
 
@@ -2861,7 +2836,7 @@ stack, and all interrupts and exceptions are handled on a second
 M-mode-only stack.  In addition, background non-handler code in M-mode
 can either use the same M-mode stack as the interrupt handler, or a
 separate M-mode stack.  The only difference is in the value held in
-{scratch} while the M-mode background thread is running (either 0 to
+{mscratch} while the M-mode background thread is running (either 0 to
 indicate use the existing stack pointer in `sp` or non-zero to
 indicate this stack pointer should be used in the handler.
 
@@ -3009,17 +2984,17 @@ CLIC.
 ----
 ID  Interrupt   Note
 
- 0  usip        User software Interrupt
+ 0  reserved
  1  ssip        Supervisor software Interrupt
  2  reserved
  3  msip        Machine software interrupt
 
- 4  utip        User timer interrupt
+ 4  reserved
  5  stip        Supervisor timer interrupt
  6  reserved
  7  mtip        Machine timer interrupt
 
- 8  ueip        User external (PLIC/APLIC) interrupt
+ 8  reserved
  9  seip        Supervisor external (PLIC/APLIC) interrupt
 10  reserved
 11  meip        Machine external (PLIC/APLIC) interrupt
