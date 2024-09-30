@@ -555,6 +555,8 @@ only certain mode/trigger/shv types.
   0       reserved for smclicshv extension (WARL 0)
 ----
 
+include::images/wavedrom/clicintattr.edn[]
+
 The 2-bit `trig` WARL field specifies the trigger type and polarity for each
 interrupt input. Bit 1, `trig[0]`, is defined as "edge-triggered"
 (0: level-triggered, 1: edge-triggered); while bit 2, `trig[1]`, is defined
