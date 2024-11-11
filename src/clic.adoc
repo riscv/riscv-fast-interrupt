@@ -826,6 +826,8 @@ larger power-of-two boundary.
   1:0           mode (WARL)
 ----
 
+include::images/wavedrom/xtvec.edn[]
+
 NOTE: Systems implementing both CLIC and CLINT mode may, but are not
 required to, limit alignment of `mtvec` to 64-byte boundaries in both
 modes.
