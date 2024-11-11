@@ -555,7 +555,7 @@ only certain mode/trigger/shv types.
   0       reserved for smclicshv extension (WARL 0)
 ----
 .clicintattr[i] register layout
-include::images/wavedrom/clicintattr.edn[]
+include::images/wavedrom/clicintattri.edn[]
 
 The 2-bit `trig` WARL field specifies the trigger type and polarity for each
 interrupt input. Bit 1, `trig[0]`, is defined as "edge-triggered"
@@ -653,6 +653,7 @@ following layout:
 
 ----
 
+.clicinttrig register layout
 include::images/wavedrom/clicinttrig.edn[]
 
 The `interrupt_number` field selects which number of interrupt input
@@ -826,6 +827,7 @@ larger power-of-two boundary.
   1:0           mode (WARL)
 ----
 
+.CLIC mode xtvec register layout
 include::images/wavedrom/xtvec.edn[]
 
 NOTE: Systems implementing both CLIC and CLINT mode may, but are not
@@ -1580,6 +1582,9 @@ This is an 8-bit WARL read-write register to specify various attributes for each
   2:1     trig
   0       shv
 ----
+
+.clicintattr register layout
+include::images/wavedrom/clicintattr.edn[]
 
 The 1-bit `shv` field is used for Selective Hardware Vectoring.
 If `shv` is 0, it assigns this interrupt to be software vectored and thus it jumps
