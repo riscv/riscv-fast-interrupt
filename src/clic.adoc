@@ -135,6 +135,7 @@ Creative Commons Attribution 4.0 International License.
 [source]
 ----
 Date        Description
+11/11/2024  issue #414 - Move register layout definitions into wavedrom
 09/10/2024  issue #411 - Clarify that smclicshv ignores 1 or 2 LSBs of vector table entry (depending on IALIGN)
 09/10/2024  pull  #404 - First round of reorganization of the document to move SW information to Appendix
 08/30/2024  issue #401 - First round of changes to improve clarity of document. Removed mention of U-mode interrupts.
