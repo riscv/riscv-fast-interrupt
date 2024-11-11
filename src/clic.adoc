@@ -554,7 +554,7 @@ only certain mode/trigger/shv types.
   2:1     trig
   0       reserved for smclicshv extension (WARL 0)
 ----
-
+.clicintattr[i] register layout
 include::images/wavedrom/clicintattr.edn[]
 
 The 2-bit `trig` WARL field specifies the trigger type and polarity for each
@@ -652,6 +652,8 @@ following layout:
   12:0    interrupt_number
 
 ----
+
+include::images/wavedrom/clicinttrig.edn[]
 
 The `interrupt_number` field selects which number of interrupt input
 is used as the source for this interrupt trigger.
