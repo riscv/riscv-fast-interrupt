@@ -1983,6 +1983,9 @@ not furnish these fields must hardwire them to zero.
    3:0    mnlbits[3:0]
 ----
 
+.mcliccfg register layout
+include::images/wavedrom/mcliccfg.edn[]
+
 [source]
 ----
   scliccfg register layout - dependent on ssclic extension
@@ -1992,6 +1995,8 @@ not furnish these fields must hardwire them to zero.
   19:16   snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)
   15:0    reserved (WPRI 0)
 ----
+.scliccfg register layout
+include::images/wavedrom/scliccfg.edn[]
 
 scliccfg is a subset of the mcliccfg register.
 
