@@ -544,16 +544,6 @@ This is an 8-bit WARL read-write register to specify various attributes for each
 NOTE: This register is defined as WARL as some implementations may want to hardwire to fixed values
 only certain mode/trigger/shv types.
 
-[source]
-----
-  clicintattr[i] register layout
-
-  Bits    Field
-  7:6     mode
-  5:3     reserved (WPRI 0)
-  2:1     trig
-  0       reserved for smclicshv extension (WARL 0)
-----
 .clicintattr[i] register layout
 include::images/wavedrom/clicintattri.edn[]
 
@@ -640,18 +630,6 @@ This logic is intended to be used with tmexttrigger.intctl as described in the R
 
 Each interrupt trigger is a 32-bit WARL register with the
 following layout:
-
-[source]
-----
-  clicinttrig register layout
-
-  Bits    Field
-  31      interrupt_trap_enable
-  30      nxti_enable
-  29:13   reserved (WARL 0)
-  12:0    interrupt_number
-
-----
 
 .clicinttrig register layout
 include::images/wavedrom/clicinttrig.edn[]
@@ -816,16 +794,6 @@ are reserved for future use.  The trap vector base address is
 specified as the upper XLEN-6 bits of {tvec} (`base`) with six
 lower zero bits appended, which constrains alignment on a 64-byte or
 larger power-of-two boundary.
-
-[source]
-----
- CLIC mode xtvec register layout
-
-  Bits          Field
-  XLEN-1:6      base (WARL)
-  5:2           submode (WARL)
-  1:0           mode (WARL)
-----
 
 .CLIC mode xtvec register layout
 include::images/wavedrom/xtvec.edn[]
@@ -1572,17 +1540,6 @@ of the appropriate access to the {nxti} CSR (see that CSR's description for deta
 
 This is an 8-bit WARL read-write register to specify various attributes for each interrupt.
 
-[source]
-----
-  clicintattr register layout
-
-  Bits    Field
-  7:6     mode
-  5:3     reserved (WPRI 0)
-  2:1     trig
-  0       shv
-----
-
 .clicintattr register layout
 include::images/wavedrom/clicintattr.edn[]
 
@@ -1971,30 +1928,9 @@ the values held in these fields when writing values to other fields of
 the same register. For forward compatibility, implementations that do
 not furnish these fields must hardwire them to zero.
 
-[source]
-----
-  mcliccfg register layout
-
-  Bits    Field
-  31:20   reserved (WPRI 0)
-  19:16   snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)
-  15:6    reserved (WPRI 0)
-   5:4    nmbits[1:0]
-   3:0    mnlbits[3:0]
-----
-
 .mcliccfg register layout
 include::images/wavedrom/mcliccfg.edn[]
 
-[source]
-----
-  scliccfg register layout - dependent on ssclic extension
-
-  Bits    Field
-  31:20   reserved (WPRI 0)
-  19:16   snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)
-  15:0    reserved (WPRI 0)
-----
 .scliccfg register layout
 include::images/wavedrom/scliccfg.edn[]
 
