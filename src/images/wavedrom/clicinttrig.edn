@@ -1,0 +1,13 @@
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 45)
+(def row-header-fn nil)
+(def boxes-per-row 32)
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "" "" "" "" "" "" "12" "13" "" "" "" "" "" "" "" "29" "" "" "30" "" "" "" "" "" "" "31" "" "" "" ""])})
+
+(draw-box "interrupt_trap_enable" {:span 9})
+(draw-box "nxti_enable" {:span 5})
+(draw-box "reserved (WARL 0)" {:span 9})
+(draw-box "interrupt_number" {:span 9})
+----

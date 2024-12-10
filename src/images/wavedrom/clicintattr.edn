@@ -1,0 +1,10 @@
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 1, name: 'shv' },
+  {bits: 2, name: 'trig' },
+  {bits: 3, name: 'WPRI(0)' },
+  {bits: 2, name: 'trigshv' },
+  {bits: 2, name: 'mode' },
+]}
+....
