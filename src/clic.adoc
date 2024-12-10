@@ -1004,12 +1004,19 @@ NOTE: Vertical interrupts to higher privilege modes will be taken
 preemptively by the hardware, so {mnxti} effectively only ever handles
 the next interrupt in the same privilege mode.
 
-Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode:
+Pseudo-code for csrrsi|csrrci rd, mnxti, uimm[4:0] in M mode:
 [source]
 ----
  // clic.priv, clic.level, clic.id represent the highest-ranked
  // interrupt currently present in the CLIC
- mstatus |= uimm[4:0]; // Performed regardless of interrupt readiness.
+ // Performed regardless of interrupt readiness.
+ if (funct3 == csrrsi) {
+     mstatus.mie |= uimm[3];
+     mstatus.sie |= uimm[1];
+ } else {   // csrrci
+     mstatus.mie &= !uimm[3];
+     mstatus.sie &= !uimm[1];
+ }
  if (clic.priv==M && clic.level > mcause.mpil && clic.level > mintthresh.th) {
    // There is an available interrupt.
    if (uimm[4:0] != 0) {  // Side-effects should occur.
@@ -1026,8 +1033,6 @@ Pseudo-code for csrrsi rd, mnxti, uimm[4:0] in M mode:
    // No interrupt or in non-CLIC mode.
    rd = 0;
  }
- // When a different CSR instruction is used, the update of mstatus and the test
- // for whether side-effects should occur are modified accordingly.
  // When a different privileges xnxti CSR is accessed then clic.priv is compared with
  // the corresponding privilege and xstatus, xintstatus.xil, xcause.exccode are the
  // corresponding privileges CSRs.
@@ -1039,7 +1044,9 @@ Pseudo-code for csrrs rd, mnxti, rs1 in M mode:
  // clic.priv, clic.level, clic.id represent the highest-ranked interrupt currently present in the CLIC
    if (rs1 != x0)
    {
-      mstatus |= rs1[4:0]; // Performed regardless of interrupt readiness.
+      // Performed regardless of interrupt readiness.
+      mstatus.mie |= rs1[3];
+      mstatus.sie |= rs1[1];
    }
    if (clic.priv==M && clic.level > rs1[23:16] && clic.level > mintthresh.th) {
      // There is an available interrupt.
@@ -1058,8 +1065,6 @@ Pseudo-code for csrrs rd, mnxti, rs1 in M mode:
      rd = 0;
    }
 
- // When a different CSR instruction is used, the update of mstatus and the test
- // for whether side-effects should occur are modified accordingly.
  // When a different privileges mnxti CSR is accessed then clic.priv is compared with
  // the corresponding privilege and mstatus, mintstatus.mil, mcause.exccode are the
  // corresponding privileges CSRs.
