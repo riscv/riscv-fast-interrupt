@@ -1,0 +1,14 @@
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 45)
+(def row-header-fn nil)
+(def boxes-per-row 32)
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "3" "4" "" "5" "6" "" "" "" "15" "16" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "19" "20" "" "" "" "31"])})
+
+(draw-box "reserved (WPRI 0)" {:span 5})
+(draw-box "snlbits[3:0] if ssclic is supported, else reserved (WPRI 0)" {:span 16})
+(draw-box "reserved (WPRI 0)" {:span 5})
+(draw-box "nmbits[1:0]" {:span 3})
+(draw-box "mnlbits[3:0]" {:span 3})
+----
