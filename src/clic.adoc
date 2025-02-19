@@ -928,7 +928,7 @@ Additionally in CLIC mode, interrupt level (`xpil`) is set to xintstatus.xil and
 xcause.exccode is written with a code indicating the event (the id of the
 interrupt or exception code) that caused the trap.
 
-Note: For now all privilege modes must run in either CLIC mode or all
+NOTE: For now all privilege modes must run in either CLIC mode or all
 privilege modes must run in non-CLIC mode so switching to CLINT mode
 from CLIC mode causes {pil} in all privilege modes to be zeroed.
 
@@ -1774,7 +1774,7 @@ For backwards compatibility in systems supporting both CLINT and CLIC modes, whe
 switching to CLINT mode the new CLIC {cause} state fields
 ({inhv} and {pil}) are zeroed.
 
-Note: For now all privilege modes must run in either CLIC mode or all privilege modes must run in non-CLIC mode so switching to CLINT mode from CLIC mode causes {inhv} and {pil} in all privilege modes to be zeroed.
+NOTE: For now all privilege modes must run in either CLIC mode or all privilege modes must run in non-CLIC mode so switching to CLINT mode from CLIC mode causes {inhv} and {pil} in all privilege modes to be zeroed.
 
 In CLIC mode, when a trap is taken, {cause} has the CLIC format and the {cause} fields are updated.
 On the other hand, when not in CLIC mode, {cause} has the CLINT mode format.
@@ -2052,6 +2052,149 @@ the setting in the CLIC Configuration register (`mcliccfg.xnlbits`).
 ==== smclicconfig Changes to Interrupt-Level Threshold ({intthresh}) CSRs
 If the number of bits actually implemented in the `th` field is less than 8 (e.g. an implementation option when `CLICINTCTLBITS` is less than 8), the number of implemented bits `INTTHRESHBITS` must be greater than `CLICINTCTLBITS` and the implemented bits should be kept left-justified in the most-significant bits of the 8-bit field, with the lower unimplemented bits treated as hardwired to 1.
 For example, if `CLICINTCTLBITS` is 1 and `INTTHRESHBITS` is 2, interrupts can be set to level 127 or 255 and {intthresh}.`th` can be set to 63, 127, 191, or 255.
+
+== Smip Interrupt push and pop extension
+
+The interrupt push and pop extension adds instructions to accelerate interrupt handling, which additionally reduce code size.
+Interupt latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
+Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt.
+Interrupt throughput is increased by allowing tail-chaing of interupts, skipping the context restore and save in between servicing interrupts.
+The instructions are designed to be applicable to all RISC-V interrupt schemes.
+
+Assmed general changes not covered here:
+
+* The current interrupt handler examples assume that mepc and mcause are being saved. This is a mix of values relating to the current (xexcode, xepc) and the previous interrupt context (pil, pp, pie)
+* It is better to harmonize this, and to consistently save/restore the interrupted context
+** This would fix the issues discovered earlier where mcause in the trampoline is overwritted before reading it in the handler
+* For this, while not necessary with the ipush/ipopret proposals, we might consider to introduce pepc and xpexccode fields. For the ipush/ipopret, these names are just used to refer to the values of the interrupted context
+* the necessary changes would also change the behavior of xret, where now mcause.exccode is being overwritten with xpexccode upon execution of xret.
+
+=== Interrupt push and pop functional overview
+
+1. The ipush instruction
+* Saves hart's state of the interrupted context that can be overwritten in case of preemption
+* Save registers x10-x15 (these are the caller saved registers available in RVC)
+* Adjusts the stack pointer to create the stack frame
+* Optionally, enables interrupts
+
+2. The ipopxret instruction
+* Disables interrupts
+* Restores registers x10-x15
+* Restores the the hart's state to the point that the hart can return to the interrupted context
+* Adjust the stack pointer to destroy the stack frame
+* Executes an xret according to the current level
+
+There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
+Interrupts shall not enabled before completing the context save/restore operations of the ipush instruction.
+Interrupts must be disabled before starting to restore context in the ipopxret instruction.
+As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
+
+If the Smip extension is implemented, the first and last instructions of a trap handler of an interrupt must be an ipush and the last an ipopxret instruction, respectively.
+If an ipush or ipopxret instruction is used outside of these two scenarios, an illegal-instruction exception shall be raised.
+
+NOTE: In contrast to the Zcmp push/pop intructions, Smip instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
+
+#TODO: Discuss if we want to have the illegal instruction exceptions as defined here
+
+With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
+
+#TODO: discuss if we want to enforce this for all interrupts or only HW-vectored interrupts (i.e. coming from xtvt). My assumption is we do not want to do this exceptions
+
+=== Late Preemption of the interrupt handler
+
+While executing the ipush instruction, a hart may optionally check for higher priority/level pending and enabled interrupts at the current privilege mode, and switch to fetching this interrupt handler instead.
+Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
+
+=== Tail chaining of interrupts handlers
+
+While executing the ipopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
+If such an interrupt exists, the hart may abort executing the ipopxret instruction and trigger the following actions:
+  - Update the xcause.exccode to the corresponding interrupt id.
+  - Perform the trap handler fetch.
+  - Start excuting the trap handler, while skipping the portions of ipush that have not been reverted by the aborted ipopxret.
+
+Explicitly, xepc, xpil, xpp, and xpexccode remain unchanged.
+
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the ipopxret instruction. In this case, only the conditional interrupt enablement of the ipush instruction would need to executed.
+
+Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
+
+=== Stack layout
+
+To ease debugging, a stack layout is specified for the saved context.
+
+#TODO: find the best way to specify the memory layout in asciidoc
+
+* xtvec.mode != CLIC:
+** XXLEN = 32:
+
+stack pointer adjustment: 32
+
+24: x15
+
+20: x14
+
+16: x13
+
+12: x12
+
+8: x11
+
+4: x10
+
+** XXLEN = 64:
+
+stack pointer adjustment: 48
+
+48: x15
+
+40: x14
+
+32: x13
+
+24: x12
+
+16: x11
+
+8: x10
+
+* xtvec.mode = CLIC:
+
+start of stackframe remains same. In addition:
+
+** XXLEN = 32
+
+stack pointer adjustment: 32
+
+32: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | reserved (4) | xpexccode (12)
+
+28: xpepc (XXLEN)
+
+** XXLEN = 32
+
+stack pointer adjustment: 64
+
+60: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | reserved (4) | xpexccode (12)
+
+56: xpepc (XXLEN)
+
+== Fault handling
+
+According the the Machine Level ISA, trap handlers must be designed to not cause exceptions during their critical section.
+This applies to the ipush and ipopxret instruction.
+Therefore, by design, it must be guaranteed that no faults occur during the execution of these instructions.
+
+=== Debug
+
+#TODO: Define what happens if there is a break point at the ipush instruction address
+
+== Instructions
+
+#TODO: define encodings, sail etc.
+
+=== ipush
+
+=== ipopxret
 
 [appendix]
 == Interrupt Handling Software
