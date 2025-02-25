@@ -2068,6 +2068,7 @@ Assmed general changes not covered here:
 ** This would fix the issues discovered earlier where mcause in the trampoline is overwritted before reading it in the handler
 * For this, while not necessary with the ipush/ipopret proposals, we might consider to introduce pepc and xpexccode fields. For the ipush/ipopret, these names are just used to refer to the values of the interrupted context
 * the necessary changes would also change the behavior of xret, where now mcause.exccode is being overwritten with xpexccode upon execution of xret.
+* The trap behavior needs to be modified to clear the ip bit upon completion of ipush, rather than as soon as the vector table access happens.
 
 === Interrupt push and pop functional overview
 
