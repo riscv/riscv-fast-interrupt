@@ -2053,6 +2053,52 @@ the setting in the CLIC Configuration register (`mcliccfg.xnlbits`).
 If the number of bits actually implemented in the `th` field is less than 8 (e.g. an implementation option when `CLICINTCTLBITS` is less than 8), the number of implemented bits `INTTHRESHBITS` must be greater than `CLICINTCTLBITS` and the implemented bits should be kept left-justified in the most-significant bits of the 8-bit field, with the lower unimplemented bits treated as hardwired to 1.
 For example, if `CLICINTCTLBITS` is 1 and `INTTHRESHBITS` is 2, interrupts can be set to level 127 or 255 and {intthresh}.`th` can be set to 63, 127, 191, or 255.
 
+== Smcspsw Conditional Stack Pointer Swap extension
+
+For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
+Performing stack pointer swaping in SW can be time consuming, as the conditions for swapping have to be checked first.
+However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
+To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
+
+=== Separating stack per privilege mode
+
+The stack separation per privilege mode is controlled through the {insert CSR here}.xspsw field.
+If enabled, the xcspw instruction can be used to atomically swap the stack pointer with the xscratch register if a mode change happened.
+
+This mechanism can also be used to initialize the sp value of a less privileged mode.
+If an operating system manages separate stacks per software thread in a lower privileged mode, this mechanism can also be used.
+
+=== Separating stack for interrupts
+
+The same instruction can be used to separate the stack of non-interrupt execution from interrupts at the same privilege level.
+This is beneficial to ensure the integrity of the interrupts stack independently of the non-interrupt stack.
+The interrupt stack pointer at a given privilege level has to be initialized by writing to the xtscratch CSR.
+After a trap, the xcspw instruction will swap the previous sp with the value in xtscratch if {insert CSR here}.xtspsw is asserted.
+
+=== xcspsw
+
+The xcspsw instruction conditional swaps the sp register with the xscratch register.
+
+Encoding tbd. Assume this includes the PRIV field.
+
+Behavior:
+
+[source]
+----
+if ((xtspsw == 1) and (xil != xpil))
+{
+  tmp = sp
+  sp = xtscratch
+  xtscratch = tmp
+}
+elif ((xspsw == 1) and (PRIV != xpp))
+{
+  tmp = sp
+  sp = xscratch
+  xscratch = tmp
+}
+----
+
 == Smip Interrupt push and pop extension
 
 The interrupt push and pop extension adds instructions to accelerate interrupt handling, which additionally reduce code size.
@@ -2073,6 +2119,7 @@ Assmed general changes not covered here:
 === Interrupt push and pop functional overview
 
 1. The ipush instruction
+* Conditionally performs a stack pointer swap by executing xcspsw
 * Saves hart's state of the interrupted context that can be overwritten in case of preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
@@ -2083,6 +2130,7 @@ Assmed general changes not covered here:
 * Restores registers x10-x15
 * Restores the the hart's state to the point that the hart can return to the interrupted context
 * Adjust the stack pointer to destroy the stack frame
+* Conditionally performs a stack pointer swap by executing xcspsw
 * Executes an xret according to the current level
 
 There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
