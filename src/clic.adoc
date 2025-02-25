@@ -2107,14 +2107,17 @@ Additional latency reduction is achieved by allowing late-preemption of the push
 Interrupt throughput is increased by allowing tail-chaing of interupts, skipping the context restore and save in between servicing interrupts.
 The instructions are designed to be applicable to all RISC-V interrupt schemes.
 
-Assmed general changes not covered here:
+Assumed general changes not covered here:
 
 * The current interrupt handler examples assume that mepc and mcause are being saved. This is a mix of values relating to the current (xexcode, xepc) and the previous interrupt context (pil, pp, pie)
 * It is better to harmonize this, and to consistently save/restore the interrupted context
-** This would fix the issues discovered earlier where mcause in the trampoline is overwritted before reading it in the handler
+** This would fix the issues discovered earlier where mcause in the trampoline is overwritten before reading it in the handler
 * For this, while not necessary with the ipush/ipopret proposals, we might consider to introduce pepc and xpexccode fields. For the ipush/ipopret, these names are just used to refer to the values of the interrupted context
 * the necessary changes would also change the behavior of xret, where now mcause.exccode is being overwritten with xpexccode upon execution of xret.
 * The trap behavior needs to be modified to clear the ip bit upon completion of ipush, rather than as soon as the vector table access happens.
+* Stack pointer swapping (see Smcspsw): 
+** Assumption is that there a CSR bits configuring if stack swap should happen or not. For now, they will be called xspsw (stack pointer swap) and xtspsw (trap stack pointer swap).
+** For handling trap stack pointer swap, a new CSR, xtscratch is introduced, with the intention of holding the trap stack pointer for each privilege level.
 
 === Interrupt push and pop functional overview
 
@@ -2123,6 +2126,7 @@ Assmed general changes not covered here:
 * Saves hart's state of the interrupted context that can be overwritten in case of preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
+* If the interrupt is edge-triggered, clear the ip bit
 * Optionally, enables interrupts
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
