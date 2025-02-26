@@ -2060,26 +2060,27 @@ Performing stack pointer swaping in SW can be time consuming, as the conditions 
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
-=== Separating stack per privilege mode
+=== Separate stacks per privilege mode
 
 The stack separation per privilege mode is controlled through the {insert CSR here}.xspsw field.
 If enabled, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
 
-#TODO: repurpose conditional scratch swap registers to xsp and xtsp
+#TODO: repurpose conditional scratch swap registers to xsp.
 
 This mechanism can also be used to initialize the sp value of a less privileged mode.
 If an operating system manages separate stacks per software thread in a lower privileged mode, this mechanism can also be applied.
 
-=== Separating stack for interrupts
+=== Separate stacks for interrupts
 
 The same instruction can be used to separate the stack of non-interrupt execution from interrupts at the same privilege level.
 This is beneficial to ensure the integrity of the interrupts stack independently of the non-interrupt stack.
 The interrupt stack pointer at a given privilege level has to be initialized by writing to the xtsp CSR.
-After a trap, the xcspw instruction will swap the previous sp with the value in xtsp if {insert CSR here}.xtspsw is asserted.
+If using xcspsw to swap stack pointers before changing to a lower privilege level, the current value of sp will be used as stack pointer in trap handling at the current privilege level. 
+After a trap, the xcspw instruction will swap the previous sp with the value in xsp if {insert CSR here}.xtspsw is asserted.
 
 === xcspsw
 
-The xcspsw instruction conditional swaps the sp register with the xsp or xtsp register.
+The xcspsw instruction conditional swaps the sp register with the xsp register.
 
 Encoding tbd. Assume this includes the PRIV field.
 
@@ -2087,13 +2088,7 @@ Behavior:
 
 [source]
 ----
-if ((xtspsw == 1) and (xil != xpil))
-{
-  tmp = sp
-  sp = xtsp
-  xtsp = tmp
-}
-elif ((xspsw == 1) and (PRIV != xpp))
+if (((xspsw == 1) and (xil != xpil)) or ((xtspsw == 1) and (PRIV != xpp)))
 {
   tmp = sp
   sp = xsp
