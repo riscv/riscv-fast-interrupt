@@ -2125,6 +2125,11 @@ Assmed general changes not covered here:
 * Adjusts the stack pointer to create the stack frame
 * Optionally, enables interrupts
 
+NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
+The preempting trap is expected to fully save and restore the architectural state that it overwrites.
+If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
+In this case, if the instruction is resumed, any store operations must be re-executed.
+
 2. The ipopxret instruction
 * Disables interrupts
 * Restores registers x10-x15
@@ -2132,6 +2137,9 @@ Assmed general changes not covered here:
 * Adjust the stack pointer to destroy the stack frame
 * Conditionally performs a stack pointer swap by executing xcspsw
 * Executes an xret according to the current level
+
+NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
+A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
 
 There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
 Interrupts shall not be enabled before completing the context save/restore operations of the ipush instruction.
@@ -2148,6 +2156,7 @@ NOTE: In contrast to the Zcmp push/pop intructions, Smip instructions do not enc
 With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
 
 #TODO: discuss if we want to enforce this for all interrupts or only HW-vectored interrupts (i.e. coming from xtvt). My assumption is we do not want to do this exceptions
+
 
 === Late Preemption of the interrupt handler
 
