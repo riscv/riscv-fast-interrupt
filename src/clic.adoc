@@ -2134,7 +2134,7 @@ Assmed general changes not covered here:
 * Executes an xret according to the current level
 
 There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
-Interrupts shall not enabled before completing the context save/restore operations of the ipush instruction.
+Interrupts shall not be enabled before completing the context save/restore operations of the ipush instruction.
 Interrupts must be disabled before starting to restore context in the ipopxret instruction.
 As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
 
