@@ -2236,7 +2236,7 @@ stack pointer adjustment: 64
 
 56: xpepc (XXLEN)
 
-== Fault handling
+=== Fault handling
 
 According the the Machine Level ISA, trap handlers must be designed to not cause exceptions during their critical section.
 This applies to the ipush and ipopxret instruction.
@@ -2246,13 +2246,13 @@ Therefore, by design, it must be guaranteed that no faults occur during the exec
 
 #TODO: Define what happens if there is a break point at the ipush instruction address
 
-== Instructions
+=== Instructions
 
 #TODO: define encodings, sail etc.
 
-=== ipush
+==== ipush
 
-=== ipopxret
+==== ipopxret
 
 [appendix]
 == Interrupt Handling Software
