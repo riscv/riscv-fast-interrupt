@@ -2088,13 +2088,15 @@ Behavior:
 
 [source]
 ----
-if (((xspsw == 1) and (xil != xpil)) or ((xtspsw == 1) and (PRIV != xpp)))
+if ((xspsw == 1) and ((xil == 0) != (xpil == 0)) or ((xtspsw == 1) and (PRIV != xpp)))
 {
   tmp = sp
   sp = xsp
   xsp = tmp
 }
 ----
+
+#TODO: Check how this interacts with double trap
 
 == Smip Interrupt push and pop extension
 
