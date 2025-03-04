@@ -73,8 +73,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mtvec: pass:q[``mtvec``]
 :mtvt: pass:q[``mtvt``]
 :mscratch: pass:q[``mscratch``]
-:mscratchcsw: pass:q[``mscratchcsw``]
-:mscratchcswl: pass:q[``mscratchcswl``]
+:msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
@@ -89,8 +88,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :stvec: pass:q[``stvec``]
 :stvt: pass:q[``stvt``]
 :sscratch: pass:q[``sscratch``]
-:sscratchcsw: pass:q[``sscratchcsw``]
-:sscratchcswl: pass:q[``sscratchcswl``]
+:ssp: pass:q[``ssp``]
 :sepc: pass:q[``sepc``]
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
@@ -764,8 +762,7 @@ additions for CLIC mode described in the following sections.
  (NEW) 0x345   mnxti        Interrupt handler address and enable modifier
  (NEW) 0xFB1   mintstatus   Current interrupt levels
  (NEW) 0x347   mintthresh   Interrupt-level threshold
- (NEW) 0x348   mscratchcsw  Conditional scratch swap on priv mode change
- (NEW) 0x349   mscratchcswl Conditional scratch swap on level change
+ (NEW) 0x348   msp          Stack pointer for conditional swap
        0x350   miselect     Indirect register select
        0x351   mireg        Indirect register alias
        0x352   mireg2       Indirect register alias2
@@ -1105,90 +1102,6 @@ maximum interrupts (one for the current mode and one for each
 higher-privilege mode) qualified by the per-mode threshold, then pick
 a qualified maximum interrupt with the highest privilege mode.
 
-==== Scratch Swap CSRs ({mscratchcsw}) for Multiple Privilege Modes
-
-To accelerate interrupt handling with multiple privilege modes, a new
-CSR {mscratchcsw} is defined for all but the lowest privilege mode supported in a given implementation
-to support conditional swapping of the {mscratch} register when
-transitioning between privilege modes.  The CSR instruction is used
-once at the entry to a handler routine and once at handler exit, so
-only adds two instructions to the interrupt code path.
-
-These CSRs are only designed to be used with the `csrrw` instruction
-with neither `rd` nor `rs1` set to `x0`.  Accessing the {mscratchcsw}
-register with the `csrrw` instruction with either `rd` or `rs1` set to
-`x0`, or using any other CSR instruction form
-(CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
-
-When using `csrrw` to access {mscratchcsw}, the value written into `rd`
-is either {mscratch} if {mpp} is different than the current privilege
-mode, or `rs1` if {mpp} is the same as the current privilege mode.  The
-{mscratch} register is only written with the original value of `rs1` if
-there is a privilege mode difference.
-
-NOTE: This is different than a regular CSR instruction as the value
-returned is different from the value used in the read-modify-write
-operation.
-
-NOTE: The CSR instructions are defined to always copy a result
-({mscratch} or `rs1`) to the `rd` destination to simplify
-implementations using register renaming, and in normal use the
-instructions set both `rs1` = `sp` and `rd` = `sp`.
-
-An example of normal usage of the {mscratchcsw} CSR is as follows:
-
-[source]
-----
-csrrw sp, mscratchcsw, sp
-# If mpp!=M-mode, swap mscratch and stack pointer (sp)
-# otherwise sp copied to sp (i.e., no change) and mscratch unchanged
-----
-
-Formal description follows:
-
-[source]
-----
-csrrw rd, mscratchcsw, rs1
-
-match cur_privilege {
-  Machine => match mstatus.MPP() {
-    Machine => rd = rs1; // mscratch unchanged.
-    _       => t = rs1; rd = mscratch; mscratch = t; /* default: for all other priv modes*/
-  }
-}
-----
-
-NOTE: To avoid virtualization holes, software cannot directly read the
-hart's current privilege mode. Also, an instruction attempting to access
-a given mode's {mscratchcsw} CSR from a lesser-privileged mode will trap
-to avoid a virtualization hole.
-
-==== Scratch Swap CSR ({mscratchcswl}) for Interrupt Levels
-
-A new {mscratchcswl} CSR is added to support faster swapping of the
-stack pointer between interrupt and non-interrupt code both running in M-mode.
-
-[source]
-----
-csrrw rd, mscratchcswl, rs1
-
-// Pseudocode operation.
-if ( (mcause.mpil==0) != (mintstatus.mil==0) ) then {
-    t = rs1; rd = mscratch; mscratch = t;
-} else {
-    rd = rs1; // mscratch unchanged.
-}
-
-// Usual use: csrrw sp, mscratchcswl, sp
-----
-
-This new CSR operates similarly to {mscratchcsw} except that the swap
-condition is true when the interrupter and interruptee are not both
-application tasks or not both interrupt handlers.
-
-As with {mscratchcsw}, these CSRs are only designed to be used with the csrrw instruction with neither rd nor rs1 set to x0.
-Accessing the {mscratchcswl} register with the csrrw instruction with either rd or rs1 set to x0, or using any other CSR instruction (CSRRWI/CSRRS/CSRRC/CSRRSI/CSRRCI), is reserved.
-
 === CLIC Reset Behavior
 
 In general in RISC-V, mandatory reset state is minimized but platform
@@ -1434,8 +1347,7 @@ additions for CLIC mode described in the following sections.
  (NEW) 0x145   snxti        Interrupt handler address and enable modifier
  (NEW) 0xDB1   sintstatus   Current interrupt levels
  (NEW) 0x147   sintthresh   Interrupt-level threshold
- (NEW) 0x148   sscratchcsw  Conditional scratch swap on priv mode change
- (NEW) 0x149   sscratchcswl Conditional scratch swap on level change
+ (NEW) 0x148   ssp          Stack pointer for conditional swap
        0x150   siselect     Indirect register select
        0x151   sireg        Indirect register alias
        0x152   sireg2       Indirect register alias2
@@ -1447,7 +1359,7 @@ additions for CLIC mode described in the following sections.
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
 access to the new CSRs ({stvt}, {snxti}, {sintstatus}, {sintthresh},
-{sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
+{ssp}) by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
 exception apply, in which case a virtual instruction exception is
@@ -1473,40 +1385,6 @@ scause
 
 The supervisor {scause} register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from {sstatus}.`spp`.
-
-==== ssclic New Interrupt Status ({sintstatus}) CSRs
-
-A corresponding supervisor mode, {sintstatus} CSR provides restricted views of {mintstatus}.
-
-[source]
-----
-sintstatus fields
- 31:16 (reserved)
- 15: 8 sil
-  7: 0 (reserved)
-----
-
-==== ssclic Scratch Swap CSR ({sscratchcsw}) for Multiple Privilege Modes
-
-[source]
-----
-csrrw rd, sscratchcsw, rs1
-
-match cur_privilege {
-  Supervisor => if sstatus.SPP() then {
-                  rd = rs1; // sscratch unchanged.
-                } else {
-                  t = rs1; rd = sscratch; sscratch = t;
-                }
-/* Although machine-mode access to sscratchcsw is not expected to be the normal usage, */
-/* it is specified in a way that simplifies hardware. */
-  Machine    => match mstatus.MPP() {
-               Supervisor => t  = rs1; rd = sscratch; sscratch = t;
-               Machine    => rd = rs1; // sscratch unchanged.
-               _          => t  = rs1; rd = sscratch; sscratch = t; /* default */
-             }
-}
-----
 
 === ssclic CLIC Reset Behavior
 
