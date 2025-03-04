@@ -2088,7 +2088,13 @@ Behavior:
 
 [source]
 ----
-if ((xspsw == 1) and ((xil == 0) != (xpil == 0)) or ((xtspsw == 1) and (PRIV != xpp)))
+
+# Stack pointer swap condition (SPSC) in a trap handler:
+exception_spsc = true if exception was taken from (xil == 0)
+interrupt_spsc = (xil == 0) != (xpil == 0)
+trap_spsc = exception_spsc or interrupt_spsc
+
+if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
 {
   tmp = sp
   sp = xsp
