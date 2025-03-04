@@ -2905,7 +2905,7 @@ interrupts from the same privilege mode.
     # Example of inline interrupt with stack swapping.
    .align 3
    foo:
-      csrrw sp, mscratchcsw, sp    # Conditionally swap in stack pointer.
+      mcspsw                       # Conditionally swap in stack pointer.
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
       sw s0, OFFSET(sp)            # Save working register.
       sw zero, INTERRUPT_FLAG, s0    # Clear interrupt flag.
@@ -2916,7 +2916,7 @@ interrupts from the same privilege mode.
       lw s1, OFFSET(sp)            # Restore registers.
       lw s0, OFFSET(sp)
       addi sp, sp, FRAMESIZE       # Free stack frame.
-      csrrw sp, mscratchcsw, sp    # Conditionally swap out stack pointer.
+      mcspsw                       # Conditionally swap out stack pointer.
       mret                         # Return from handler using saved mepc.
 ----
 
@@ -2929,7 +2929,7 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
    .align 3
    foo:
       #----- Interrupts disabled on entry ---#
-      csrrw sp, mscratchcsw, sp    # Conditionally swap in stack pointer.
+      mcspsw                       # Conditionally swap in stack pointer.
       addi sp, sp, -FRAMESIZE      # Create a frame on stack.
       sw s0, OFFSET(sp)            # Save working register.
       sw s1, OFFSET(sp)            # Save working register.
@@ -2952,7 +2952,7 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
       lw s1, OFFSET(sp)            # Restore s1.
       lw s0, OFFSET(sp)            # Restore s0.
       addi sp, sp, FRAMESIZE       # Free stack frame.
-      csrrw sp, mscratchcsw, sp    # Conditionally swap out stack pointer.
+      mcspsw                       # Conditionally swap out stack pointer.
       mret                         # Return from handler.
       #------------------------------------#
 ----
@@ -2963,13 +2963,13 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
 
   irq_enter:
   #----
-    csrrw sp, mscratchcsw, sp # Conditionally swap in stack pointer.
+    mcspsw                    # Conditionally swap in stack pointer.
     addi sp, sp, -FRAMESIZE   # Allocate space on stack.
     # ...
     # Everything else same as above.
     # ...
     addi sp, sp, FRAMESIZE    # Reclaim stack space.
-    csrrw sp, mscratchcsw, sp # Conditionally swap back stack pointer.
+    mcspsw                    # Conditionally swap back stack pointer.
     mret                      # Return from interrupt.
   #-----------------------------------------------------------------------
   #-----------------------------------------------------------------------
@@ -2978,7 +2978,7 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
     # Perform exception processing with interrupts disabled
     # ...
     addi sp, sp, FRAMESIZE    # Reclaim stack space.
-    csrrw sp, mscratchcsw, sp # Conditionally swap back stack pointer.
+    mcspsw                    # Conditionally swap back stack pointer.
     mret                      # Return from exception
   #----------------------------------------------------------------------
 ----
