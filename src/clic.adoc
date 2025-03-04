@@ -2224,7 +2224,7 @@ start of stackframe remains same. In addition:
 
 stack pointer adjustment: 32
 
-32: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | reserved (4) | xpexccode (12)
+32: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (3) | xpexccode (12)
 
 28: xpepc (XXLEN)
 
@@ -2232,7 +2232,7 @@ stack pointer adjustment: 32
 
 stack pointer adjustment: 64
 
-60: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | reserved (4) | xpexccode (12)
+60: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (3) | xpexccode (12)
 
 56: xpepc (XXLEN)
 
