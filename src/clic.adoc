@@ -505,34 +505,36 @@ The conditions for an interrupt trap to occur must be evaluated in a bounded amo
 from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the {ip}/{ie} CSRs, there is no requirement
 that `clicintie` or `clicintip` are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
 
-When the input is configured for level-sensitive input, the
-`clicintip[__i__]` bit reflects the value of an input signal to the
+When the input is configured for edge-sensitive input,
+`clicintip[__i__]` is a read-write bit that can be updated both
+by hardware interrupt inputs and by software. The bit is set by
+hardware after an edge of the appropriate polarity is observed on the
+interrupt input, as determined by the `clicintattr[__i__]` field.
+
+When the input is configured for level-sensitive input,
+each `clicintip[__i__]` may be writable or read-only.
+When read-only, `clicintip[__i__]` bit reflects the value of an input signal to the
 interrupt controller after any conditional inversion specified by the
 `clicintattr[__i__]` field, and software writes to the bit are ignored.
 Software clears the interrupt at the source device.
+When writable, additionally, the software-writable is applied with a logical-OR.
+Only the software-writable bit participates in
+the read-modify-write sequence of a CSRRS or CSRRC instruction.
 
-When the input is configured for edge-sensitive input,
-`clicintip[__i__]` is a read-write register that can be updated both
-by hardware interrupt inputs and by software.  The bit is set by
-hardware after an edge of the appropriate polarity is observed on the
-interrupt input, as determined by the `clicintattr[__i__]` field.
-Software writes to `clicintip[__i__]` can set or
-clear edge-triggered pending bits directly by writes to the
+Note: As per the machine-level ISA, this behavior is required for the SEI interrupt (exccode 9).
 
-`clicintip[__i__]` register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
+If `clicintip[__i__]` is writable, a pending interrupt i can be cleared by writing 0 to this bit.
+
+Writable pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
 `clicintip[__i__]` behavior is unaffected by `clicintie[__i__]` setting.
 
-
 NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
-an edge-triggered pending bit for software vectored interrupts.  Additional detail
+a writable pending bit for software vectored interrupts.  Additional detail
 on this is described in the {nxti} section.
 
-The value in the `clicintip[__i__]` is undefined when switching from
-level-sensitive mode to edge-triggered mode in `clicintattr[__i__]`.
-
-NOTE: Software cannot rely on the underlying `clicintip[__i__]`
-register bits used in edge-triggered mode to hold state while in
-level-sensitive mode.
+The value in the `clicintip[__i__]` is undefined
+When switching from level-sensitive mode to edge-triggered mode,
+`clicintattr[__i__]` has the value of the software-writable bit, ignoring the previous external signal level.
 
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt input has a dedicated interrupt-enable WARL bit (`clicintie[__i__]`)
@@ -965,7 +967,7 @@ If the CSR instruction that accesses {mnxti} includes a write, the
 {mstatus} CSR is used for the read-modify-write portion of the
 operation, while the {mcause} register's `exccode` field and the
 {mintstatus} register's {mil} field can also be updated with the new interrupt id and level.
-If the interrupt is edge-triggered, then the pending bit is also zeroed.
+If the interrupt is writable, then the pending bit is also zeroed.
 
 The {mnxti} CSR may only be accessed with the CSRR (CSRRS rd,csr,x0), CSRRSI/CSRRS, or CSRRCI instructions.
 Accessing the {mnxti} CSR using any other CSR instruction (i.e., CSRRW, CSRRC, or CSRRWI) is reserved.
@@ -1549,12 +1551,12 @@ See additional details on hardware clearing in the {tvec} section.
 
 NOTE: To improve performance, when a hardware vectored interrupt is selected
 and serviced, the hardware automatically clears its corresponding
-edge-triggered pending bit, so software doesn't need to clear the
+pending bit if that is writable, so software doesn't need to clear the
 pending bit in the service routine.
 
 In contrast, when a software vectored interrupt is selected,
-the hardware will not automatically clear an edge-triggered pending
-bit. Harware will clear an edge-triggered pending bit upon execution
+the hardware will not automatically clear a pending
+bit. Harware will clear an writable pending bit upon execution
 of the appropriate access to the {nxti} CSR (see that CSR's description for details).
 
 ==== smclicshv Changes to CLIC Interrupt Attribute (`clicintattr`)
@@ -2141,7 +2143,7 @@ pipeline flushes (on entry and on exit), plus the cycles taken to fetch
 the hardware vector entry.
 
 NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
-edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
+edge-triggered or SW-asserted interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
 
 These inline handlers can be used with the CLINT mode as
 well as CLIC mode.
@@ -2832,7 +2834,7 @@ interrupts from the same privilege mode.
 ----
 
 NOTE: This example assumes level-triggered interrupts where `INTERRUPT_FLAG` is cleared at the memory-mapped peripheral. Use of
-edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
+edge-triggered or SW-asserted interrupts and clearing `clicintip[__i__]` via indirect CSR access while same privilege mode mstatus.mie is enabled requires `mireg` register state to be part of the interrupt handler's overall context state save/restore.
 
 [source]
 ----
