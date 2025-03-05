@@ -2009,7 +2009,7 @@ Assumed general changes not covered here:
 * Saves hart's state of the interrupted context that can be overwritten in case of preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
-* If the interrupt is edge-triggered, clear the ip bit
+* Clear the ip bit if writable
 * Optionally, enables interrupts
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
