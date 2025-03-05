@@ -409,10 +409,6 @@ an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
 and interrupt control bits to specify level
 and priority (`clicintctl[__i__]`).
 
-When the first 16 interrupt inputs are reserved for the CLINT mode
-interrupts present in the low 16 bits of the {ip} and {ie} registers,
-up to 4080 local interrupts can be added.
-
 === Interrupt Preemption
 
 The CLIC extends interrupt preemption to support up to 256 interrupt
@@ -501,6 +497,11 @@ Each interrupt input has a dedicated interrupt pending bit
 Software should assume `clicintip[__i__]=0` means no interrupt pending, and
 `clicintip[__i__]=1` indicates an interrupt is pending.
 
+The the lowest index `clicintip[__i__]` bits are an alias of the `mip` CSR.
+
+NOTE: The number of aliased bits depends on MXLEN and if AIA is implemented.
+Only for MXLEN=32 and without AIA is mip 32b wide, else 64b
+
 The conditions for an interrupt trap to occur must be evaluated in a bounded amount of time
 from when an interrupt becomes, or ceases to be, pending in `clicintip`, but unlike the {ip}/{ie} CSRs, there is no requirement
 that `clicintie` or `clicintip` are evaluated immediately following an explicit store to `clicintip` or `clicintie`.
@@ -521,7 +522,6 @@ clear edge-triggered pending bits directly by writes to the
 
 `clicintip[__i__]` register. Edge-triggered pending bits can also be cleared when a CSR instruction that accesses {nxti} includes a write.
 `clicintip[__i__]` behavior is unaffected by `clicintie[__i__]` setting.
-
 
 NOTE: Software is expected to use a CSR instruction that accesses {nxti} that includes a write to clear
 an edge-triggered pending bit for software vectored interrupts.  Additional detail
@@ -544,11 +544,15 @@ the global enable bit for the current privilege mode. Therefore, for an
 interrupt `_i_` to be enabled in the current privilege mode, both `clicintie[__i__]`
 and {status}.{ie} have to be set.
 
-
 NOTE: In contrast, since {status}.{ie} only takes effect in the current privilege
 mode according to RISC-V convention, an interrupt `_i_` from a higher privilege mode
 is enabled as long as `clicintie[__i__]` is set (regardless of the setting
 of {status}.{ie} in the higher privilege modes).
+
+The the lowest index `clicintie[__i__]` bits are an alias of the `mie` CSR.
+
+NOTE: The number of aliased bits depends on MXLEN and if AIA is implemented.
+Only for MXLEN=32 and without AIA is mie 32b wide, else 64b
 
 NOTE: This register bit is defined as WARL as unimplemented interrupts appear hardwired to zero.
 
@@ -753,14 +757,12 @@ additions for CLIC mode described in the following sections.
        Number  Name         Description
        0x300   mstatus      Status register
        0x303   mideleg      Interrupt delegation register (INACTIVE IN CLIC MODE)
-       0x304   mie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0x305   mtvec        Trap-handler base address / interrupt mode
  (NEW) 0x307   mtvt         Trap-handler vector table base address
        0x340   mscratch     Scratch register for trap handlers
        0x341   mepc         Exception program counter
        0x342   mcause       Cause of trap
        0x343   mtval        Bad address or instruction
-       0x344   mip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0x345   mnxti        Interrupt handler address and enable modifier
  (NEW) 0xFB1   mintstatus   Current interrupt levels
  (NEW) 0x347   mintthresh   Interrupt-level threshold
@@ -787,20 +789,6 @@ specifies the privilege mode in which each interrupt should be taken.
 If {mideleg} exists, the {mideleg} CSR ceases to have effect in CLIC mode.  If {mideleg} exists, the {mideleg}
 CSR is still accessible and state bits retain their values when
 switching between CLIC and CLINT interrupt modes.
-
-==== Changes to {mie}/{mip} CSRs
-
-The {mie} CSR appears hardwired to zero in CLIC mode, replaced by separate
-interrupt enables (`clicintie[__i__]`).
-
-The {mip} CSR appears hardwired to zero in CLIC mode, replaced by
-separate interrupt pendings (`clicintip[__i__]`).
-
-Writes to {mie}/{mip} will be ignored and will not trap (i.e., no access faults).
-{mie}/{mip} always appear to be zero in CLIC mode.
-
-In systems that support both CLINT and CLIC modes, the state bits in
-{mie} and {mip} retain their value when switching between modes.
 
 ==== New {mtvec} CSR Mode for CLIC
 
@@ -1423,14 +1411,12 @@ additions for CLIC mode described in the following sections.
 ----
        Number  Name         Description
        0x100   sstatus      Status register
-       0x104   sie          Interrupt-enable register     (INACTIVE IN CLIC MODE)
        0x105   stvec        Trap-handler base address / interrupt mode
  (NEW) 0x107   stvt         Trap-handler vector table base address
        0x140   sscratch     Scratch register for trap handlers
        0x141   sepc         Exception program counter
        0x142   scause       Cause of trap
        0x143   stval        Bad address or instruction
-       0x144   sip          Interrupt-pending register    (INACTIVE IN CLIC MODE)
  (NEW) 0x145   snxti        Interrupt handler address and enable modifier
  (NEW) 0xDB1   sintstatus   Current interrupt levels
  (NEW) 0x147   sintthresh   Interrupt-level threshold
@@ -2897,128 +2883,6 @@ edge-triggered interrupts and clearing `clicintip[__i__]` via indirect CSR acces
 In all cases, conditionally swapping the stack to account for
 potential privilege-mode changes adds two extra instructions to all
 interrupt handlers.
-
-[appendix]
-== CLIC Interrupt ID ordering recommendations
-
-The specific numbering of interrupts is defined by the platform.  A
-platform definition will often be based on a specific RISC-V ISA
-profile, where RISC-V ISA profiles specify a common set of ISA choices
-that capture the most value for most users to enable software
-compatibility.
-
-Certain RISC-V profiles may include the CLIC as an option.
-
-Four different CLIC interrupt ID orderings are enumerated below for
-ease of reference in profile specifications.
-
-=== CLIC-mode interrupt-map for systems retaining interrupt ID compatible with CLINT mode:
-
-The CLINT-mode interrupts retain their interrupt ID in CLIC mode.
-The `clicintattr` settings are now used to delegate these interrupts as
-required.
-
-We recommend allocating an edge-triggered CLIC software interrupt bit
-(`csip`) with the lowest number (16) among the local interrupts to
-provide support for a local background interrupt thread, e.g. context
-switching.  By placing the `csip` interrupt at the lowest number among
-local interrupts, we avoid requiring another interrupt level to
-ensure this only runs when there are no other interrupts.
-
-The existing CLINT software interrupt bits are primarily intended for
-inter-hart interrupt signaling, and so are retained for that purpose.
-The software interrupts can have their priority changed using their
-`clicintctl` setting.
-
-CLIC interrupt inputs are allocated IDs beginning at interrupt ID 17.
-Any fast local interrupts that would have been connected at interrupt
-ID 16 and above should now be mapped into corresponding inputs of the
-CLIC.
-
-
-[source]
-----
-ID  Interrupt   Note
-
- 0  reserved
- 1  ssip        Supervisor software Interrupt
- 2  reserved
- 3  msip        Machine software interrupt
-
- 4  reserved
- 5  stip        Supervisor timer interrupt
- 6  reserved
- 7  mtip        Machine timer interrupt
-
- 8  reserved
- 9  seip        Supervisor external (PLIC/APLIC) interrupt
-10  reserved
-11  meip        Machine external (PLIC/APLIC) interrupt
-
-12  reserved
-13  reserved
-14  reserved
-15  reserved
-
-16  csip        CLIC software interrupt
-17+ inputs      CLIC local inputs
-----
-
-In CLINT mode, as stated in the RISC-V privilege specification, each
-individual bit in CSR register {ip} may be software writable or may be
-software read-only. When bit _i_ in {ip} is writable, a pending
-interrupt _i_ can be cleared by writing `0` to this bit. STIP is
-writable in `mip`, and may be written by M-mode software to deliver
-timer interrupts to S-mode.
-
-However, in CLIC mode, {ip} bits cannot be updated in software when
-they are in level-sensitive mode.  One possible equivalent
-implementation to deliver timer interrupts would be to hardwire the
-STIP input to 0 and then M-mode software can deliver timer interrupts to
-S-mode by setting `clicintattr[stip].trig` to `00`
-(positive-edge-triggered) and writing `clicintip[stip]` to `1`.
-
-The following optional recommendations remove unused interrupt inputs
-and compress the map to simplify hardware implementations.
-
-=== CLIC-mode interrupt-map recommendation for single-hart systems with PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt
-0   S-mode software interrupt
-1   S-mode timer interrupt
-2   S-mode external (PLIC/APLIC) interrupt
-3   M-mode software interrupt
-4   M-mode timer interrupt
-5   M-mode external (PLIC/APLIC) interrupt
-6+  local
-----
-
-=== CLIC-mode interrupt-map recommendation for single-hart M/S/U systems with no PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt
-0   S-mode software interrupt
-1   S-mode timer interrupt
-2   M-mode software interrupt
-3   M-mode timer interrupt
-4+  other
-----
-
-=== CLIC-mode interrupt-map recommendation for single-hart M-mode only or M/U mode
-systems without N extension and no PLIC/APLIC:
-
-[source]
-----
-ID  Interrupt
-0   M-mode software interrupt
-1   M-mode timer interrupt
-2+  other
-----
-
-
 
 [[bibliography]]
 == Bibliography
