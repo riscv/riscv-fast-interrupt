@@ -2010,7 +2010,7 @@ Assumed general changes not covered here:
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
 * Clear the ip bit if writable
-* Optionally, enables interrupts
+* Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
 The preempting trap is expected to fully save and restore the architectural state that it overwrites.
@@ -2019,6 +2019,7 @@ In this case, if the instruction is resumed, any store operations must be re-exe
 
 2. The ipopxret instruction
 * Disables interrupts
+* Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 * Restores registers x10-x15
 * Restores the the hart's state to the point that the hart can return to the interrupted context
 * Adjust the stack pointer to destroy the stack frame
