@@ -164,7 +164,8 @@ This table provides a summary of the CLIC extensions to AIA.
 | Extension Name | Description
 | smclicincr   | Increase of the number of local interrupts for M-mode
 | ssclicincr   | Increase of the number of local interrupts for S-mode
-| smclic       | Same Privilege Mode Interrupt Preemption support for M-mode
+| smclic       | Horizontal Nested Interrupt Preemption support for M-mode
+
 | ssclic       | Same Privilege Mode Interrupt Preemption support for S-mode
 | smclicshv    | Selective Hardware Vectored Interrupts
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
