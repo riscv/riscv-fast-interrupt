@@ -170,7 +170,6 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | smclicdbg    | support for interrupt debug triggering
 | smclicip     | support for interrupt context push/pop
-| smcliclat    | features to improve latency of context switching.
 |===
 
 == Increase of AIA local interrupts - smclicincr
@@ -565,7 +564,6 @@ interrupt's privilege mode (`**__x__**`) and interrupt level (`il`).
 A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
 
 NOTE: Previous versions of CLIC modified the {cause} CSR to contain preempted context.
-That modification has been moved to the smcliclat extension.
 {pintstatus} has been added to allow implementations to maintain {cause} compatibility between
 CLIC and CLINT modes.
 
