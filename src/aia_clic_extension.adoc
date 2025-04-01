@@ -169,7 +169,7 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclicshv    | Selective Hardware Vectored Interrupts
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | smclicdbg    | support for interrupt debug triggering
-| smclicip     | support for interrupt context push/pop
+| Smip         | support for interrupt context push/pop
 |===
 
 == Increase of AIA local interrupts - smclicincr
