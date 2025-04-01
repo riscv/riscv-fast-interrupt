@@ -1215,13 +1215,14 @@ To ensure fast interrupt handling, this extension introduces an instruction to a
 
 === Separate stacks per privilege mode
 
-The stack separation per privilege mode is controlled through the {insert CSR here}.xspsw field.
-If enabled, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
+The stack separation per privilege mode is controlled through the xsp CSR.
+If this reads the value zero, no conditional stack swap is performed.
+Else, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
 
 [source]
 ----
       Number  Name         Description
-(NEW) 0x348   msp          Stack pointer for conditional swap
+(NEW) 0x348   msp          Stack pointer for conditional swap (WARL)
 ----
 
 This mechanism can also be used to initialize the sp value of a less privileged mode.
@@ -1251,7 +1252,7 @@ exception_spsc = true if exception was taken from (xil == 0)
 interrupt_spsc = (xil == 0) != (xpil == 0)
 trap_spsc = exception_spsc or interrupt_spsc
 
-if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
+if ((xsp != 0) and (trap_spsc or (PRIV != xpp)))
 {
   tmp = sp
   sp = xsp
@@ -1268,10 +1269,10 @@ It adds a new supervisor level CSR ssp.
 [source]
 ----
       Number  Name         Description
-(NEW) 0x148   ssp          Stack pointer for conditional swap
+(NEW) 0x148   ssp          Stack pointer for conditional swap (WARL)
 ----
 
-If {insert CSR here}.xtspsw is set, the xcspsw conditionally perfoms a stack pointer swap with ssp.
+If ssp reads a non-zero value, the xcspsw conditionally perfoms a stack pointer swap with ssp.
 The behavior is analogous to Smcspsw.
 
 == Smtp Trap handler push and pop extension
