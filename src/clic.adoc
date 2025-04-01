@@ -367,7 +367,7 @@ each `mireg2` register controls the interrupt enable of thirty-two interrupts.
 | `miselect` |  `mireg` bits |  `mireg` state            |  `mireg2` bits |  `mireg2` state           | description
 | 0x1400     |   31:0        | RW `clicintip[31:0]`      |   31:0         | RW `clicintie[31:0]`      | settings for interrupts 31 through 0
 | 0x1401     |   31:0        | RW `clicintip[63:32]`     |   31:0         | RW `clicintie[63:32]`     | settings for interrupts 63 through 32
-| ...
+6*^| ...
 | 0x147F     |   31:0        | RW `clicintip[4095:4064]` |   31:0         | RW `clicintie[4095:4064]` | settings for interrupts 4095 through 4064
 |===
 
@@ -379,7 +379,7 @@ each `mireg2` register controls the interrupt enable of sixty-four interrupts.
 | `miselect` |  `mireg` bits |  `mireg` state            |  `mireg2` bits |  `mireg2` state           | description
 | 0x1400     |   63:0        | RW `clicintip[63:0]`      |   63:0         | RW `clicintie[63:0]`      | settings for interrupts 63 through 0
 | 0x1402     |   63:0        | RW `clicintip[127:64]`    |   63:0         | RW `clicintie[127:64]`    | settings for interrupts 127 through 64
-| ...
+6*^| ...
 |===
 
 ==== `clicideleg[__i__]`
@@ -393,7 +393,7 @@ In this `miselect` offset range:
 | `miselect` |  `mireg3` bits |  `mireg3` state            | description
 | 0x1400     |   31:0        | RW `clicideleg[31:0]`      | settings for interrupts 31 through 0
 | 0x1401     |   31:0        | RW `clicideleg[63:32]`     | settings for interrupts 63 through 32
-| ...
+4*^| ...
 | 0x147F     |   31:0        | RW `clicideleg[4095:4064]` | settings for interrupts 4095 through 4064
 |===
 
@@ -404,7 +404,7 @@ In this `miselect` offset range:
 | `miselect` |  `mireg3` bits |  `mireg3` state            | description
 | 0x1400     |   63:0        | RW `clicideleg[63:0]`       | settings for interrupts 63 through 0
 | 0x1402     |   127:64      | RW `clicideleg[127:64]`     | settings for interrupts 127 through 64
-| ...
+4*^| ...
 |===
 
 === Indirect Access S-mode CSRs
@@ -1164,8 +1164,6 @@ interrupt trigger when using accesses of {nxti} that include writes.  A trigger 
 The `interrupt_trap_enable` control bit is read-write to enable/disable this
 interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.interrupt_trap_enable is set.
 
-
-
 === smclicdbg machine level CSRs
 
 ==== `clicinttrig[__i__]`
@@ -1180,7 +1178,7 @@ In this `miselect` offset range:
 
 | 0x1480         |     31:0      |   RW   `clicinttrig[0]`     |  clic interrupt trigger 0
 | 0x1480 + __i__ |     31:0      |   RW   `clicinttrig[__i__]` |  clic interrupt trigger __i__
-| ...
+4*^| ...
 | 0x149F         |     31:0      |   RW   `clicinttrig[31]`    |  clic interrupt trigger 31
 |===
 
@@ -1200,7 +1198,7 @@ In this `siselect` offset range:
 
 | 0x1480     |     31:0     |   RW   `clicinttrig[0]`  |  clic interrupt trigger 0
 | 0x1480 + _i_ |     31:0     |   RW   `clicinttrig[_i_]`  |  clic interrupt trigger _i_
-| ...
+4*^| ...
 | 0x149F     |     31:0     |   RW   `clicinttrig[31]` |  clic interrupt trigger 31
 |===
 
