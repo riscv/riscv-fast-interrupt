@@ -1241,10 +1241,12 @@ Behavior:
 
 [source]
 ----
+
 # Stack pointer swap condition (SPSC) in a trap handler:
 exception_spsc = true if exception was taken from (xil == 0)
 interrupt_spsc = (xil == 0) != (xpil == 0)
 trap_spsc = exception_spsc or interrupt_spsc
+
 if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
 {
   tmp = sp
@@ -1255,14 +1257,12 @@ if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
 
 #TODO: Check how this interacts with double trap
 
-== Smclicip Interrupt push and pop extension
+== Smip Interrupt push and pop extension
 
 The interrupt push and pop extension adds instructions to accelerate interrupt handling, which additionally reduce code size.
-Interrupt latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
-herber-nxp marked this conversation as resolved.
+Interupt latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
 Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt.
 Interrupt throughput is increased by allowing tail-chaing of interupts, skipping the context restore and save in between servicing interrupts.
-
 The instructions are designed to be applicable to all RISC-V interrupt schemes.
 
 Assumed general changes not covered here:
@@ -1272,7 +1272,6 @@ Assumed general changes not covered here:
 ** This would fix the issues discovered earlier where mcause in the trampoline is overwritten before reading it in the handler
 * For this, while not necessary with the ipush/ipopret proposals, we might consider to introduce pepc and xpexccode fields. For the ipush/ipopret, these names are just used to refer to the values of the interrupted context
 * the necessary changes would also change the behavior of xret, where now mcause.exccode is being overwritten with xpexccode upon execution of xret.
-
 * The trap behavior needs to be modified to clear the ip bit upon completion of ipush, rather than as soon as the vector table access happens.
 * Stack pointer swapping (see Smcspsw): 
 ** Assumption is that there a CSR bits configuring if stack swap should happen or not. For now, they will be called xspsw (stack pointer swap) and xtspsw (trap stack pointer swap).
@@ -1304,7 +1303,6 @@ For example, if a peripheral exists multiple times in a system at different offs
 * Restores registers x10-x15
 * Restores the the hart's state to the point that the hart can return to the interrupted context
 * Adjust the stack pointer to destroy the stack frame
-
 * Conditionally performs a stack pointer swap by executing xcspsw
 * Executes an xret according to the current level
 
@@ -1319,14 +1317,11 @@ As interrupts are disabled during the sequence as a side effect of the trap bein
 If the Smip extension is implemented, the first and last instructions of a trap handler of an interrupt must be an ipush and the last an ipopxret instruction, respectively.
 If an ipush or ipopxret instruction is used outside of these two scenarios, an illegal-instruction exception shall be raised.
 
-
 NOTE: In contrast to the Zcmp push/pop intructions, Smip instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 
 #TODO: Discuss if we want to have the illegal instruction exceptions as defined here
 
 With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
-
-
 
 #TODO: discuss if we want to enforce this for all interrupts or only HW-vectored interrupts (i.e. coming from xtvt). My assumption is we do not want to do this exceptions
 
@@ -1344,14 +1339,11 @@ If such an interrupt exists, the hart may abort executing the ipopxret instructi
   - Perform the trap handler fetch.
   - Start excuting the trap handler, while skipping the portions of ipush that have not been reverted by the aborted ipopxret.
 
-
-
 Explicitly, xepc, xpil, xpp, and xpexccode remain unchanged.
 
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the ipopxret instruction. In this case, only the conditional interrupt enablement of the ipush instruction would need to executed.
 
 Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
-
 
 === Stack layout
 
@@ -1417,7 +1409,6 @@ stack pointer adjustment: 64
 According the the Machine Level ISA, trap handlers must be designed to not cause exceptions during their critical section.
 This applies to the ipush and ipopxret instruction.
 Therefore, by design, it must be guaranteed that no faults occur during the execution of these instructions.
-
 
 === Debug
 
