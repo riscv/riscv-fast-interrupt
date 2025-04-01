@@ -1285,7 +1285,7 @@ Assumed general changes not covered here:
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
 * Clear the ip bit if writable
-* Write xstatus.exccode into a0
+* Write trap information to argument registers
 * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
@@ -1293,9 +1293,23 @@ The preempting trap is expected to fully save and restore the architectural stat
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
 
-The ipush instruction puts the exception code into register a0.
+The ipush instruction writes the value of the xcause CSR into register a0.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
 For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
+
+The following table summarizes the written trap information:
+
+[%autowidth]
+|===
+| Register | synchronous exception | interrupt
+| a0       | xcause | xcause
+| a1       | xtval | no write
+| a2       | xtval2 | no write
+| a3       | xtinst | no write
+|===
+
+Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
+The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 
 2. The ipopxret instruction
 * Disables interrupts
@@ -1324,7 +1338,6 @@ NOTE: In contrast to the Zcmp push/pop intructions, Smip instructions do not enc
 With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
 
 #TODO: discuss if we want to enforce this for all interrupts or only HW-vectored interrupts (i.e. coming from xtvt). My assumption is we do not want to do this exceptions
-
 
 === Late Preemption of the interrupt handler
 
