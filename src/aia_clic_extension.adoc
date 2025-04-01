@@ -74,8 +74,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mtvec: pass:q[``mtvec``]
 :mtvt: pass:q[``mtvt``]
 :mscratch: pass:q[``mscratch``]
-:mscratchcsw: pass:q[``mscratchcsw``]
-:mscratchcswl: pass:q[``mscratchcswl``]
+:msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
@@ -90,8 +89,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :stvec: pass:q[``stvec``]
 :stvt: pass:q[``stvt``]
 :sscratch: pass:q[``sscratch``]
-:sscratchcsw: pass:q[``sscratchcsw``]
-:sscratchcswl: pass:q[``sscratchcswl``]
+:ssp: pass:q[``ssp``]
 :sepc: pass:q[``sepc``]
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
@@ -170,7 +168,8 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | smclicdbg    | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
-| Smcspsw      | Conditional stack pointer swap
+| Smcspsw      | Conditional stack pointer swap at machine level
+| Sscspsw      | Conditional stack pointer swap at supervisor level
 |===
 
 == Increase of AIA local interrupts - smclicincr
@@ -1219,7 +1218,11 @@ To ensure fast interrupt handling, this extension introduces an instruction to a
 The stack separation per privilege mode is controlled through the {insert CSR here}.xspsw field.
 If enabled, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
 
-#TODO: repurpose conditional scratch swap registers to xsp.
+[source]
+----
+      Number  Name         Description
+(NEW) 0x348   msp          Stack pointer for conditional swap
+----
 
 This mechanism can also be used to initialize the sp value of a less privileged mode.
 If an operating system manages separate stacks per software thread in a lower privileged mode, this mechanism can also be applied.
@@ -1255,6 +1258,21 @@ if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
   xsp = tmp
 }
 ----
+
+== Sscspsw Conditional Stack Pointer Swap extension
+
+The Sscspsw depends on the Smcspsw extension.
+
+It adds a new supervisor level CSR ssp.
+
+[source]
+----
+      Number  Name         Description
+(NEW) 0x148   ssp          Stack pointer for conditional swap
+----
+
+If {insert CSR here}.xtspsw is set, the xcspsw conditionally perfoms a stack pointer swap with ssp.
+The behavior is analogous to Smcspsw.
 
 == Smtp Trap handler push and pop extension
 
