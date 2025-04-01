@@ -169,7 +169,7 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclicshv    | Selective Hardware Vectored Interrupts
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | smclicdbg    | support for interrupt debug triggering
-| Smip         | support for interrupt context push/pop
+| Smtp         | support for interrupt context push/pop
 |===
 
 == Increase of AIA local interrupts - smclicincr
@@ -1255,33 +1255,23 @@ if ((xtspsw == 1) and (trap_spsc) or ((xspsw == 1) and (PRIV != xpp)))
 }
 ----
 
-#TODO: Check how this interacts with double trap
+== Smtp Trap handler push and pop extension
 
-== Smip Interrupt push and pop extension
-
-The interrupt push and pop extension adds instructions to accelerate interrupt handling, which additionally reduce code size.
-Interupt latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
-Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt.
-Interrupt throughput is increased by allowing tail-chaing of interupts, skipping the context restore and save in between servicing interrupts.
-The instructions are designed to be applicable to all RISC-V interrupt schemes.
+The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
+Trap handler latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
+Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt or synchronous exception.
+Trap handling throughput is increased by allowing tail-chaing of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+The instructions are designed to be applicable to all RISC-V trap handling schemes.
 
 Assumed general changes not covered here:
 
-* The current interrupt handler examples assume that mepc and mcause are being saved. This is a mix of values relating to the current (xexcode, xepc) and the previous interrupt context (pil, pp, pie)
-* It is better to harmonize this, and to consistently save/restore the interrupted context
-** This would fix the issues discovered earlier where mcause in the trampoline is overwritten before reading it in the handler
-* For this, while not necessary with the ipush/ipopret proposals, we might consider to introduce pepc and xpexccode fields. For the ipush/ipopret, these names are just used to refer to the values of the interrupted context
-* the necessary changes would also change the behavior of xret, where now mcause.exccode is being overwritten with xpexccode upon execution of xret.
-* The trap behavior needs to be modified to clear the ip bit upon completion of ipush, rather than as soon as the vector table access happens.
-* Stack pointer swapping (see Smcspsw): 
-** Assumption is that there a CSR bits configuring if stack swap should happen or not. For now, they will be called xspsw (stack pointer swap) and xtspsw (trap stack pointer swap).
-** For handling trap stack pointer swap, a new CSR, xtsp is introduced, with the intention of holding the trap stack pointer for each privilege level.
+* The trap behavior needs to be modified to clear the ip bit upon completion of tpush, rather than as soon as the vector table access happens.
 
-=== Interrupt push and pop functional overview
+=== Trap handler push and pop functional overview
 
-1. The ipush instruction
+1. The tpush instruction
 * Conditionally performs a stack pointer swap by executing xcspsw
-* Saves hart's state of the interrupted context that can be overwritten in case of preemption
+* Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
 * Clear the ip bit if writable
@@ -1293,7 +1283,7 @@ The preempting trap is expected to fully save and restore the architectural stat
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
 
-The ipush instruction writes the value of the xcause CSR into register a0.
+The tpush instruction writes the value of the xcause CSR into register a0.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
 For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
 
@@ -1311,7 +1301,7 @@ The following table summarizes the written trap information:
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
 The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 
-2. The ipopxret instruction
+2. The tpopxret instruction
 * Disables interrupts
 * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 * Restores registers x10-x15
@@ -1324,37 +1314,33 @@ NOTE: If a trap occurs during the sequence, then any operations which were execu
 A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
 
 There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
-Interrupts shall not be enabled before completing the context save/restore operations of the ipush instruction.
-Interrupts must be disabled before starting to restore context in the ipopxret instruction.
+Interrupts shall not be enabled before completing the context save/restore operations of the tpush instruction.
+Interrupts must be disabled before starting to restore context in the tpopxret instruction.
 As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
 
-If the Smip extension is implemented, the first and last instructions of a trap handler of an interrupt must be an ipush and the last an ipopxret instruction, respectively.
-If an ipush or ipopxret instruction is used outside of these two scenarios, an illegal-instruction exception shall be raised.
+If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
+If an tpush or tpopxret instruction is used outside of these two scenarios, an illegal-instruction exception shall be raised.
 
-NOTE: In contrast to the Zcmp push/pop intructions, Smip instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
+NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 
-#TODO: Discuss if we want to have the illegal instruction exceptions as defined here
-
-With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
-
-#TODO: discuss if we want to enforce this for all interrupts or only HW-vectored interrupts (i.e. coming from xtvt). My assumption is we do not want to do this exceptions
+With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
 
 === Late Preemption of the interrupt handler
 
-While executing the ipush instruction, a hart may optionally check for higher priority/level pending and enabled interrupts at the current privilege mode, and switch to fetching this interrupt handler instead.
+While executing the tpush instruction, a hart may optionally check for higher priority/level pending and enabled interrupts at the current privilege mode, and switch to fetching this trap handler instead.
 Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
 
 === Tail chaining of interrupts handlers
 
-While executing the ipopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
-If such an interrupt exists, the hart may abort executing the ipopxret instruction and trigger the following actions:
+While executing the tpopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
+If such an interrupt exists, the hart may abort executing the tpopxret instruction and trigger the following actions:
   - Update the xcause.exccode to the corresponding interrupt id.
   - Perform the trap handler fetch.
-  - Start excuting the trap handler, while skipping the portions of ipush that have not been reverted by the aborted ipopxret.
+  - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
 
-Explicitly, xepc, xpil, xpp, and xpexccode remain unchanged.
+Explicitly, xepc, xpil, and xpp remain unchanged.
 
-NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the ipopxret instruction. In this case, only the conditional interrupt enablement of the ipush instruction would need to executed.
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
 
 Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
 
@@ -1405,7 +1391,7 @@ start of stackframe remains same. In addition:
 
 stack pointer adjustment: 32
 
-32: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (3) | xpexccode (12)
+32: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (15)
 
 28: xpepc (XXLEN)
 
@@ -1413,28 +1399,28 @@ stack pointer adjustment: 32
 
 stack pointer adjustment: 64
 
-60: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (3) | xpexccode (12)
+60: reserved (5) | xpp (2) |  xpie (1) |  xpil (8) | xpinterrupt (1) | reserved (15)
 
 56: xpepc (XXLEN)
 
 === Fault handling
 
 According the the Machine Level ISA, trap handlers must be designed to not cause exceptions during their critical section.
-This applies to the ipush and ipopxret instruction.
+This applies to the tpush and tpopxret instruction.
 Therefore, by design, it must be guaranteed that no faults occur during the execution of these instructions.
 
 === Debug
 
-As the execution of ipush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
-Therefore, if a breakpoint is triggered because of an ipush instruction, the breakpoint shall be handled as if it occured on the subsequent instruction.
+As the execution of tpush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
+Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occured on the subsequent instruction.
 
 === Instructions
 
 #TODO: define encodings, sail etc.
 
-==== ipush
+==== tpush
 
-==== ipopxret
+==== tpopxret
 
 == CLIC Parameters
 
