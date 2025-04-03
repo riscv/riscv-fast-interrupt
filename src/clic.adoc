@@ -80,6 +80,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
 :mnxti: pass:q[``mnxti``]
+:mpintstatus: pass:q[``mpintstatus``]
 :mintstatus: pass:q[``mintstatus``]
 :mintthresh: pass:q[``mintthresh``]
 
@@ -95,6 +96,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
 :snxti: pass:q[``snxti``]
+:spintstatus: pass:q[``spintstatus``]
 :sintstatus: pass:q[``sintstatus``]
 :sintthresh: pass:q[``sintthresh``]
 
@@ -160,19 +162,15 @@ This table provides a summary of the CLIC extensions to AIA.
 [%autowidth]
 |===
 | Extension Name | Description
-| smclicincr   | Increase of the number of local interrupts for M-mode
-| ssclicincr   | Increase of the number of local interrupts for S-mode
-| smclic       | Horizontal Nested Interrupt Preemption support for M-mode
-| ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
+| smclicincr   | Increase of the number of local interrupts
+| smclic       | Horizontal Nested Interrupt Preemption support
 | smclicshv    | Selective Hardware Vectored Interrupts
-| smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
-| smclicdbg    | support for interrupt debug triggering
+| smidbg    | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
-| Smcspsw      | Conditional stack pointer swap at machine level
-| Sscspsw      | Conditional stack pointer swap at supervisor level
+| Smcspsw      | Conditional stack pointer swap
 |===
 
-== Increase of AIA local interrupts - smclicincr
+== Increase the number of local interrupts - smclicincr extension
 
 The smclicincr extension increases support up to 4096 interrupt inputs per hart.
 Each interrupt input _i_ has five control
@@ -407,7 +405,7 @@ In this `miselect` offset range:
 4*^| ...
 |===
 
-=== Indirect Access S-mode CSRs
+=== Indirect Access S-mode CLIC Interrupt CSRs
 
 If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
 locations appear hardwired to zero.
@@ -472,7 +470,7 @@ and each `sireg2` register controls the interrupt enable of thirty-two interrupt
 * When XLEN = 64, only the even-numbered registers exist and each `sireg` register reflects the interrupt pending of sixty-four interrupts and
 each `sireg2` register controls the interrupt enable of sixty-four interrupts.
 
-== Same Privilege Mode Interrupt Preemption Support - smclic
+== Horizontal Nested Interrupt Preemption Support - smclic
 
 This extension requires smclicincr extension.
 
@@ -526,7 +524,7 @@ interrupt level of zero.
 
 === New {mtvec} CSR Mode for CLIC
 
-The CLIC interrupt-handling mode is encoded as a new state in the
+Horizontal Nested Interrupt Preemption Support is encoded as a new state in the
 existing {mtvec} WARL register, where {mtvec}.`mode` (the two
 least-significant bits) is `11`.
 
@@ -559,7 +557,17 @@ and interrupts are globally enabled in this privilege mode, then
 execution is immediately transferred to a handler running with the new
 interrupt's privilege mode (`**__x__**`) and interrupt level (`il`).
 
-==== New Interrupt Status ({mpintstatus}) CSR
+=== CLIC Level Control of Interrupts at Machine level
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x346   mpintstatus  Previous interrupt context
+ (NEW) 0xFB1   mintstatus   Current interrupt context
+ (NEW) 0x347   mintthresh   Interrupt-level threshold
+----
+
+==== Previous Interrupt Context ({mpintstatus}) CSR
 
 A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
 
@@ -595,7 +603,7 @@ Note: Switching to CLINT mode
 from CLIC mode causes {pil} in that privilege mode to be zeroed.
 
 
-==== New Interrupt Status ({mintstatus}) CSR
+==== Current Interrupt Context ({mintstatus}) CSR
 
 A new M-mode CSR, `mintstatus`, holds the active interrupt level for
 each supported privilege mode.  These fields are read-only.  The
@@ -657,6 +665,56 @@ maximum interrupts (one for the current mode and one for each
 higher-privilege mode) qualified by the per-mode threshold, then pick
 a qualified maximum interrupt with the highest privilege mode.
 
+=== CLIC Level Control of Interrupts at Supervisor level 
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x146   spintstatus  Previous Interrupt Context
+ (NEW) 0xDB1   sintstatus   Current Interrupt Context
+ (NEW) 0x147   sintthresh   Interrupt-level threshold
+----
+
+==== Previous Interrupt Context ({spintstatus}) CSR
+
+[source]
+----
+spintstatus
+ Bits    Field        Description
+ XLEN-1 Interrupt     Interrupt=1, Exception=0, same as scause.Interrupt
+    30  (reserved for smclicshv extension)
+    29  (reserved)
+    28  spp           Previous privilege mode, same as sstatus.spp
+    27  spie          Previous interrupt enable, same as sstatus.spie
+ 26:24  (reserved)
+ 23:16  spil[7:0]     Previous interrupt level
+ 15:12  (reserved)
+ 11:0   exccode[11:0] Exception/interrupt code, same as scause[11:0]
+----
+
+The supervisor {scause} register has only a single `spp` bit (to
+indicate user/supervisor) mirrored from {sstatus}.`spp`.
+
+
+==== Current Interrupt Context ({sintstatus}) CSR
+
+A corresponding supervisor mode, {sintstatus} CSR provides restricted views of {mintstatus}.
+
+[source]
+----
+sintstatus fields
+ 31:16 (reserved)
+ 15: 8 sil
+  7: 0 (reserved)
+----
+
+==== Interrupt-Level Threshold ({sintthresh}) CSR
+
+The interrupt-level threshold ({sintthresh}) is a new read-write WARL CSR,
+which holds an 8-bit field (`th`) for the threshold level of the
+supervisor privilege mode.  The `th` field is held in the least-significant
+8 bits of the CSR, and zero should be written to the upper bits.
+
 === smclic Reset Behavior
 
 In general in RISC-V, mandatory reset state is minimized but platform
@@ -665,12 +723,22 @@ requirements.  Since the general privileged architecture states that
 mstatus.mie is reset to zero, interrupts will not be enabled coming
 out of reset.
 
-==== smclic mandatory reset state
+==== CLIC Reset Behavior at Machine Level
 
 {mintstatus}.`mil` and {mpintstatus}.`mpil` fields reset to 0.  Interrupt level 0 corresponds to regular
 execution outside of an interrupt handler.
 
 The reset behavior of other fields is platform-specific.
+
+==== CLIC Reset Behavior at Supervisor Level
+
+Interrupt level 0 corresponds to regular
+execution outside of an interrupt handler.
+
+NOTE: For an S-mode execution environment, the EEI should specify
+that {sstatus}.`sie` is also reset on entry. It is then responsibility of
+the execution environment to ensure that is true before beginning execution
+in S-mode.
 
 === smclic Interrupt Operation
 
@@ -794,25 +862,10 @@ mode.  The {ret} instruction sets the pc to the value stored in the {epc} regist
 Additionally in CLIC mode, {ret} sets {intstatus}.{il} to {pintstatus}.{pil}.
 The {ret} instruction does not modify the {pintstatus}.{pil} field in {pintstatus}.
 
-
-=== CLIC Level Control - Interrupts at machine level
-
-[source]
-----
-       Number  Name         Description
- (NEW) 0x346   mpintstatus  Previous interrupt context
- (NEW) 0xFB1   mintstatus   Current interrupt context
- (NEW) 0x347   mintthresh   Interrupt-level threshold
-----
-
-==== Specifying Interrupt Level
-
-NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
+==== Specifying Interrupt Level at Machine Level - `clicintlvl[__i__]`
 
 A parameterized number of upper bits in
 `clicintlvl[__i__]` are assigned to encode the interrupt level.
-
-==== `clicintlvl[__i__]`
 
 In this `miselect` offset range:
 
@@ -830,65 +883,20 @@ In this `miselect` offset range:
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
-=== Interrupts at supervisor level
+==== Specifying Interrupt Level at Supervisor Level - `clicintlvl[__i__]`
+In this `siselect` offset range:
+*  When XLEN = 32, each `sireg` register controls the clic level setting of four interrupts
 
-[source]
-----
-       Number  Name         Description
- (NEW) 0x146   spintstatus  Previous interrupt levels
- (NEW) 0xDB1   sintstatus   Current interrupt levels
- (NEW) 0x147   sintthresh   Interrupt-level threshold
-----
+[%autowidth]
+|===
+| `siselect` |  `sireg` bits |  `sireg` state              | description
+| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
+| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
+| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
+| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
+|===
 
-==== New Interrupt Status ({spintstatus}) CSR
-
-[source]
-----
-spintstatus
- Bits    Field        Description
- XLEN-1 Interrupt     Interrupt=1, Exception=0, same as scause.Interrupt
-    30  (reserved for smclicshv extension)
-    29  (reserved)
-    28  spp           Previous privilege mode, same as sstatus.spp
-    27  spie          Previous interrupt enable, same as sstatus.spie
- 26:24  (reserved)
- 23:16  spil[7:0]     Previous interrupt level
- 15:12  (reserved)
- 11:0   exccode[11:0] Exception/interrupt code, same as scause[11:0]
-----
-
-The supervisor {scause} register has only a single `spp` bit (to
-indicate user/supervisor) mirrored from {sstatus}.`spp`.
-
-
-==== ssclic New Interrupt Status ({sintstatus}) CSR
-
-A corresponding supervisor mode, {sintstatus} CSR provides restricted views of {mintstatus}.
-
-[source]
-----
-sintstatus fields
- 31:16 (reserved)
- 15: 8 sil
-  7: 0 (reserved)
-----
-
-==== New Interrupt-Level Threshold ({sintthresh}) CSR
-
-The interrupt-level threshold ({sintthresh}) is a new read-write WARL CSR,
-which holds an 8-bit field (`th`) for the threshold level of the
-supervisor privilege mode.  The `th` field is held in the least-significant
-8 bits of the CSR, and zero should be written to the upper bits.
-
-=== ssclic CLIC Reset Behavior
-
-Interrupt level 0 corresponds to regular
-execution outside of an interrupt handler.
-
-NOTE: For an S-mode execution environment, the EEI should specify
-that {sstatus}.`sie` is also reset on entry. It is then responsibility of
-the execution environment to ensure that is true before beginning execution
-in S-mode.
+* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 ==== State Enable
 
@@ -904,7 +912,7 @@ exception.
 
 
 
-== Support for selective hardware vectored interrupts - smclicshv
+== Selective Hardware Vectored Interrupts - smclicshv
 This extension requires smclicincr and smclic.
  
 The selective hardware vectoring extension adds the ability for each interrupt
@@ -1136,7 +1144,7 @@ during hardware vectoring.  If breakpoints are allowed to trap on the
 table read, dret should honor {inhv}.
 
 
-== Interrupt trigger Debug extension- smclicdbg
+== Interrupt trigger Debug extension- smidbg
 
 === CLIC Interrupt Trigger (`clicinttrig`)
 
@@ -1164,7 +1172,7 @@ interrupt trigger when using accesses of {nxti} that include writes.  A trigger 
 The `interrupt_trap_enable` control bit is read-write to enable/disable this
 interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.interrupt_trap_enable is set.
 
-=== smclicdbg machine level CSRs
+=== smidbg machine level CSRs
 
 ==== `clicinttrig[__i__]`
 
@@ -1184,7 +1192,7 @@ In this `miselect` offset range:
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the interrupt trigger setting of two interrupts.
 
-=== smclicdbg supervisor level CSRs
+=== smidbg supervisor level CSRs
 
 ==== `clicinttrig[__i__]`
 
@@ -1217,6 +1225,8 @@ The stack separation per privilege mode is controlled through the xsp CSR.
 If this reads the value zero, no conditional stack swap is performed.
 Else, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
 
+=== Smcspsw Conditional Stack Pointer Swap at Machine level
+
 [source]
 ----
       Number  Name         Description
@@ -1225,6 +1235,19 @@ Else, the xcspw instruction can be used to atomically swap the stack pointer wit
 
 This mechanism can also be used to initialize the sp value of a less privileged mode.
 If an operating system manages separate stacks per software thread in a lower privileged mode, this mechanism can also be applied.
+
+=== Smcspsw Conditional Stack Pointer Swap at supervisor level
+
+It adds a new supervisor level CSR ssp.
+
+[source]
+----
+      Number  Name         Description
+(NEW) 0x148   ssp          Stack pointer for conditional swap (WARL)
+----
+
+If ssp reads a non-zero value, the xcspsw conditionally perfoms a stack pointer swap with ssp.
+The behavior is analogous to Machine level.
 
 === Separate stacks for interrupts
 
@@ -1257,21 +1280,6 @@ if ((xsp != 0) and (trap_spsc or (PRIV != xpp)))
   xsp = tmp
 }
 ----
-
-== Sscspsw Conditional Stack Pointer Swap extension
-
-The Sscspsw depends on the Smcspsw extension.
-
-It adds a new supervisor level CSR ssp.
-
-[source]
-----
-      Number  Name         Description
-(NEW) 0x148   ssp          Stack pointer for conditional swap (WARL)
-----
-
-If ssp reads a non-zero value, the xcspsw conditionally perfoms a stack pointer swap with ssp.
-The behavior is analogous to Smcspsw.
 
 == Smtp Trap handler push and pop extension
 
