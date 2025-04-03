@@ -578,16 +578,6 @@ Bits   Field         Description
  11:0   exccode[11:0] Exception/interrupt code, mirror of mcause[11:0]
 ----
 
-
-As stated in the RISC-V privilege specification,
-when a trap is taken from privilege mode y into privilege mode x,
-xPIE is set to the value of xIE; xIE is set to 0; and
-xPP is set to y.  xepc is written with the virtual address of the instruction
-that was interrupted or that encountered the exception.
-Additionally in CLIC mode, interrupt level (`xpil`) is set to xintstatus.xil and
-xcause.exccode is written with a code indicating the event (the id of the
-interrupt or exception code) that caused the trap.
-
 Note: Switching to CLINT mode
 from CLIC mode causes {pil} in that privilege mode to be zeroed.
 
