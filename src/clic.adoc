@@ -766,10 +766,6 @@ Vertical synchronous exception traps, which are serviced at a higher
 privilege mode, are taken at interrupt level 0 in the higher privilege
 mode.
 
-WARNING: Traps should be avoided at any time when {epc}/{cause} are live
-because these CSRs will be overwritten. Software should try to back them
-up if needed.
-
 ==== Non-Resumable Non-Maskable Interrupts
 
 The handling of NMIs is implementation-specific, but NMIs are always
