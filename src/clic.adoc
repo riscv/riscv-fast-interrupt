@@ -62,7 +62,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :cause: pass:q[``**__x__**cause``]
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
-:nxti: pass:q[``**__x__**nxti``]
 :pintstatus: pass:q[``**__x__**pintstatus``]
 :intstatus: pass:q[``**__x__**intstatus``]
 :intthresh: pass:q[``**__x__**intthresh``]
@@ -79,7 +78,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
-:mnxti: pass:q[``mnxti``]
 :mintstatus: pass:q[``mintstatus``]
 :mintthresh: pass:q[``mintthresh``]
 
@@ -94,7 +92,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
-:snxti: pass:q[``snxti``]
 :sintstatus: pass:q[``sintstatus``]
 :sintthresh: pass:q[``sintthresh``]
 
@@ -166,7 +163,7 @@ This table provides a summary of the CLIC extensions to AIA.
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | smclicshv    | Selective Hardware Vectored Interrupts
 | smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
-| smclicdbg    | support for interrupt debug triggering
+| smditrig    | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
 | Sscspsw      | Conditional stack pointer swap at supervisor level
@@ -894,7 +891,7 @@ in S-mode.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs ({stvt}, {snxti}, {sintstatus}, {sintthresh},
+access to the new CSRs ({stvt}, {sintstatus}, {sintthresh},
 {sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
@@ -1136,15 +1133,15 @@ during hardware vectoring.  If breakpoints are allowed to trap on the
 table read, dret should honor {inhv}.
 
 
-== Interrupt trigger Debug extension- smclicdbg
+== Interrupt trigger Debug extension- smditrig
 
-=== CLIC Interrupt Trigger (`clicinttrig`)
+=== Interrupt Trigger (`dbginttrig`)
 
-Optional interrupt triggers (`clicinttrig[__i__]`) are used to generate
+Optional interrupt triggers (`dbginttrig[__i__]`) are used to generate
 a breakpoint exception, entry into Debug Mode, or a trace action.
 If these registers are not implemented, they appear as hard-wired zeros.
 
-NOTE: The notation [__i__] for the clicinttrig register in this section treats __i__ not an interrupt number
+NOTE: The notation [__i__] for the dbginttrig register in this section treats __i__ not an interrupt number
 but is instead as a trigger number.
 
 This logic is intended to be used with `tmexttrigger`.`intctl`` as described in the RISC-V debug specification.
@@ -1152,21 +1149,18 @@ This logic is intended to be used with `tmexttrigger`.`intctl`` as described in 
 Each interrupt trigger is a 32-bit WARL register with the
 following layout:
 
-.clicinttrig register layout
-include::images/wavedrom/clicinttrig.edn[]
+.dbginttrig register layout
+include::images/wavedrom/dbginttrig.edn[]
 
 The `interrupt_number` field selects which number of interrupt input
 is used as the source for this interrupt trigger.
 
-The `nxti_enable` control bit is read-write to enable/disable this
-interrupt trigger when using accesses of {nxti} that include writes.  A trigger is signaled to the debug module if the interrupt code from a write access to {nxti} matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.nxti_enable is set.
-
 The `interrupt_trap_enable` control bit is read-write to enable/disable this
-interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `clicinttrig[__i__]`.interrupt_number and the associated `clicinttrig[__i__]`.interrupt_trap_enable is set.
+interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `dbginttrig[__i__]`.interrupt_number and the associated `dbginttrig[__i__]`.interrupt_trap_enable is set.
 
-=== smclicdbg machine level CSRs
+=== smditrig machine level CSRs
 
-==== `clicinttrig[__i__]`
+==== `dbginttrig[__i__]`
 
 In this `miselect` offset range:
 
@@ -1176,17 +1170,17 @@ In this `miselect` offset range:
 |===
 | `miselect`     |  `mireg` bits |  `mireg` state              |  description
 
-| 0x1480         |     31:0      |   RW   `clicinttrig[0]`     |  clic interrupt trigger 0
-| 0x1480 + __i__ |     31:0      |   RW   `clicinttrig[__i__]` |  clic interrupt trigger __i__
+| 0x1480         |     31:0      |   RW   `dbginttrig[0]`     |  interrupt trigger 0
+| 0x1480 + __i__ |     31:0      |   RW   `dbginttrig[__i__]` |  interrupt trigger __i__
 4*^| ...
-| 0x149F         |     31:0      |   RW   `clicinttrig[31]`    |  clic interrupt trigger 31
+| 0x149F         |     31:0      |   RW   `dbginttrig[31]`    |  interrupt trigger 31
 |===
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the interrupt trigger setting of two interrupts.
 
-=== smclicdbg supervisor level CSRs
+=== smditrig supervisor level CSRs
 
-==== `clicinttrig[__i__]`
+==== `dbginttrig[__i__]`
 
 In this `siselect` offset range:
 
@@ -1196,10 +1190,10 @@ In this `siselect` offset range:
 |===
 | `siselect`   |  `sireg` bits |  `sireg` state          |  description
 
-| 0x1480     |     31:0     |   RW   `clicinttrig[0]`  |  clic interrupt trigger 0
-| 0x1480 + _i_ |     31:0     |   RW   `clicinttrig[_i_]`  |  clic interrupt trigger _i_
+| 0x1480     |     31:0     |   RW   `dbginttrig[0]`  |  interrupt trigger 0
+| 0x1480 + _i_ |     31:0     |   RW   `dbginttrig[_i_]`  |  interrupt trigger _i_
 4*^| ...
-| 0x149F     |     31:0     |   RW   `clicinttrig[31]` |  clic interrupt trigger 31
+| 0x149F     |     31:0     |   RW   `dbginttrig[31]` |  interrupt trigger 31
 |===
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the interrupt trigger setting of two interrupts.
