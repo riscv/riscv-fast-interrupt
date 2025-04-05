@@ -145,7 +145,158 @@ Creative Commons Attribution 4.0 International License.
 
 [Preface]
 == Revision History
-
+Date        Description
+04/02/2025  pull #464  - removed old CLIC spec in favor of CLIC on top of AIA
+11/11/2024  issue #414 - Move register layout definitions into wavedrom
+09/25/2024  issue #409 - Renamed M-mode CSRs in smclic chapter from 'x' to 'm' prefix. Also fixed inconsistent formating of indirect CSR names.
+09/10/2024  issue #411 - Clarify that smclicshv ignores 1 or 2 LSBs of vector table entry (depending on IALIGN)
+09/10/2024  pull  #404 - First round of reorganization of the document to move SW information to Appendix
+08/30/2024  issue #401 - First round of changes to improve clarity of document. Removed mention of U-mode interrupts.
+03/14/2024  issue #391 - Allocated indirect CSR numbers 0x1000-0x14A0 for clicint regs
+03/08/2024  issue #385 - Add WARL note to clicintctl/clicintattr/clicintie
+03/05/2024  issue #388 - Fix clicintctl/clicintattr miselect/siselect values
+03/05/2024  issue #377 - Clarify indirect CSR access text
+03/05/2024  issue #383 - Rename title of m-mode indirect csr access
+03/05/2024  issue #381/379 - revert pull #370 merge. xnxti again does not return SHV trap-handler entries.
+03/05/2024  issue #380 - Fix clicintctl spelling
+03/04/2024  issue #349 - Change access to CLIC registers from memory mapped to indirect CSR
+03/04/2024  pull #369  - Redefine parameters to no longer specify number of bit implemented but instead specify legal WARL values.
+03/04/2024  pull #373  - Add xcause.xpil fields to mandatory reset state.
+03/04/2024  issue #371 - Add additional clicinttrig enable for signaling interrupts claimed by xnxti.
+03/04/2024  issue #314 - xnxti now also returns SHV trap-handler entries
+02/09/2024  issue #360 - CLIC is allocated bit 53 in the stateen0 registers with the presumed bit name of CLIC.
+02/09/2024  issue #91  - Removed incorrect DTS entry. Moving DTS entry task to spike issue #242 instead of being in CLIC spec.
+02/05/2024  issue #367 - clicintip/ie clarification
+12/19/2023  issue #303 - Clarify behavior of CSRs when switching between CLIC and CLINT modes
+10/10/2023  issue #307 - NUM_INTERRUPT parameter text cleanup
+10/10/2023  issue #355 - updated text clarifying clic interaction with rnmi spec
+10/10/2023  issue #347/356/357/358 - updated mret/inhv pseudo-code
+09/01/2023  issue #339 - typo changed xstatus.xil to xintstatus.xil
+08/29/2023  issue #345 - stateen register required to block access to new ssclic CSRs?
+08/29/2023  issue #350 - clarify which privilege modes will have mscratchcsw
+08/29/2023  issue #351 - Clarify/Fix Smclic Ssclic Suclic memory map reserved areas
+08/01/2023  issue #333 - xcause.xinhv - x is the faulting priv, i.e., when set, xinhv indicates is xepc is addr of a table entry.
+06/20/2023  issue #339 - updated text describing mcause.mpil and mret behavior to better match wording in priv spec
+06/06/2023  issue #334 - removed text regarding debug changes to xintthresh as this does not apply #334
+05/30/2023  spelling fixes.
+05/09/2023  issue #317 - clarification that trampoline examples do not account for f or v registers
+05/09/2023  issue #322 - xcliccfg xnlbits text cleanup
+05/09/2023  issue #321 - intthresh clearing/zeroing text changed to setting to min value
+05/09/2023  issue #320 - RNMI CSR CLIC details added
+04/11/2023  issue #318 - use zero instead of x0 in assembly examples.
+04/11/2023  issue #290 - force xepc to have table-entry alignment on xRET during inhv
+03/28/2023  issue #311 - provided separate unlbits/snlbits/mnlbits in separate cliccfg registers per mode.  This changes the cliccfg bit ordering.
+03/28/2023  issue #304 - clean up VM page boundary alignment recommendations
+03/28/2023  issue #295 - also include DRET in clearing intthresh
+03/28/2023  issue #315 - typo fix in interrupt handler example
+03/14/2023  issue #309 - Added discussion on NMI and RNMI handling.
+03/14/2023  issue #295 - MRET/SRET clears current priv intthresh when going to a lower priv mode.
+02/28/2023  issue #305 - clean up xideleg and xedeleg text
+02/14/2023  pull #302 - make clicinttrig, xnxti/xscratchcsw/xscratchcswl non-optional
+02/14/2023  issue #293 - create separate cliccfg per priv mode
+02/14/2023  issue #294 - Change addresses of mintstatus, sintstatus, uintstatus to  0xFB1, 0xDB1, and 0xCB1, respectively.
+02/14/2023  issue #298 - typo cleanup - removed redundant note text in smclicshv section
+01/31/2023  issues #75/#160 - reordered text into 5 extensions, smclic, ssclic, suclic, smclicshv, smclicconfig. No functional changes intended.
+11/08/2022  issue #271 - text cleanup - updated inhv to xinhv
+11/08/2022  issue #280 - clarified nxti CSR access types
+11/08/2022  issue #235 - clarified inhv text for statement when a trap is taken all cause fields are updated.
+11/08/2022  issue #88/#282 - moved xintstatus to read-only CSR addr range, moved clicbase, nvbits, clicinfo to parameters section
+10/25/2022  issue #274 - clarify handling of horizontal traps on table fetch in pseudo-code
+10/25/2022  issue #277 - be consistent in calling CLIC inputs local interrupts.
+10/11/2022  issue #275 - clarify hwvector text
+10/11/2022  issue #279 - Reserved use of all but simple csrrw access to scratchcsw/l, clarified operation of the instruction
+10/11/2022  issue #277 - Added more clarification on csip
+09/27/2022  issue #271/#272 - xinhv text cleanup. setting ucause_inhv in pseudo-code when u-mode not implemented.
+09/27/2022  issue #240/#255 - clarify CLIC vs CLINT mode settings
+09/13/2022  issues #219/#222 - CLIC interrupt ordering text clarifications.
+09/05/2022  issue #267 - update text from not defined to implementation-defined.
+08/30/2022  clarify hw vectoring execute permissions,
+            fixed text to say priv level instead of interrupt level.
+            changed implicit read to implicit fetch.
+08/30/2022  issue #219 - csip interrupt ordering clarification - CSIP interrupt ID was changed from 12 to 16
+08/30/2022  issue #229 - clarify clicintattr.mode WARL behavior
+08/30/2022  Define CLINT and replace references to "original basic local interrupts" with CLINT
+08/30/2022  issue #191 - software vectoring read permission clarification
+08/30/2022  issue #239/228 - clarification of breakpoints on hw vector table fetches, dpc
+08/16/2022  issue #202 - 64-bit writes to {clicintctl,clicintattr,clicintie,clicintip} text clarification
+08/02/2022  issue #250 - Clarified that not all specified CSRs are available in all privilege modes
+08/02/2022  issue #248 - created a new xtvec submode field in clic mode
+08/02/2022  issue #100 - reserving use of uimm bits in xnxti for future use
+07/05/2022  Specified that xtvec.mode bits are writeable but hidden when in CLINT mode
+06/21/2022  clarified "cleared" means set to 0 for interrupt pending bit
+06/21/2022  issue #220 - reserved address space clarification (pull #243)
+06/21/2022  issue #214 - xscratch pseudocode clarification (pull #215)
+06/21/2022  issue #197 - Clarified xinhv pseudocode (pull #198)
+06/21/2022  Made clear that mtvec[5:0]=000010 is still reserved
+06/07/2022  pull #217 - allow implementing less than 8 bits for xintthresh
+06/07/2022  issue #29/#155 (pull#190) - clarify clicinttrig details
+06/07/2022  issue #212/pull#216 - fixed parameter value ranges for NUM_INTERRUPT and CLICMTVECALIGN
+06/07/2022  Pull #218 - typo fix. clicintattr regs are used to delegate interrupts
+06/01/2022  Wording change in comparison with AIA features.  Added reference to Bibliography.
+05/10/2022  issue #235 - change “exception” to “trap” to match priv spec wording.
+05/10/2022  issue #233 - mnxti pseudo-code clarification (added meaning of clic.priv,clic.level,clic.id)
+05/10/2022  issue #225 - bounded time to respond to interrupts
+04/26/2022  issue #191 - hw vector fetch permission changed to implicit read with execute permission required.
+04/26/2022  issue #223/224 - mtval=0 allowed, hw vect xepc difference noted.
+03/15/2022  issue #207 - further xret/inhv text clarification
+03/06/2022  issue #210 - hw vector trap text clarification
+02/15/2022  WFI text clarification
+02/01/2022  issue #193 - xret/inhv text clarification
+01/04/2022  issue #45 - remove new alignment constraint on CLINT mode when CLIC added
+01/04/2022  issue #188 - clarification that writes to xcause affect xstatus
+12/21/2021  issue #109 - add smclic arch string to spec
+12/21/2021  issue #180 - change processor references to hart
+11/09/2021  issue #48 - indicate when edge-triggered interrupts are cleared
+11/09/2021  issue #179 - set interrupt bit during nxti access
+10/28/2021  issue #154 - inhv clarification
+10/28/2021  issue #31/#120 - wfi clarification
+10/12/2021  issue #177 - Reduced mandatory reset requirements
+09/29/2021  Added link to development states definition on top page
+09/14/2021  pull #169 - nxti clarification
+09/14/2021  pull #168 - only 0 or 8 level bits currently supported (other values reserved)
+09/14/2021  issue #170 - clarified position of intthresh in CSR
+08/31/2021  issue #86/#165 - Update mnxti pseudo-code to handle side-effects correctly.
+08/31/2021  pull #164 - moved clicintattr.mode reset value to reset section of spec
+08/17/2021  pull #163 - spec clarification that clicintie is held in bit 0 of byte.
+07/20/2021  pull #161 - spec clarification that only writes to xnxti have side effects.
+07/06/2021  issue #156,#77,#79 - more CLIC memory mapped text clarifications, clicintctl typo fixes
+06/22/2021  issue #156 - reverted text and added clarification on CLIC memory mapped privilege regions.
+05/25/2021  issue #149 - added text that 32-bit writes are legal but effects are not defined.
+05/25/2021  issue #142 - added text that MPRV and SUM are obeyed on vector table accesses.
+05/11/2021  issue #154 – added text that clarifies behavior when inhv is set when returning from a ret instruction.
+04/27/2021  clicintip[i] state is undefined when switching from level to edge triggered mode
+04/22/2021  updated adoc format to align with risc-v template, added revision history
+04/18/2021  Added Bibliography section
+04/15/2021  issue #45 - for rev1.0 mtvec not xtvec controls enabling CLIC mode for all priv
+04/13/2021  issue #141 - N-extension vs Bare S-mode note added.
+04/13/2021  issue #117,#125 fix - change text to match table in M/S/U system if nmbits==1
+04/12/2021  issue #47 fix - add CLIC reset behavior section
+04/12/2021  issue #26 fix - modify wording that defined micro-architectural behavior of xINHV
+04/12/2021  issue #91 - add DTS entry example
+04/12/2021  added CLIC comparison to Advance Interupt Architecture (AIA)
+04/12/2021  issue #111,#105 fix - For hardware vectoring access exceptions, both {tval} and {epc} holds the faulting address
+04/08/2021  issue #49, #79 - downplay M/S/U memory map requirements
+03/30/2021  issue #29 - updated memory map table reserved section to give room for clicinttrig
+03/30/2021  issue #122 fix - remove wording referring to register
+03/11/2021  issue #120 - update WFI wording
+03/11/2021  typo fixing
+03/11/2021  issue #51 - implementation of non CSRRW variants of xscratchcsw/xscratchcswl explicitly not defined/reserved.
+03/11/2021  issue #58 - xintthresh was missing from table summarizing overall interrupt behavior
+02/17/2021  issue #95 fix - removed N extension reference since not ratified.
+02/17/2021  issue #90 fix - clarified that clicintip!=0 means interrupt pending
+02/17/2021  issue #89 - updated CLIC interrupt ID ordering recommendations
+02/17/2021  ihnv clarification - inhv bit has no effect except when returning from a trap using an {ret} instruction
+02/17/2021  ihnv clarification - inhv only written by hw during table vector read. can be written by software.
+02/02/2021  WFI wording change
+01/19/2021  WFI wording change
+01/07/2021  WFI section added
+01/07/2021  Notes added clarifying clicintie and mstatus.xie
+01/07/2021  interrupt priority clarification
+12/17/2020  Added support for interrupt triggers
+10/20/2020  clarified differences between level and priority
+10/20/2020  fixed value range for CLICINTCTLBITS
+10/20/2020  Clarified relationship among interrupt level, cliccfg.nlbits and CLICINTCTLBITS
+09/08/2020  clarified description for interrupt level
 [source]
 ----
 Date        Description
@@ -165,7 +316,6 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclic       | Horizontal Nested Interrupt Preemption support for M-mode
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | smclicshv    | Selective Hardware Vectored Interrupts
-| smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | smclicdbg    | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
@@ -830,8 +980,7 @@ In this `miselect` offset range:
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
-=== Interrupts at supervisor level
-
+== Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
 [source]
 ----
        Number  Name         Description
