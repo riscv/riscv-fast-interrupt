@@ -783,13 +783,9 @@ This makes the design of the RNMI extension orthogonal to the hart's general int
 
 ==== Returns from Handlers
 
-As stated in the RISC-V Privilege Specification,
-when executing an xRET instruction, supposing xPP holds the value y, xIE is set to xPIE; the
-privilege mode is changed to y; xPIE is set to 1; and xPP is set to the least-privileged supported
-mode.  The {ret} instruction sets the pc to the value stored in the {epc} register.
-Additionally in CLIC mode, {ret} sets {intstatus}.{il} to {pintstatus}.{pil}.
+The behavior of an {ret} instruction is modified as follows:
+In CLIC mode, {ret} sets {intstatus}.{il} to {pintstatus}.{pil}.
 The {ret} instruction does not modify the {pintstatus}.{pil} field in {pintstatus}.
-
 
 === CLIC Level Control - Interrupts at machine level
 
