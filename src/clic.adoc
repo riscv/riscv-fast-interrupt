@@ -1025,8 +1025,9 @@ When a trap is taken, the {inhv} bit is set by hardware to indicate if {epc} is 
 or cleared by hardware to indicate if {epc} is the address of an instruction.
 The {inhv} bit is only set by hardware if an exception occurs during the table vector
 read operation.  The {inhv} bit can be written by software, including
-when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning using an {ret} instruction.
+when hardware vectoring is not in effect.
+
+==== Returns from Handlers
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
