@@ -479,7 +479,7 @@ interrupts for a higher privilege mode can preempt an active interrupt
 handler running in a lower privilege mode, regardless of global
 interrupt enable in lower privilege mode.
 
-=== CLIC Interrupt Input Control (`clicintlvl`)
+=== Interrupt level control
 
 `clicintlvl[__i__]` is an 8-bit WARL control register
 to specify interrupt levels 1-255. 
@@ -510,6 +510,31 @@ handler tasks from application tasks to increase robustness, reduce
 space usage, and aid in system debugging.  Interrupt handler tasks
 have non-zero interrupt levels, while application tasks have an
 interrupt level of zero.
+
+==== Indirect Access to interrupt level CSRs
+
+NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
+
+A parameterized number of upper bits in
+`clicintlvl[__i__]` are assigned to encode the interrupt level.
+
+==== `clicintlvl[__i__]`
+
+In this `miselect` offset range:
+
+*  When XLEN = 32, each `mireg` register controls the clic level setting of four interrupts
+
+[%autowidth]
+|===
+| `miselect` |  `mireg` bits |  `mireg` state              | description
+
+| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
+| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
+| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
+| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
+|===
+
+* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 === Changed and new CSRs
 
@@ -582,7 +607,6 @@ Bits   Field         Description
 Note: Switching to CLINT mode
 from CLIC mode causes {pil} in that privilege mode to be zeroed.
 
-
 ==== New Interrupt Status ({mintstatus}) CSR
 
 A new M-mode CSR, `mintstatus`, holds the active interrupt level for
@@ -598,7 +622,6 @@ mintstatus fields
  15: 8   sil if ssclic is supported
   7: 0   (reserved)
 ----
-
 
 ==== New Interrupt-Level Threshold ({mintthresh}) CSRs
 
@@ -774,34 +797,6 @@ instruction that changes the privilege mode to a mode less
 privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.
 This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
 privilege mode is running.
-
-=== CLIC Level Control - Interrupts at machine level
-
-
-==== Indirect Access to interrupt level CSRs
-
-NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
-
-A parameterized number of upper bits in
-`clicintlvl[__i__]` are assigned to encode the interrupt level.
-
-==== `clicintlvl[__i__]`
-
-In this `miselect` offset range:
-
-*  When XLEN = 32, each `mireg` register controls the clic level setting of four interrupts
-
-[%autowidth]
-|===
-| `miselect` |  `mireg` bits |  `mireg` state              | description
-
-| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 == Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
 
