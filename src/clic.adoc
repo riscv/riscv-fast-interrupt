@@ -513,6 +513,15 @@ interrupt level of zero.
 
 === Changed and new CSRs
 
+[source]
+----
+       Number  Name         Description
+       0x305   mtvec        Trap-handler base address / interrupt mode
+ (NEW) 0x346   mpintstatus  Previous interrupt context
+ (NEW) 0xFB1   mintstatus   Current interrupt context
+ (NEW) 0x347   mintthresh   Interrupt-level threshold
+----
+
 ==== New {mtvec} CSR Mode for CLIC
 
 The CLIC interrupt-handling mode is encoded as a new state in the
@@ -767,14 +776,6 @@ This helps software avoid a higher privilege mode from having a non-minimum thre
 privilege mode is running.
 
 === CLIC Level Control - Interrupts at machine level
-
-[source]
-----
-       Number  Name         Description
- (NEW) 0x346   mpintstatus  Previous interrupt context
- (NEW) 0xFB1   mintstatus   Current interrupt context
- (NEW) 0x347   mintthresh   Interrupt-level threshold
-----
 
 ==== Specifying Interrupt Level
 
