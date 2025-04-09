@@ -140,14 +140,6 @@ version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
 Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
 Creative Commons Attribution 4.0 International License.
 
-[Preface]
-== Revision History
-
-[source]
-----
-Date        Description
-----
-
 == CLIC extensions to AIA
 This section gives an overview for the Core-Local Interrupt
 Controller (CLIC) extensions to AIA.
@@ -162,7 +154,6 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclic       | Horizontal Nested Interrupt Preemption support for M-mode
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | smclicshv    | Selective Hardware Vectored Interrupts
-| smclicconfig | Allows implementations to support different parameterizations of CLIC extensions
 | sditrig      | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
@@ -809,8 +800,7 @@ In this `miselect` offset range:
 
 * When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
-=== Interrupts at supervisor level
-
+== Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
 [source]
 ----
        Number  Name         Description
