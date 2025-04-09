@@ -92,7 +92,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
-:sintstatus: pass:q[``sintstatus``]
 :sintthresh: pass:q[``sintthresh``]
 
 :pp: pass:q[``**__x__**pp``]
@@ -512,7 +511,9 @@ space usage, and aid in system debugging.  Interrupt handler tasks
 have non-zero interrupt levels, while application tasks have an
 interrupt level of zero.
 
-=== New {mtvec} CSR Mode for CLIC
+=== Changed and new CSRs
+
+==== New {mtvec} CSR Mode for CLIC
 
 The CLIC interrupt-handling mode is encoded as a new state in the
 existing {mtvec} WARL register, where {mtvec}.`mode` (the two
@@ -801,11 +802,13 @@ In this `miselect` offset range:
 * When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 == Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
+
+=== Changed and new CSRs
+
 [source]
 ----
        Number  Name         Description
  (NEW) 0x146   spintstatus  Previous interrupt levels
- (NEW) 0xDB1   sintstatus   Current interrupt levels
  (NEW) 0x147   sintthresh   Interrupt-level threshold
 ----
 
@@ -829,19 +832,6 @@ spintstatus
 The supervisor {scause} register has only a single `spp` bit (to
 indicate user/supervisor) mirrored from {sstatus}.`spp`.
 
-
-==== ssclic New Interrupt Status ({sintstatus}) CSR
-
-A corresponding supervisor mode, {sintstatus} CSR provides restricted views of {mintstatus}.
-
-[source]
-----
-sintstatus fields
- 31:16 (reserved)
- 15: 8 sil
-  7: 0 (reserved)
-----
-
 ==== New Interrupt-Level Threshold ({sintthresh}) CSR
 
 The interrupt-level threshold ({sintthresh}) is a new read-write WARL CSR,
@@ -863,7 +853,7 @@ in S-mode.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs ({stvt}, {sintstatus}, {sintthresh},
+access to the new CSRs ({stvt}, {sintthresh},
 {sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
