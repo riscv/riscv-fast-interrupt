@@ -578,16 +578,6 @@ Bits   Field         Description
  11:0   exccode[11:0] Exception/interrupt code, mirror of mcause[11:0]
 ----
 
-
-As stated in the RISC-V privilege specification,
-when a trap is taken from privilege mode y into privilege mode x,
-xPIE is set to the value of xIE; xIE is set to 0; and
-xPP is set to y.  xepc is written with the virtual address of the instruction
-that was interrupted or that encountered the exception.
-Additionally in CLIC mode, interrupt level (`xpil`) is set to xintstatus.xil and
-xcause.exccode is written with a code indicating the event (the id of the
-interrupt or exception code) that caused the trap.
-
 Note: Switching to CLINT mode
 from CLIC mode causes {pil} in that privilege mode to be zeroed.
 
@@ -633,12 +623,6 @@ The interrupt-level threshold is only valid when running in associated
 privilege mode and not in other modes. This is because interrupts for
 lower privilege modes are always disabled, whereas interrupts for higher
 privilege modes are always enabled.
-
-If the hart is currently running at some privilege mode `*x*`, an {ret}
-instruction that changes the privilege mode to a mode less
-privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.
-This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
-privilege mode is running.
 
 NOTE: The anticipated use of threshold is to provide critical sections
 within code running at one privilege mode, not to selectively mask
@@ -783,6 +767,12 @@ This makes the design of the RNMI extension orthogonal to the hart's general int
 The behavior of an {ret} instruction is modified as follows:
 In CLIC mode, {ret} sets {intstatus}.{il} to {pintstatus}.{pil}.
 The {ret} instruction does not modify the {pintstatus}.{pil} field in {pintstatus}.
+
+If the hart is currently running at some privilege mode `*x*`, an {ret}
+instruction that changes the privilege mode to a mode less
+privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.
+This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
+privilege mode is running.
 
 === CLIC Level Control - Interrupts at machine level
 
@@ -1035,8 +1025,9 @@ When a trap is taken, the {inhv} bit is set by hardware to indicate if {epc} is 
 or cleared by hardware to indicate if {epc} is the address of an instruction.
 The {inhv} bit is only set by hardware if an exception occurs during the table vector
 read operation.  The {inhv} bit can be written by software, including
-when hardware vectoring is not in effect. The {inhv} bit has no effect
-except when returning using an {ret} instruction.
+when hardware vectoring is not in effect.
+
+==== Returns from Handlers
 
 When returning from an {ret} instruction, the {inhv} bit modifies behavior
 as follows:
