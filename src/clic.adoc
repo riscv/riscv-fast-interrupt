@@ -78,6 +78,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
+:mpintstatus: pass:q[``mpintstatus``]
 :mintstatus: pass:q[``mintstatus``]
 :mintthresh: pass:q[``mintthresh``]
 
@@ -92,6 +93,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
+:spintstatus: pass:q[``spintstatus``]
 :sintthresh: pass:q[``sintthresh``]
 
 :pp: pass:q[``**__x__**pp``]
@@ -510,7 +512,6 @@ handler tasks from application tasks to increase robustness, reduce
 space usage, and aid in system debugging.  Interrupt handler tasks
 have non-zero interrupt levels, while application tasks have an
 interrupt level of zero.
-
 ==== Indirect Access to interrupt level CSRs
 
 NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
