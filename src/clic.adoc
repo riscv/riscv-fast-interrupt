@@ -1380,9 +1380,9 @@ stack pointer adjustment: 64
 
 === Fault handling
 
-According the the Machine Level ISA, trap handlers must be designed to not cause exceptions during their critical section.
-This applies to the tpush and tpopxret instruction.
-Therefore, by design, it must be guaranteed that no faults occur during the execution of these instructions.
+Unless it can be guaranteed by design that faults causing synchronous exceptions cannot occure during the critical section,
+handling can only be resumed if the double trap extension is supported.
+The critical sections are defined as the time during execution of the tpush and tpopxret instruction, during which interrupts are disabled.
 
 === Debug
 
