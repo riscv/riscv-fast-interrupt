@@ -987,9 +987,6 @@ address with permissions corresponding to the handler's mode from the in-memory 
 `VTBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
 clears the low bit of the handler address and sets the PC to this handler
 address.
-If the trap handler function address fetch is unsuccessful and a exception trap occurs,
-the {inhv} bit in {pintstatus} of the exception handler privilege mode is set indicating that {epc} of
-the exception handler privilege mode contains a trap handler function address instead of the virtual address of an instruction.
 
 The overall effect is:
 
@@ -1022,11 +1019,31 @@ function pointers.
 NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
 traps on fetches to the vector table.
 
+==== Exception behavior
+
+If the trap handler function address fetch is unsuccessful and a exception trap occurs,
+the {inhv} bit in {pintstatus} of the exception handler privilege mode is set indicating that {epc} of
+the exception handler privilege mode contains a trap handler function address instead of the virtual address of an instruction.
+
 When a trap is taken, the {inhv} bit is set by hardware to indicate if {epc} is the address of a table entry
 or cleared by hardware to indicate if {epc} is the address of an instruction.
 The {inhv} bit is only set by hardware if an exception occurs during the table vector
 read operation.  The {inhv} bit can be written by software, including
 when hardware vectoring is not in effect.
+
+For permissions-checking purposes, the memory access to retrieve the
+function pointer for hardware vectoring is an _implicit_ fetch at the
+privilege mode of the interrupt handler, and requires execute
+permission; read permission is irrelevant.
+
+NOTE: software vectoring will need vector table read permission.
+
+If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
+
+NOTE: For simpler systems, we do not require that {tval} is written
+with the faulting address.  For systems with demand paging, {tval}
+should be written with the faulting address to simplify page-fault
+handling code.
 
 ==== Returns from Handlers
 
@@ -1083,19 +1100,7 @@ function exception_handler(cur_priv, xret, pc) {
 
 NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of page faults and can handle them using exactly the same code.
 
-For permissions-checking purposes, the memory access to retrieve the
-function pointer for hardware vectoring is an _implicit_ fetch at the
-privilege mode of the interrupt handler, and requires execute
-permission; read permission is irrelevant.
-
 NOTE: software vectoring will need vector table read permission.
-
-If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
-
-NOTE: For simpler systems, we do not require that {tval} is written
-with the faulting address.  For systems with demand paging, {tval}
-should be written with the faulting address to simplify page-fault
-handling code.
 
 NOTE: Interrupted context is lost on horizontal traps during table fetch where exceptions are the same privilege mode as the interrupt handler. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults for the less privileged mode vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run). However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are recommended to be written with the faulting address in systems with demand paging.
 
