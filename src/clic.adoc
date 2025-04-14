@@ -512,14 +512,13 @@ handler tasks from application tasks to increase robustness, reduce
 space usage, and aid in system debugging.  Interrupt handler tasks
 have non-zero interrupt levels, while application tasks have an
 interrupt level of zero.
-==== Indirect Access to interrupt level CSRs
 
 NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
 
 A parameterized number of upper bits in
 `clicintlvl[__i__]` are assigned to encode the interrupt level.
 
-==== `clicintlvl[__i__]`
+==== Indirect Access to interrupt level CSRs - `clicintlvl[__i__]`
 
 In this `miselect` offset range:
 
@@ -800,6 +799,30 @@ This helps software avoid a higher privilege mode from having a non-minimum thre
 privilege mode is running.
 
 == Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
+
+=== Interrupt level control
+
+==== Indirect Access to interrupt level CSRs - `clicintlvl[__i__]`
+
+If an interrupt i is not present in the hardware, the corresponding CLIC register locations appear hardwired to zero.
+
+In S-mode, if an interrupt i is not accessible to S-mode, the corresponding CLIC register locations appear hardwired to zero.
+
+In this `siselect` offset range:
+
+*  When XLEN = 32, each `sireg` register controls the clic level setting of four interrupts
+
+[%autowidth]
+|===
+| `siselect` |  `sireg` bits |  `sireg` state              | description
+
+| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
+| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
+| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
+| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
+|===
+
+* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 === Changed and new CSRs
 
