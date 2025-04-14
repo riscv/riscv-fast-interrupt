@@ -985,7 +985,7 @@ At this time, if the associated interrupt pending bit is configured for edge-sen
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (VTBASE) is in
 {tvt}.  The trap handler function address is fetched from
 `VTBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
-clears the low bit of the handler address and sets the PC to this handler
+clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
 address.
 If the trap handler function address fetch is unsuccessful and a exception trap occurs,
 the {inhv} bit in {pintstatus} of the exception handler privilege mode is set indicating that {epc} of
