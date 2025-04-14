@@ -471,21 +471,20 @@ can preempt lower-numbered interrupt levels.  Interrupt level 0
 corresponds to regular execution outside of an interrupt handler.
 Levels 1--255 correspond to interrupt handler levels. 
 
-Incoming interrupts with a higher interrupt level can preempt an
-active interrupt handler running at a lower interrupt level in the
-same privilege mode, provided interrupts are globally enabled in this
-privilege mode.
+The highest rank pending and enabled interrupt in the same privilege mode 
+as the current privilege mode is taken if the current privilege mode global 
+interrupt enable is enabled and its level is greater than the current effective interrupt level.
 
-NOTE: Existing RISC-V interrupt behavior is retained, where incoming
-interrupts for a higher privilege mode can preempt an active interrupt
-handler running in a lower privilege mode, regardless of global
-interrupt enable in lower privilege mode.
+Existing RISC-V interrupt behavior is retained, where a pending and enabled 
+interrupt at a higher privilege mode can preempt an active interrupt
+handler running, regardless of global
+interrupt enables or effective interrupt level.
 
 === Interrupt level control
 
 `clicintlvl[__i__]` is an 8-bit WARL control register
 to specify interrupt levels 1-255. 
-0 is only valid when the interrupt is not implemented or visible.
+0 is only valid when the interrupt is not implemented or not visible.
 
 To select an interrupt to present to the core, the CLIC hardware
 combines the interrupt privilege mode encoding and
@@ -703,10 +702,11 @@ The global interrupt-enable bit of the handler's privilege mode is
 cleared, to prevent preemption by higher-level interrupts in the same
 privilege mode.
 
-The overall behavior is summarized in the following table: the Current
+The overall behavior of interrupts with `clicintip[__i__]` and `clicintie[__i__]` asserted 
+is summarized in the following table: the Current
 `p/ie/il` fields represent the current privilege mode `P` (not
 software visible), interrupt enable `ie` =
-({status}.{ie} & `clicintie[__i__]`)  and interrupt
+{status}.{ie} and interrupt
 level `L` = max({intstatus}.{il}, {intthresh}.`th`);
 the CLIC `priv`,`level`, and `id` fields
 represent the highest-ranked interrupt currently present in the CLIC
@@ -728,7 +728,7 @@ context fields in {mpintstatus} and {epc}.
  P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
  P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
  P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  e  L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  e  pc  # Vertical interrupt taken
+ P  ie L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  ie pc  # Vertical interrupt taken
 ----
 
 ==== smclic events that cause the hart to resume execution after Wait for Interrupt (WFI) Instruction
