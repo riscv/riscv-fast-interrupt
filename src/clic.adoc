@@ -259,11 +259,6 @@ of {status}.{ie} in the higher privilege modes).
 
 NOTE: This register bit is defined as WARL as unimplemented interrupts appear hardwired to zero.
 
-==== Major interrupt numbers
-
-CLIC provides up to 4096 major interrupt numbers indicated
-with {mcause} Exception Code (`exccode`) values. 
-
 === Indirect Access M-mode CLIC interrupt CSRs
 
 Access to CLIC registers `clicintattr[__i__]`, `clicintip[__i__]`, `clicintie[__i__]`, `cliciprio[__i__]`, and `clicideleg[__i__]`
@@ -545,6 +540,9 @@ In this `miselect` offset range:
  (NEW) 0xFB1   mintstatus   Current interrupt context
  (NEW) 0x347   mintthresh   Interrupt-level threshold
 ----
+
+CLIC provides up to 4096 major interrupt numbers indicated
+with {mcause} Exception Code (`exccode`) values.
 
 ==== New {mtvec} CSR Mode for CLIC
 
