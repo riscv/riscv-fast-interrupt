@@ -54,7 +54,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :ideleg: pass:q[``**__x__**ideleg``]
 :ie: pass:q[``**__x__**ie``]
 :tvec: pass:q[``**__x__**tvec``]
-:tvt: pass:q[``**__x__**tvt``]
+:ivt: pass:q[``**__x__**ivt``]
 :scratch: pass:q[``**__x__**scratch``]
 :scratchcsw: pass:q[``**__x__**scratchcsw``]
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
@@ -71,7 +71,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mideleg: pass:q[``mideleg``]
 :mie: pass:q[``mie``]
 :mtvec: pass:q[``mtvec``]
-:mtvt: pass:q[``mtvt``]
+:mivt: pass:q[``mivt``]
 :mscratch: pass:q[``mscratch``]
 :msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
@@ -86,7 +86,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :sideleg: pass:q[``sideleg``]
 :sie: pass:q[``sie``]
 :stvec: pass:q[``stvec``]
-:stvt: pass:q[``stvt``]
+:sivt: pass:q[``sivt``]
 :sscratch: pass:q[``sscratch``]
 :ssp: pass:q[``ssp``]
 :sepc: pass:q[``sepc``]
@@ -874,7 +874,7 @@ in S-mode.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs ({stvt}, {sintthresh},
+access to the new CSRs ({sivt}, {sintthresh},
 {sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
@@ -891,7 +891,7 @@ The selective hardware vectoring extension adds the ability for each interrupt
 to be configured to use hardware vectoring or software vectoring.
 Interrupts are always software vectored if smclicshv isn't supported when in CLIC mode.
 When a hardware vectored interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to {mtvt} CSR),
+table entry for the associated interrupt (table pointed to {mivt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
 The masked vector table entry bit(s) are reserved and should be zero.
@@ -933,22 +933,22 @@ The 1-bit `shv` field is used for Selective Hardware Vectoring.
 If `shv` is 0, it assigns this interrupt to be software vectored and thus it jumps
 to the common code at {tvec}.
 If `shv` is 1, it assigns this interrupt to be hardware vectored and thus it
-automatically jumps to the trap-handler function pointer specified in {tvt} CSR.
+automatically jumps to the trap-handler function pointer specified in {ivt} CSR.
 This feature allows some interrupts to all jump to a common base address held
 in {tvec}, while the others are vectored in hardware via a table pointed to
-by the additional {tvt} CSR.
+by the additional {ivt} CSR.
 
 === smclicshv Changes to CLIC CSRs
 
 
-==== New {mtvt} CSR
+==== New {mivt} CSR
 
-The {mtvt} WARL XLEN-bit CSR holds the base address of the trap vector
+The {mivt} WARL XLEN-bit CSR holds the base address of the interrupt vector
 table, aligned on a 64-byte or greater power-of-two boundary. The actual
 alignment can be determined by writing ones to the low-order bits then reading
-them back. Values other than 0 in the low 6 bits of {mtvt} are reserved.
+them back. Values other than 0 in the low 6 bits of {mivt} are reserved.
 
-The value of {mtvt} CSR is also used when the smclicshv exception is present
+The value of {mivt} CSR is also used when the smclicshv exception is present
 and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 
 
@@ -965,7 +965,7 @@ and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 where:
   OBASE  = xtvec[XLEN-1:2]<<2   # CLINT mode vector base is at least 4-byte aligned
   NBASE  = xtvec[XLEN-1:2]<<2   # CLIC mode vector base is at least 64-byte aligned
-  VTBASE = xtvt[XLEN-1:6]<<6    # Vector table base is at least 64-byte aligned
+  VTBASE = xivt[XLEN-1:6]<<6    # Vector table base is at least 64-byte aligned
   shv    = clicintattr[i].shv
   M[a]   = Contents of memory address at address "a"
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
@@ -983,7 +983,7 @@ sets interrupt `i` to hardware vectored. When these interrupts are taken, the ha
 switches to the handler's privilege mode, and performs the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {pintstatus}, {cause}, {status} fields including clearing {status}.{ie}).
 At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
 address with permissions corresponding to the handler's mode from the in-memory table whose base address (VTBASE) is in
-{tvt}.  The trap handler function address is fetched from
+{ivt}.  The trap handler function address is fetched from
 `VTBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
 clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
 address.
@@ -998,13 +998,13 @@ The overall effect is:
 [source]
 ----
            # Vector table layout for RV32 (4-byte function pointers)
-  mtvt ->  0x800000 # Interrupt 0 handler function pointer
+  mivt ->  0x800000 # Interrupt 0 handler function pointer
            0x800004 # Interrupt 1 handler function pointer
            0x800008 # Interrupt 2 handler function pointer
            0x80000c # Interrupt 3 handler function pointer
 
            # Vector table layout for RV64 (8-byte function pointers)
-  mtvt ->  0x800000 # Interrupt 0 handler function pointer
+  mivt ->  0x800000 # Interrupt 0 handler function pointer
            0x800008 # Interrupt 1 handler function pointer
            0x800010 # Interrupt 2 handler function pointer
            0x800018 # Interrupt 3 handler function pointer
