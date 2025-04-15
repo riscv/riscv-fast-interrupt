@@ -960,6 +960,7 @@ The PC upon interrupt is changed as follows:
  01       OBASE+4*exccode                                     # CLINT vectored mode
  11       shv ? ((M[VTBASE+XLEN/8*exccode)] & VTMASK) : OBASE  # CLIC mode
  10       Reserved
+----
 
 Synchronous exceptions are vectored using xtvec as an offset.
 The summarized behavior is the following:
@@ -980,8 +981,7 @@ where:
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
-NOTE:
-Accelerating synchronous exception handlers through vectoring positively affects interrupt latency.
+NOTE: Accelerating synchronous exception handlers through vectoring positively affects interrupt latency.
 During synchronous exceptions, interrupts are disabled.
 Acceleration of this critical segment decreases the time the interrupts are masked.
 Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
