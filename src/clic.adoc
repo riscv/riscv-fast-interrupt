@@ -561,15 +561,14 @@ NOTE: CLINT mode in this specification is defined as `mtvec.mode=00` or `mtvec.m
  ====  ============================================
  00       OBASE              # CLINT direct mode
  01       OBASE+4*exccode    # CLINT vectored mode
- 11       NBASE              # CLIC mode
+ 11       OBASE              # CLIC mode
  10       Reserved
 
 where:
-  OBASE = xtvec[XLEN-1:2]<<2   # CLINT mode vector base is at least 4-byte aligned
-  NBASE = xtvec[XLEN-1:2]<<2   #  CLIC mode vector base is at least 4-byte aligned
+  OBASE = xtvec[XLEN-1:2]<<2   # vector base is at least 4-byte aligned
 ----
 
-In CLIC mode, synchronous exception traps always jump to NBASE.
+Synchronous exception traps always jump to OBASE.
 
 If the hart is currently running at some privilege mode (`pp`) at some
 interrupt level (`pil`) and an enabled interrupt becomes pending at
@@ -952,22 +951,40 @@ and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 
 ==== smclicshv Changes to {tvec} CSR Mode for CLIC
 
+The PC upon interrupt is changed as follows:
+
 [source]
 ----
  mode  PC on Interrupt
  00       OBASE                                               # CLINT direct mode
  01       OBASE+4*exccode                                     # CLINT vectored mode
- 11       shv ? (M[VTBASE+XLEN/8*exccode)] & VTMASK) : NBASE  # CLIC mode
+ 11       shv ? (M[VTBASE+XLEN/8*exccode)] & VTMASK) : OBASE  # CLIC mode
+ 10       Reserved
+
+Synchronous exceptions are vectored using xtvec as an offset.
+The summarized behavior is the following:
+
+[source]
+----
+ mode  PC on Synchronous Exception
+ 00       OBASE                                               # CLINT direct mode
+ 01       OBASE                                               # CLINT vectored mode
+ 11       OBASE+4*exccode                                     # CLIC mode
  10       Reserved
 
 where:
-  OBASE  = xtvec[XLEN-1:2]<<2   # CLINT mode vector base is at least 4-byte aligned
-  NBASE  = xtvec[XLEN-1:2]<<2   # CLIC mode vector base is at least 64-byte aligned
-  VTBASE = xivt[XLEN-1:6]<<6    # Vector table base is at least 64-byte aligned
+  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
+  VTBASE = xivt[XLEN-1:6]<<6    # Interrupt Vector Table base is at least 64-byte aligned
   shv    = clicintattr[i].shv
   M[a]   = Contents of memory address at address "a"
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
+
+NOTE:
+Accelerating synchronous exception handlers through vectoring positively affects interrupt latency.
+During synchronous exceptions, interrupts are disabled.
+Acceleration of this critical segment decreases the time the interrupts are masked.
+Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
 sets interrupt `i` to software vectored,
