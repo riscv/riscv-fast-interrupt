@@ -948,7 +948,6 @@ them back. Values other than 0 in the low 6 bits of {mivt} are reserved.
 The value of {mivt} CSR is also used when the smclicshv exception is present
 and `clicintattr[__i__].shv` = 1 (hardware vectored interrupt).
 
-
 ==== smclicshv Changes to {tvec} CSR Mode for CLIC
 
 The PC upon interrupt is changed as follows:
@@ -981,9 +980,9 @@ where:
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
-NOTE: Accelerating synchronous exception handlers through vectoring positively affects interrupt latency.
+NOTE: Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
-Acceleration of this critical segment decreases the time the interrupts are masked.
+Acceleration of this critical segment decreases the time during which interrupts are masked.
 Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
