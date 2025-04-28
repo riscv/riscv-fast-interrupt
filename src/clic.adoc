@@ -1022,8 +1022,11 @@ traps on fetches to the vector table.
 ==== Exception behavior
 
 If the trap handler function address fetch is unsuccessful and an exception trap occurs,
-the {inhv} bit in {pintstatus} of the exception handler privilege mode is set indicating that {epc} of
-the exception handler privilege mode contains a trap handler function address instead of the virtual address of an instruction.
+the {inhv} bit in {pintstatus} of the exception handler privilege mode is set.
+On any other trap, the {inhv} bit is cleared.
+
+Setting the {inhv} bit indicates that the corresponding {epc} value
+contains a trap handler function address instead of the virtual address of an instruction.
 
 The {inhv} bit can be written by software, including
 when hardware vectoring is not in effect.
@@ -1045,15 +1048,16 @@ handling code.
 
 ==== Returns from Handlers
 
-When returning from an {ret} instruction, the {inhv} bit modifies behavior
+If the {inhv} is set, the behavior when returning from an {ret} instruction is modified as follows:
 as follows:
 
-If the {inhv} bit is set, the hart
-resumes the trap handler memory access to retrieve the function
+The {inhv} bit is cleared.
+Instead of resuming execution from {epc},
+the hart resumes the trap handler memory access to retrieve the function
 pointer for vectoring with permissions corresponding to the previous
 privilege mode.
 The trap handler function address is obtained from the current
-privilege mode's `xepc` with the low bits of the address cleared to
+privilege mode's {epc} with the low bits of the address cleared to
 force the access to be naturally aligned to an XLEN/8-byte table entry.
 If the fetch is successful, the hart
 clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
@@ -1073,6 +1077,7 @@ function exception_handler(cur_priv, xret, pc) {
       ... /* additional standard MRET behavior */
 
       if (minhv) {
+        mcause.minhv = 0
         /* align mepc value to XLEN/8 byte boundary by ignoring low-order bits. */
         let table_addr = mepc & inhv_pc_alignment_mask();
         if (check_fetch_permissions(table_addr) = Addr_OK) {
