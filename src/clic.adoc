@@ -155,6 +155,7 @@ This table provides a summary of the CLIC extensions to AIA.
 | smclic       | Horizontal Nested Interrupt Preemption support for M-mode
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | smclicshv    | Selective Hardware Vectored Interrupts
+| Smclicsehv   | Synchronous exceptions hardware vectoring
 | sditrig      | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
@@ -955,22 +956,10 @@ The PC upon interrupt is changed as follows:
 [source]
 ----
  mode  PC on Interrupt
- 00       OBASE                                               # CLINT direct mode
- 01       OBASE+4*exccode                                     # CLINT vectored mode
- 11       shv ? ((M[VTBASE+XLEN/8*exccode)] & VTMASK) : OBASE # CLIC mode
- 10       Reserved
-----
-
-Synchronous exceptions are vectored using xtvec as an offset.
-The summarized behavior is the following:
-
-[source]
-----
- mode  PC on Synchronous Exception
- 00       OBASE                                               # CLINT direct mode
- 01       OBASE                                               # CLINT vectored mode
- 11       OBASE+4*exccode                                     # CLIC mode
- 10       Reserved
+ 00    OBASE                                               # CLINT direct mode
+ 01    OBASE+4*exccode                                     # CLINT vectored mode
+ 11    shv ? ((M[VTBASE+XLEN/8*exccode)] & VTMASK) : OBASE # CLIC mode
+ 10    Reserved
 
 where:
   OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
@@ -979,11 +968,6 @@ where:
   M[a]   = Contents of memory address at address "a"
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
-
-NOTE: Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
-During synchronous exceptions, interrupts are disabled.
-Acceleration of this critical segment decreases the time during which interrupts are masked.
-Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
 
 In CLIC mode, writing `0` to `clicintattr[__i__].shv`
 sets interrupt `i` to software vectored,
@@ -1130,6 +1114,26 @@ faulting address if breakpoints are allowed to trap on the table fetch
 during hardware vectoring.  If breakpoints are allowed to trap on the
 table read, dret should honor {inhv}.
 
+== Synchronous exceptions hardware vectoring- Smclicsehv
+
+The Smsehv extension depends upon the Smclicshv extension.
+
+Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
+During synchronous exceptions, interrupts are disabled.
+Acceleration of this critical segment decreases the time during which interrupts are masked.
+Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
+
+With this extension, synchronous exceptions are vectored using xtvec as an offset.
+The summarized behavior is the following:
+
+[source]
+----
+ mode  PC on Synchronous Exception
+ 00       OBASE              # CLINT direct mode
+ 01       OBASE              # CLINT vectored mode
+ 11       OBASE+4*exccode    # CLIC mode
+ 10       Reserved
+----
 
 == Interrupt trigger Debug extension- sditrig
 
