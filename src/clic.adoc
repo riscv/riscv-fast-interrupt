@@ -75,6 +75,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mscratch: pass:q[``mscratch``]
 :msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
+:mnepc: pass:q[``mnepc``]
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
@@ -969,10 +970,20 @@ NOTE: software vectoring will need vector table read permission.
 
 Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
 
+It is recommended that the second fetch be ignored for hardware triggers and breakpoints.
+
 ==== Vector table fault handling
 
-If an exception trap occurs during the interrupt handler function address fetch,
-the {epc} value of the second trap is set the the pc at which interrupt traped.
+Faults that occur during the fetch of interrupt vector table entries are only recoverable,
+if the double trap extension(s) are implemented.
+For interrupts in M-mode, this additionally requires the Smrnmi extension.
+
+NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+
+In this case, if an exception trap occurs during the interrupt handler function address fetch,
+the following holds true:
+Depending on where the second trap is handled,
+the corresponding exception pc ({mepc} or {mnepc}) value is set to the exception pc of the first trap.
 In addition, {tval} is either set to zero or written with the faulting address.
 
 NOTE: For simpler systems, we do not require that {tval} is written
@@ -988,8 +999,6 @@ no side-affects of the trap may be executed that prevent resuming of operation a
 In particular, {status} and {pintstatus} may not have been modified.
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
-
-==== smclichv Changes to {epc} CSRs
 
 The {epc} CSRs behave the same in both modes, capturing the PC at
 which execution was interrupted.  In CLIC mode, the {epc} CSR additionally holds the faulting address if there is an access exception on the table fetch during hardware vectoring.
