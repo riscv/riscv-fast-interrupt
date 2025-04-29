@@ -1293,7 +1293,6 @@ Interrupts must be disabled before starting to restore context in the tpopxret i
 As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
 
 If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
-If an tpush or tpopxret instruction is used outside of these two scenarios, an illegal-instruction exception shall be raised.
 
 NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 
