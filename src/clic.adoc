@@ -167,6 +167,8 @@ machanisms. Their behavior is unchanged by the extensions of CLIC.
 
 == Increase of AIA local interrupts - smclicincr
 
+The Smclicincr extension depends on the Smcsrind extension.
+
 The smclicincr extension increases support up to 4096 interrupt inputs per hart.
 Each interrupt input _i_ has five control
 registers: an interrupt-pending bit (`clicintip[__i__]`),
@@ -462,7 +464,7 @@ each `sireg2` register controls the interrupt enable of sixty-four interrupts.
 
 == Same Privilege Mode Interrupt Preemption Support - smclic
 
-This extension requires smclicincr extension.
+The Smclic extension depends on the Smclicincr extension.
 
 The smclic extension extends interrupt preemption to support up to 256 interrupt
 levels for each privilege mode, where higher-numbered interrupt levels
@@ -785,6 +787,8 @@ This helps software avoid a higher privilege mode from having a non-minimum thre
 privilege mode is running.
 
 == Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
+
+The Ssclic extension depends on the Smclic and Sscsrind extensions.
 
 === Interrupt level control
 
