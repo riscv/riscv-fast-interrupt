@@ -892,22 +892,6 @@ at the price of slightly higher interrupt latency.
 
 === smclichv Changes to CLIC Registers
 
-==== smclichv Changes to CLIC Interrupt Pending (`clicintip`)
-
-When the input is configured for edge-sensitive input,
-hardware clears the associated interrupt pending bit when a
-hardware vectored interrupt is serviced.
-See additional details on hardware clearing in the {tvec} section.
-
-NOTE: To improve performance, when a hardware vectored interrupt is selected
-and serviced, the hardware automatically clears its corresponding
-edge-triggered pending bit, so software doesn't need to clear the
-pending bit in the service routine.
-
-In contrast, when a software vectored interrupt is selected,
-the hardware will not automatically clear an edge-triggered pending
-bit. 
-
 === smclichv Changes to CLIC CSRs
 
 ==== New {mivt} CSR
@@ -1267,10 +1251,6 @@ Trap handler latency and jitter is reduced by allowing the context save to happe
 Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt or synchronous exception.
 Trap handling throughput is increased by allowing tail-chaing of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
 The instructions are designed to be applicable to all RISC-V trap handling schemes.
-
-Assumed general changes not covered here:
-
-* The trap behavior needs to be modified to clear the ip bit upon completion of tpush, rather than as soon as the vector table access happens.
 
 === Trap handler push and pop functional overview
 
