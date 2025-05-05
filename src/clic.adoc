@@ -910,7 +910,7 @@ The PC upon interrupt is changed as follows:
  mode  PC on Interrupt
  00    OBASE                                # CLINT direct mode
  01    OBASE+4*exccode                      # CLINT vectored mode
- 11    (M[VTBASE+XLEN/8*exccode)] & VTMASK  # CLIC mode
+ 11    M[VTBASE+XLEN/8*exccode] & VTMASK    # CLIC mode
  10    Reserved
 
 where:
@@ -1088,7 +1088,7 @@ The PC upon interrupt is changed as follows:
  mode  PC on Interrupt
  00    OBASE                                               # CLINT direct mode
  01    OBASE+4*exccode                                     # CLINT vectored mode
- 11    shv ? ((M[VTBASE+XLEN/8*exccode)] & VTMASK) : OBASE # CLIC mode
+ 11    shv ? (M[VTBASE+XLEN/8*exccode] & VTMASK) : OBASE   # CLIC mode
  10    Reserved
 
 where:
