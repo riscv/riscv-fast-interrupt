@@ -864,8 +864,8 @@ in S-mode.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs ({sivt}, {sintthresh},
-{sscratchcsw}, {sscratchcswl}) by S-mode or a lower privilege mode
+access to the new CSRs ({sivt}, {sintthresh})
+by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
 exception apply, in which case a virtual instruction exception is
@@ -1240,6 +1240,18 @@ It adds a new supervisor level CSR ssp.
 
 If ssp reads a non-zero value, the xcspsw conditionally perfoms a stack pointer swap with ssp.
 The behavior is analogous to Smcspsw.
+
+=== State Enable
+
+If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
+implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
+access to the new CSRs ({ssp})
+by S-mode or a lower privilege mode
+results in an illegal instruction exception, except if the hypervisor
+extension is implemented and the conditions for a virtual instruction
+exception apply, in which case a virtual instruction exception is
+raised when in VS or VU mode instead of an illegal instruction
+exception.
 
 == Smtp Trap handler push and pop extension
 
