@@ -162,6 +162,9 @@ This table provides a summary of the CLIC extensions to AIA.
 | Sscspsw      | Conditional stack pointer swap at supervisor level
 |===
 
+NOTE: The extensions defined here are orthogonal to the NMI and RNMI
+machanisms. Their behavior is unchanged by the extensions of CLIC.
+
 == Increase of AIA local interrupts - smclicincr
 
 The smclicincr extension increases support up to 4096 interrupt inputs per hart.
@@ -768,21 +771,6 @@ that raised the exception.
 Vertical synchronous exception traps, which are serviced at a higher
 privilege mode, are taken at interrupt level 0 in the higher privilege
 mode.
-
-==== Non-Resumable Non-Maskable Interrupts
-
-The handling of NMIs is implementation-specific, but NMIs are always
-handled in M-mode and can overwrite `mepc` and `mcause` of an active
-M-mode CLIC interrupt handler.
-
-==== Resumable Non-Maskable Interrupts
-
-NOTE: This section describes the interaction of the CLIC with the
-proposed new RNMI specification.
-
-The resumable NMI (RNMI) extension adds additional `mnepc`, `mncause`,
-and `mnstatus` CSRs.  The RNMI CSRs are separate from the CLIC CSRs and so CLIC state does not need to be saved in RNMI CSRs.
-This makes the design of the RNMI extension orthogonal to the hart's general interrupt scheme.
 
 ==== Returns from Handlers
 
