@@ -8,7 +8,7 @@
 
 
 [[riscv-doc-template]]
-= AIA Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
+= Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
 include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Example Specification Document (Zexmpl)
@@ -128,7 +128,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [Preface]
 == Copyright and license information
 
-This RISC-V AIA CLIC extension specification is © 2018-2025 RISC-V international
+This RISC-V CLIC extension specification is © 2018-2025 RISC-V international
 
 This document is released under a Creative Commons Attribution 4.0
 International License. +
@@ -141,11 +141,11 @@ version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
 Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
 Creative Commons Attribution 4.0 International License.
 
-== CLIC extensions to AIA
+== CLIC extensions
 This section gives an overview for the Core-Local Interrupt
-Controller (CLIC) extensions to AIA.
+Controller (CLIC) extensions.
 
-This table provides a summary of the CLIC extensions to AIA.
+This table provides a summary of the CLIC extensions.
 
 [%autowidth]
 |===
@@ -160,12 +160,34 @@ This table provides a summary of the CLIC extensions to AIA.
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
 | Sscspsw      | Conditional stack pointer swap at supervisor level
+| Smclicaia    | Compatibility with AIA
 |===
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of CLIC.
 
-== Increase of AIA local interrupts - smclicincr
+== Compatibility with AIA - Smclicaia
+
+AIA has more complicated default priorities and additional restrictions.  
+
+=== CLIC Interrupt Attribute (`cliciprio`)
+Each interrupt has an associated priority as defined in the AIA specification.
+For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification.
+
+=== CLIC Interrupt Attribute (`clicmideleg`)
+Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
+For the first 64 interrupts, these registers mirror the values of mideleg bits in the AIA specification.
+
+=== CLIC Interrupt Enable (`clicintie`)
+When XLEN = 64, for the first 64 interrupts, these bits mirror the values of mie CSR.
+When XLEN = 32, for the first 32 interrupts, these bits mirror the values of mie CSR.
+
+=== CLIC Interrupt Pending (`clicintip`)
+
+When XLEN = 64, for the first 64 interrupts, these registers mirror the values of mip CSR.
+When XLEN = 32, for the first 32 interrupts, these registers mirror the values of mip CSR.
+
+== Increase of local interrupts - smclicincr
 
 The Smclicincr extension depends on the Smcsrind extension.
 
@@ -177,24 +199,11 @@ an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
 (`cliciprio[__i__]`) to specify priority, and 
 (`clicmideleg[__i__]`) to delegate interrupts to a lower privilege level.
 
-NOTE: The existing timer (`mtip`/`stip`), software
-(`msip`/`ssip`), and external interrupt inputs
-(`meip`/`seip`) can be treated as additional local interrupt
-sources, where the privilege mode, interrupt level, and priority can
-be altered using `clicintattr[__i__]` and
-`cliciprio[__i__]` and `clicmideleg[__i__]` registers.
-
-With this extension, for implementations that do not require CLINT compatibility, the allocation of interrupt ordering (e.g. meip, mtip, msip) 
-are allowed to be defined by the platform. A platform definition will often be based on a specific RISC-V ISA profile, 
-where RISC-V ISA profiles specify a common set of ISA choices that capture the most value for most users to enable software compatibility.
-
 === CLIC Interrupt Attribute (`cliciprio`)
-Each interrupt has an associated priority as defined in the AIA specification.
-For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification.
+Each interrupt has an associated priority.  Each byte of a valid cliciprio register is either a read-only zero or a WARL unsigned integer field.  For a given interrupt number, if the corresponding bit in clicintie is read-only zero, then the interrupt's priority number in cliciprio must be read-only zero as well.  zero is the highest priority and setting its priority number ot a nonzero value lowers its priority.  When two interrupt causes have been assigned the same nominal priority, the higher interrupt number is taken.
 
 === CLIC Interrupt Attribute (`clicmideleg`)
-Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
-For the first 64 interrupts, these registers mirror the values of mideleg bits in the AIA specification.
+Each interrupt has an associated interrupt privilege mode delegation. Setting a bit in mideleg delegates the corresponding trap from m-mode to the lower privilege level.  If a lower privilege level does not exist, clicmideleg should not exist.
 
 === CLIC Interrupt Attribute (`clicintattr`)
 
@@ -218,7 +227,6 @@ The shv field is reserved and contains the shv bit when the smclicshv extension 
 
 === CLIC Interrupt Pending (`clicintip`)
 Each interrupt has an associated interrupt pending.
-For the first 64 interrupts, these registers mirror the values of mip CSR.
 
 When the input is configured for level-sensitive input, the
 `clicintip[__i__]` bit reflects the value of an input signal to the
@@ -246,7 +254,6 @@ level-sensitive mode.
 
 === CLIC Interrupt Enable (`clicintie`)
 Each interrupt has an associated interrupt enable.
-For the first 64 interrupts, these bits mirror the values of mie CSR.
 
 Each interrupt input has a dedicated interrupt-enable WARL bit (`clicintie[__i__]`)
 This control bit is read-write to enable/disable the corresponding interrupt.
@@ -491,7 +498,7 @@ To select an interrupt to present to the core, the CLIC hardware
 combines the interrupt privilege mode encoding and
 `clicintlvl` to form an unsigned integer, then picks the global maximum
 across all pending-and-enabled interrupts based on this value.
-Next priority is determined using the AIA iprio rules. 
+Next priority is determined using the iprio rules. 
 Finally, the interrupt level of this selected interrupt is
 compared with the interrupt-level threshold of the associated privilege
 mode to determine whether it is qualified or masked by the threshold
