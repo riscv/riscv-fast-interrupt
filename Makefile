@@ -16,7 +16,7 @@ DOCS := \
 	clic.adoc
 
 DATE ?= $(shell date +%Y-%m-%d)
-VERSION ?= v0.9
+VERSION ?= dev
 REVMARK ?= Draft
 DOCKER_IMG := riscvintl/riscv-docs-base-container-image:latest
 ifneq ($(SKIP_DOCKER),true)
