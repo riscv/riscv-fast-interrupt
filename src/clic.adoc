@@ -75,6 +75,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mscratch: pass:q[``mscratch``]
 :msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
+:mnepc: pass:q[``mnepc``]
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
@@ -105,10 +106,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mil: pass:q[``mil``]
 
 :pil: pass:q[``**__x__**pil``]
-:inhv: pass:q[``**__x__**inhv``]
 
 :mpil: pass:q[``mpil``]
-:minhv: pass:q[``minhv``]
 
 :ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
@@ -598,7 +597,7 @@ CLIC and CLINT modes.
 mpintstatus 
 Bits   Field         Description
  XLEN-1 Interrupt     Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
- 30     (reserved)    Contains minhv (AKA xinhv) bit when smclicshv extension present
+ 30     (reserved)
  29:28  mpp[1:0]      Previous privilege mode, mirror of mstatus.mpp
  27     mpie          Previous interrupt enable, mirror of mstatus.mpie
  26:24  (reserved)
@@ -932,9 +931,6 @@ address with permissions corresponding to the handler's mode from the in-memory 
 `VTBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
 clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
 address.
-If the trap handler function address fetch is unsuccessful and a exception trap occurs,
-the {inhv} bit in {pintstatus} of the exception handler privilege mode is set indicating that {epc} of
-the exception handler privilege mode contains a trap handler function address instead of the virtual address of an instruction.
 
 The overall effect is:
 
@@ -964,102 +960,44 @@ instructions because it simplifies static initialization in C.
 More specifically, the entries in the table are simple XLEN-bit
 function pointers.
 
-NOTE: The hardware vectoring bit {inhv} is provided to allow resumable
-traps on fetches to the vector table.
-
-When a trap is taken, the {inhv} bit is set by hardware to indicate if {epc} is the address of a table entry
-or cleared by hardware to indicate if {epc} is the address of an instruction.
-The {inhv} bit is only set by hardware if an exception occurs during the table vector
-read operation.  The {inhv} bit can be written by software, including
-when hardware vectoring is not in effect.
-
-==== Returns from Handlers
-
-When returning from an {ret} instruction, the {inhv} bit modifies behavior
-as follows:
-
-If the {inhv} bit is set, the hart
-resumes the trap handler memory access to retrieve the function
-pointer for vectoring with permissions corresponding to the previous
-privilege mode.
-The trap handler function address is obtained from the current
-privilege mode's `xepc` with the low bits of the address cleared to
-force the access to be naturally aligned to an XLEN/8-byte table entry.
-If the fetch is successful, the hart
-clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
-address.
-
-[source]
-----
-/* MRET pseudo-code */
-function exception_handler(cur_priv, xret, pc) {
-  match (xret) {
-...
-    MRET =>  {
-      /* standard MRET behavior */
-      mstatus.MIE   = mstatus.MPIE;
-      mstatus.MPIE  = 1;
-      cur_priv      = mstatus.MPP;
-      ... /* additional standard MRET behavior */
-
-      if (minhv) {
-        /* align mepc value to XLEN/8 byte boundary by ignoring low-order bits. */
-        let table_addr = mepc & inhv_pc_alignment_mask();
-        if (check_fetch_permissions(table_addr) = Addr_OK) {
-            next_pc = mem_read(table_addr);
-        } else {
-            /* take table-fetch horizontal trap */
-            mcause.minhv = 1;
-            /* other side effects of taking a trap */
-        }
-      } else { /* Standard MRET behavior - mepc becomes next_pc */
-          next_pc = mepc;
-          /* mcause.minhv unchanged */
-      }
-    }
-  },
-
-  /* Note, next_pc is passed to fetch unit which will ignore 1 or 2
-   LSBs depending on IALIGN, so the masking is not shown above.
-   Similarly, permission checks on the ultimate instruction fetch
-   are not shown here. */
-}
-----
-
-NOTE: The {inhv} bit when set at xRET informs hardware to repeat the table fetch using the address in xEPC to obtain the address of the trap handler that is then written to the PC instead of directly writing xEPC to the PC.  One of the goals of this behavior is to avoid complicating the critical code paths for handling virtual memory in the more-privileged layer. The more-privileged layer does not have to distinguish CLIC vector table reads from other forms of page faults and can handle them using exactly the same code.
-
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
 privilege mode of the interrupt handler, and requires execute
 permission; read permission is irrelevant.
+It is recommended that the vector table fetches are ignored for hardware triggers and breakpoints.
 
 NOTE: software vectoring will need vector table read permission.
 
-If there is an access exception on the table fetch, {epc} is written with the faulting address.  {tval} is either set to zero or written with the faulting address.
+Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
+
+It is recommended that the second fetch be ignored for hardware triggers and breakpoints.
+
+==== Vector table fault handling
+
+Faults that occur during the fetch of interrupt vector table entries are only recoverable,
+if the double trap extension(s) are implemented.
+For interrupts in M-mode, this additionally requires the Smrnmi extension.
+
+NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+
+In this case, if an exception trap occurs during the interrupt handler function address fetch,
+the following holds true:
+Depending on where the second trap is handled,
+the corresponding exception pc ({mepc} or {mnepc}) value is set to the exception pc of the first trap.
+In addition, {tval} is either set to zero or written with the faulting address.
 
 NOTE: For simpler systems, we do not require that {tval} is written
 with the faulting address.  For systems with demand paging, {tval}
 should be written with the faulting address to simplify page-fault
 handling code.
 
-NOTE: Interrupted context is lost on horizontal traps during table fetch where exceptions are the same privilege mode as the interrupt handler. The interesting case is vertical traps, where a more privileged layer is handling page faults or other synchronous faults for the less privileged mode vector table access. The regular code path in more privileged layer will want to use xtval to determine what bad virtual address to page in, but will not normally restore xtval when returning to faulting context (potentially after some time and other contexts have run). However, it will restore xepc (using x for more privileged mode here) before using xret on normal code path.  This is a rationale for why both {tval} and {epc} are recommended to be written with the faulting address in systems with demand paging.
+NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
+In case a higher priority interrupt became pending and enabled, this will trap first.
 
-Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
+As long as synchronous exceptions can occur during the interrupt vector table fetch,
+side-affects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
-==== smclichv Changes to {epc} CSRs
-
-The {epc} CSRs behave the same in both modes, capturing the PC at
-which execution was interrupted.  In CLIC mode, the {epc} CSR additionally holds the faulting address if there is an access exception on the table fetch during hardware vectoring.
-
-==== smclichv Changes to `dpc` CSR
-
-For implicit hardware vector table fetches, whether breakpoints trap
-on the table read is left as an implementation option. For explicit
-loads used in software vectoring, watchpoints operate as normal for
-any load.  In CLIC mode, the `dpc` CSR additionally may hold the
-faulting address if breakpoints are allowed to trap on the table fetch
-during hardware vectoring.  If breakpoints are allowed to trap on the
-table read, dret should honor {inhv}.
+NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
 
 == Support for selective hardware vectored interrupts - smclicshv
 
