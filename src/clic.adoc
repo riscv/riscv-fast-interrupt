@@ -999,9 +999,6 @@ side-affects of the trap may only be executed if they allow resuming of operatio
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
 
-The {epc} CSRs behave the same in both modes, capturing the PC at
-which execution was interrupted.  In CLIC mode, the {epc} CSR additionally holds the faulting address if there is an access exception on the table fetch during hardware vectoring.
-
 == Support for selective hardware vectored interrupts - smclicshv
 
 The Smclicshv extension depends upon the Smclichv extension.
