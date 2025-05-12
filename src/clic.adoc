@@ -8,7 +8,7 @@
 
 
 [[riscv-doc-template]]
-= AIA Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
+= Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
 include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Example Specification Document (Zexmpl)
@@ -127,7 +127,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [Preface]
 == Copyright and license information
 
-This RISC-V AIA CLIC extension specification is © 2018-2025 RISC-V international
+This RISC-V CLIC extension specification is © 2018-2025 RISC-V international
 
 This document is released under a Creative Commons Attribution 4.0
 International License. +
@@ -140,11 +140,11 @@ version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
 Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
 Creative Commons Attribution 4.0 International License.
 
-== CLIC extensions to AIA
+== CLIC extensions
 This section gives an overview for the Core-Local Interrupt
-Controller (CLIC) extensions to AIA.
+Controller (CLIC) extensions.
 
-This table provides a summary of the CLIC extensions to AIA.
+This table provides a summary of the CLIC extensions.
 
 [%autowidth]
 |===
@@ -160,39 +160,30 @@ This table provides a summary of the CLIC extensions to AIA.
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
 | Sscspsw      | Conditional stack pointer swap at supervisor level
+| Smcliconly   | Generic interrupt attributes at machine level
+| Sscliconly   | Generic interrupt attributes at supervisor level
 |===
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of CLIC.
 
-== Increase of AIA local interrupts - smclicincr
+== Increase of local interrupts - smclicincr
 
 The Smclicincr extension depends on the Smcsrind extension.
 
 The smclicincr extension increases support up to 4096 interrupt inputs per hart.
-Each interrupt input _i_ has five control
+Each interrupt input _i_ has five CLIC interrupt control
 registers: an interrupt-pending bit (`clicintip[__i__]`),
 an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
 (`clicintattr[__i__]`) to specify trigger type, 
 (`cliciprio[__i__]`) to specify priority, and 
 (`clicmideleg[__i__]`) to delegate interrupts to a lower privilege level.
 
-NOTE: The existing timer (`mtip`/`stip`), software
-(`msip`/`ssip`), and external interrupt inputs
-(`meip`/`seip`) can be treated as additional local interrupt
-sources, where the privilege mode, interrupt level, and priority can
-be altered using `clicintattr[__i__]` and
-`cliciprio[__i__]` and `clicmideleg[__i__]` registers.
-
-With this extension, for implementations that do not require CLINT compatibility, the allocation of interrupt ordering (e.g. meip, mtip, msip) 
-are allowed to be defined by the platform. A platform definition will often be based on a specific RISC-V ISA profile, 
-where RISC-V ISA profiles specify a common set of ISA choices that capture the most value for most users to enable software compatibility.
-
-=== CLIC Interrupt Attribute (`cliciprio`)
+=== CLIC Interrupt Priority (`cliciprio`)
 Each interrupt has an associated priority as defined in the AIA specification.
 For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification.
 
-=== CLIC Interrupt Attribute (`clicmideleg`)
+=== CLIC Interrupt Delegation (`clicmideleg`)
 Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
 For the first 64 interrupts, these registers mirror the values of mideleg bits in the AIA specification.
 
@@ -497,7 +488,9 @@ compared with the interrupt-level threshold of the associated privilege
 mode to determine whether it is qualified or masked by the threshold
 (and thus no interrupt is presented).
 
-NOTE: Implementations can choose to hardcode all iprio to the same non-zero value to simplify priority calculation.
+NOTE: Interrupt level is used to determine preemption (for nesting interrupts). 
+In contrast, priority does not affect preemption but is only used as a tie-breaker 
+when there are multiple pending interrupts with the same interrupt level.
 
 NOTE: Selecting an interrupt at a high privilege mode masks any
 interrupt at a lower privilege mode since the higher-privilege mode
@@ -1360,6 +1353,53 @@ Therefore, if a breakpoint is triggered because of an tpush instruction, the bre
 
 ==== tpopxret
 
+== CLIC only-mode - Smcliconly
+The Smcliconly extension depends on the Smclic and Ssclic extensions.
+
+The CLIC only mode extension is for implementations that do not need 
+compliance with AIA or legacy RISC-V privilege interrupt scheme and want a scheme
+where interrupts can be generically assigned to the five CLIC interrupt control registers.
+Such implementations may include single-hart systems with PLIC/APLIC, 
+single-hart M/S/U systems with no PLIC/APLIC, 
+and single-hart M-mode only or M/U mode with no PLIC/APLIC.
+
+=== CLIC only-mode requires all privilege modes supporting interrupts operate in CLIC mode.
+When mtvec.mode is set to 11, all privilege modes operate in CLIC mode. 
+In CLIC mode, xtvec.mode and xtvec.submode in lower privilege modes are writeable but 
+appear to be 11 respectively when read or implicitly read in that privilege mode.
+
+If an implementation supports CLIC mode and any CLINT mode, when mtvec.mode is set to a non-CLIC mode, 
+all privilege modes operate in non-CLIC mode. In non-CLIC mode, both bits of xtvec.mode are writeable in 
+lower-privilege modes but xtvec.mode bit 1 appears to be 0 when read or implicitly read in that privilege mode. 
+xtvec operates as before where each privilege mode can set their non-CLIC mode (direct or vectored) independently.
+
+If only CLIC mode is supported, writes to bit 1 are also ignored and it is always set to one.
+
+=== CLIC only-mode priority tie-breaking
+The highest number interrupt is selected when privilege mode, level, and priority are all identical.
+
+NOTE: This is different from AIA which specifies a major interrupt default priority order. 
+
+=== CLIC only-mode interrupt attributes
+The CLIC only-mode extension treats each interrupt input as generic that can be assigned by the implementation.
+With this extension, for implementations that do not require AIA or legacy RISC-V privilege interrupt scheme compatibility, 
+the allocation of interrupt ordering (e.g. meip, mtip, msip) 
+are allowed to be defined by the platform. A platform definition will often be based on a specific RISC-V ISA profile, 
+where RISC-V ISA profiles specify a common set of ISA choices that capture the most value for most users to enable software compatibility.
+
+NOTE: AIA and the legacy RISC-V privilege interrupt schemes allocate interrupts numbers to specific interrupt causes, 
+for example specifying that certain interrupt sources must be read-only zero.
+
+=== AIA or legacy RISC-V privilege interrupt CSR behavior in CLIC mode.
+With the CLIC only-mode extension, when in CLIC mode, the five CLIC interrupt control registers no longer mirror the CSRs mip, mie, mideleg, or iprio.
+The CSRs mip, mie, mideleg and iprio do not affect interrupt behavior when in CLIC mode.  
+It is implementation defined if the CSRs mip, mie, mideleg and iprio are accessable when in CLIC mode.
+
+== CLIC only-mode - Sscliconly
+The Sscliconly extenion depends on the Smcliconly extension.
+
+The Sscliconly extension extends the Smcliconly extension to supervisor mode.
+
 == CLIC Parameters
 
 Although these are described as parameters, it is understood that hardware implementations may wish to
@@ -1404,3 +1444,4 @@ CLICMTVECALIGN >= 2         Number of hardwired-zero LSBs in mtvec address.
 ----
 NOTE: These parameters are likely to be available by the general
 discovery mechanism that is in development.
+
