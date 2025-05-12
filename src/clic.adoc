@@ -819,9 +819,14 @@ In this `siselect` offset range:
 [source]
 ----
        Number  Name         Description
+       0x105   stvec        Trap-handler base address / interrupt mode
  (NEW) 0x146   spintstatus  Previous interrupt levels
  (NEW) 0x147   sintthresh   Interrupt-level threshold
 ----
+==== New {stvec} CSR Mode for CLIC
+
+The CLIC interrupt-handling mode in supervisor mode is encoded as specified in the Smclic extension using {stvec} instead of {mtvec}.
+Since the CLIC interrupt-handling mode only affects the handling of horizontal interrupts, {stvec} can be programmed independently of {mtvec}.
 
 ==== New Interrupt Status ({spintstatus}) CSR
 
