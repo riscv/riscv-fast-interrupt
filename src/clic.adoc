@@ -82,6 +82,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mpintstatus: pass:q[``mpintstatus``]
 :mintstatus: pass:q[``mintstatus``]
 :mintthresh: pass:q[``mintthresh``]
+:mtopi: pass:q[``mtopi``]
+:mclaimi: pass:q[``mclaimi``]
 
 :sstatus: pass:q[``sstatus``]
 :sideleg: pass:q[``sideleg``]
@@ -96,6 +98,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :sip: pass:q[``sip``]
 :spintstatus: pass:q[``spintstatus``]
 :sintthresh: pass:q[``sintthresh``]
+:stopi: pass:q[``stopi``]
+:sclaimi: pass:q[``sclaimi``]
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
@@ -167,7 +171,7 @@ machanisms. Their behavior is unchanged by the extensions of CLIC.
 
 == Increase of AIA local interrupts - smclicincr
 
-The Smclicincr extension depends on the Smcsrind extension.
+The Smclicincr extension depends on the Smcsrind and Smaia extensions.
 
 The smclicincr extension increases support up to 4096 interrupt inputs per hart.
 Each interrupt input _i_ has five control
@@ -397,6 +401,26 @@ In this `miselect` offset range:
 4*^| ...
 |===
 
+=== New CSRs
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x???   mclaimi      Claim top interrupt
+----
+
+==== Claim top interrupt
+
+Register {mclaimi} has the same value as {mtopi}.
+When this value is not zero,
+reading {mclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
+if possible.
+Writes to {mclaimi} are ignored.
+
+== Increase of AIA local interrupts - ssclicincr
+
+The Ssclicincr extension depends on the Sscsrind and Ssaia extensions.
+
 === Indirect Access S-mode CSRs
 
 If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
@@ -461,6 +485,22 @@ and each `sireg2` register controls the interrupt enable of thirty-two interrupt
 
 * When XLEN = 64, only the even-numbered registers exist and each `sireg` register reflects the interrupt pending of sixty-four interrupts and
 each `sireg2` register controls the interrupt enable of sixty-four interrupts.
+
+=== New CSRs
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x???   sclaimi      Claim top interrupt
+----
+
+==== Claim top interrupt
+
+Register {sclaimi} has the same value as {stopi}.
+When this value is not zero,
+reading {sclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
+if possible.
+Writes to {sclaimi} are ignored.
 
 == Same Privilege Mode Interrupt Preemption Support - smclic
 
