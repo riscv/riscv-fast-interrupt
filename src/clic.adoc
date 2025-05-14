@@ -84,6 +84,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mclaimi: pass:q[``mclaimi``]
+:mithreshold: pass:q[``mithreshold``]
 
 :sstatus: pass:q[``sstatus``]
 :sideleg: pass:q[``sideleg``]
@@ -100,6 +101,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :sintthresh: pass:q[``sintthresh``]
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
+:sithreshold: pass:q[``sithreshold``]
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
@@ -407,15 +409,26 @@ In this `miselect` offset range:
 ----
        Number  Name         Description
  (NEW) 0x???   mclaimi      Claim top interrupt
+ (NEW) 0x???   mithreshold  Interrupt enable threshold
 ----
 
-==== Claim top interrupt
+==== Claim top interrupt (mclaimi)
 
 Register {mclaimi} has the same value as {mtopi}.
 When this value is not zero,
 reading {mclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
 if possible.
 Writes to {mclaimi} are ignored.
+
+==== Interrupt enable threshold (mithreshold)
+
+{mithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
+number) for an interrupt to be to be considered enabled.
+Register {mithreshold} implements exactly IPRIOLEN bits,
+and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
+When {mithreshold} is a nonzero value P,
+interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
+regardless of the settings of their interrupt-enable bits.
 
 == Increase of AIA local interrupts - ssclicincr
 
@@ -494,13 +507,23 @@ each `sireg2` register controls the interrupt enable of sixty-four interrupts.
  (NEW) 0x???   sclaimi      Claim top interrupt
 ----
 
-==== Claim top interrupt
+==== Claim top interrupt (sclaimi)
 
 Register {sclaimi} has the same value as {stopi}.
 When this value is not zero,
 reading {sclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
 if possible.
 Writes to {sclaimi} are ignored.
+
+==== Interrupt enable threshold (smithreshold)
+
+{sithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
+number) for an interrupt to be to be considered enabled.
+Register {smithreshold} implements exactly IPRIOLEN bits,
+and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
+When {sithreshold} is a nonzero value P,
+interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
+regardless of the settings of their interrupt-enable bits.
 
 == Same Privilege Mode Interrupt Preemption Support - smclic
 
