@@ -448,7 +448,7 @@ locations appear hardwired to zero.
 
 In this `siselect` offset range:
 
-* When XLEN = 32, each `sireg` register controls the clic level/priority setting of four interrupts
+* When XLEN = 32, each `sireg` register controls the clic priority setting of four interrupts
 and each `sireg2` register controls the clic attribute setting of four interrupts
 
 [%autowidth]
@@ -1137,7 +1137,7 @@ With these requirements, implementations are allowed to speculatively start exec
 
 === Late Preemption of the interrupt handler
 
-While executing the tpush instruction, a hart may optionally check for higher priority/level pending and enabled interrupts at the current privilege mode, and switch to fetching this trap handler instead.
+While executing the tpush instruction, a hart may optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this trap handler instead.
 Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
 
 === Tail chaining of interrupts handlers
@@ -1268,7 +1268,6 @@ triggers supported in this implementation. Valid values are 0 to 32.
 [source]
 ----
 Name           Value Range  Description
-CLICLEVELS     2-256        Number of interrupt levels including 0
 CLICMAXID      12-4095      Largest interrupt ID
 
 INTTHRESHBITS  1-8          Number of bits implemented in {intthresh}.th
