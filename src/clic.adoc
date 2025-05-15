@@ -81,6 +81,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mip: pass:q[``mip``]
 :mpintstatus: pass:q[``mpintstatus``]
 :mintstatus: pass:q[``mintstatus``]
+:mipreemptcfg: pass:q[``mipreemptcfg``]
+:preemptmsk: pass:q[``preemptmsk``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mclaimi: pass:q[``mclaimi``]
@@ -105,15 +107,15 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
-:il: pass:q[``**__x__**il``]
+:ipprio: pass:q[``**__x__**ipprio``]
 
 :mpp: pass:q[``mpp``]
 :mpie: pass:q[``mpie``]
-:mil: pass:q[``mil``]
+:mipprio: pass:q[``mipprio``]
 
-:pil: pass:q[``**__x__**pil``]
+:pipprio: pass:q[``**__x__**pipprio``]
 
-:mpil: pass:q[``mpil``]
+:mpippro: pass:q[``mpippro``]
 
 :ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
