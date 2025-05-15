@@ -525,79 +525,12 @@ When {sithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
 regardless of the settings of their interrupt-enable bits.
 
-== Same Privilege Mode Interrupt Preemption Support - smclic
+== Horizontal Nested Interrupt Preemption support for M-mode - smclic
 
 The Smclic extension depends on the Smclicincr extension.
 
-The smclic extension extends interrupt preemption to support up to 256 interrupt
-levels for each privilege mode, where higher-numbered interrupt levels
-can preempt lower-numbered interrupt levels.  Interrupt level 0
-corresponds to regular execution outside of an interrupt handler.
-Levels 1--255 correspond to interrupt handler levels. 
-
-The highest rank pending and enabled interrupt in the same privilege mode 
-as the current privilege mode is taken if the current privilege mode global 
-interrupt enable is enabled and its level is greater than the current effective interrupt level.
-
-Existing RISC-V interrupt behavior is retained, where a pending and enabled 
-interrupt at a higher privilege mode can preempt an active interrupt
-handler running, regardless of global
-interrupt enables or effective interrupt level.
-
-=== Interrupt level control
-
-`clicintlvl[__i__]` is an 8-bit WARL control register
-to specify interrupt levels 1-255. 
-0 is only valid when the interrupt is not implemented or not visible.
-
-To select an interrupt to present to the core, the CLIC hardware
-combines the interrupt privilege mode encoding and
-`clicintlvl` to form an unsigned integer, then picks the global maximum
-across all pending-and-enabled interrupts based on this value.
-Next priority is determined using the AIA iprio rules. 
-Finally, the interrupt level of this selected interrupt is
-compared with the interrupt-level threshold of the associated privilege
-mode to determine whether it is qualified or masked by the threshold
-(and thus no interrupt is presented).
-
-NOTE: Implementations can choose to hardcode all iprio to the same non-zero value to simplify priority calculation.
-
-NOTE: Selecting an interrupt at a high privilege mode masks any
-interrupt at a lower privilege mode since the higher-privilege mode
-causes the interrupt signal to appear more urgent than any lower-privilege
-mode interrupt.
-
-NOTE: This register is defined as WARL as some implementations may want to support a limited number
-of values in this register including hardwiring some bits to fixed values.
-
-NOTE: Within a single privilege mode, it can be useful to separate interrupt
-handler tasks from application tasks to increase robustness, reduce
-space usage, and aid in system debugging.  Interrupt handler tasks
-have non-zero interrupt levels, while application tasks have an
-interrupt level of zero.
-
-NOTE: Implementations may choose to make CLIC parameters configurable prior to operation.
-
-A parameterized number of upper bits in
-`clicintlvl[__i__]` are assigned to encode the interrupt level.
-
-==== Indirect Access to interrupt level CSRs - `clicintlvl[__i__]`
-
-In this `miselect` offset range:
-
-*  When XLEN = 32, each `mireg` register controls the clic level setting of four interrupts
-
-[%autowidth]
-|===
-| `miselect` |  `mireg` bits |  `mireg` state              | description
-
-| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
+The Smclic extension enables higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
+It provides additional state to resume execution of the previous handler after a nested preemption.
 
 === Changed and new CSRs
 
@@ -607,11 +540,8 @@ In this `miselect` offset range:
        0x305   mtvec        Trap-handler base address / interrupt mode
  (NEW) 0x346   mpintstatus  Previous interrupt context
  (NEW) 0xFB1   mintstatus   Current interrupt context
- (NEW) 0x347   mintthresh   Interrupt-level threshold
+ (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
-
-CLIC provides up to 4096 major interrupt numbers indicated
-with {mcause} Exception Code (`exccode`) values.
 
 ==== New {mtvec} CSR Mode for CLIC
 
@@ -639,21 +569,33 @@ where:
 
 Synchronous exception traps always jump to OBASE.
 
-If the hart is currently running at some privilege mode (`pp`) at some
-interrupt level (`pil`) and an enabled interrupt becomes pending at
-any interrupt level in a higher privilege mode or if an interrupt assigned to a
-higher interrupt level in the current privilege mode becomes pending
-and interrupts are globally enabled in this privilege mode, then
-execution is immediately transferred to a handler running with the new
-interrupt's privilege mode (`**__x__**`) and interrupt level (`il`).
+==== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
+
+[source]
+----
+mipreemptcfg fields
+ bits        description
+ XLEN-1:4    (reserved)
+ 3:1         preemptmsk
+----
+
+{mipreemptcfg} is a WARL register used to configure the behavior of preemption.
+{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {ipprio}.
+The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
+The interrupt preemption priority {ipprio} is defined as follows:
+
+[source]
+----
+IPPRIO_MASK = 2^(mipreemptcfg.preemptmsk) - 1
+ipprio[i]   = iprio[i] & IPPRIO_MASK
+----
+
+A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
+and the preemption priority of that interrupt ipprio[i] excceds (i.e. is numerically smaller) than {mintstatus}.{mipprio}.
 
 ==== New Interrupt Status ({mpintstatus}) CSR
 
 A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
-
-NOTE: Previous versions of CLIC modified the {cause} CSR to contain preempted context.
-{pintstatus} has been added to allow implementations to maintain {cause} compatibility between
-CLIC and CLINT modes.
 
 [source]
 ----
@@ -664,17 +606,14 @@ Bits   Field         Description
  29:28  mpp[1:0]      Previous privilege mode, mirror of mstatus.mpp
  27     mpie          Previous interrupt enable, mirror of mstatus.mpie
  26:24  (reserved)
- 23:16  mpil[7:0]     Previous interrupt level
+ 23:16  mpipprio[7:0] Previous interrupt preemption priority
  15:12  (reserved)
  11:0   exccode[11:0] Exception/interrupt code, mirror of mcause[11:0]
 ----
 
-Note: Switching to CLINT mode
-from CLIC mode causes {pil} in that privilege mode to be zeroed.
-
 ==== New Interrupt Status ({mintstatus}) CSR
 
-A new M-mode CSR, `mintstatus`, holds the active interrupt level for
+A new M-mode CSR, `mintstatus`, holds the active interrupt preemption priority for
 each supported privilege mode.  These fields are read-only.  The
 primary reason to expose these fields is to support debug.
 
@@ -682,52 +621,13 @@ primary reason to expose these fields is to support debug.
 ----
 mintstatus fields
  bits    description
- 31:24   mil
+ 31:24   mipprio
  23:16   (reserved)
- 15: 8   sil if ssclic is supported
+ 15: 8   sipprio if ssclic is supported
   7: 0   (reserved)
 ----
 
-==== New Interrupt-Level Threshold ({mintthresh}) CSRs
-
-The interrupt-level threshold ({mintthresh}) is a new read-write WARL CSR,
-which holds an 8-bit field (`th`) for the threshold level of the
-machine privilege mode.  The `th` field is held in the least-significant
-8 bits of the CSR, and zero should be written to the upper bits.
-
-A typical usage of the interrupt-level threshold is for implementing
-critical sections. The current handler can temporarily raise its effective
-interrupt level to implement a critical section among a subset of levels,
-while still allowing higher interrupt levels to preempt.
-
-The current hart's effective interrupt level would then be:
-    effective_level = max({mintstatus}.`mil``, {mintthresh}.`th`)
-
-The max is used to prevent a hart from dropping below its original level
-which would break assumptions in design, and also makes it
-simple for software to remove threshold without knowing its own level
-by simply setting {mintthresh} to the lowest supported {mintthresh} value.
-
-The interrupt-level threshold is only valid when running in associated
-privilege mode and not in other modes. This is because interrupts for
-lower privilege modes are always disabled, whereas interrupts for higher
-privilege modes are always enabled.
-
-NOTE: The anticipated use of threshold is to provide critical sections
-within code running at one privilege mode, not to selectively mask
-interrupts before running lower-privilege code.  If desired,
-higher-privilege-mode interrupts can be selectively disabled using
-local interrupt enables before switching to a lower privilege mode.
-
-NOTE: This behavior significantly reduces the hardware cost because it
-only needs to select one global maximum interrupt and compare with the
-threshold of the associated privilege mode.  If higher-privilege modes
-could have non-minimum thresholds, hardware would have to select multiple
-maximum interrupts (one for the current mode and one for each
-higher-privilege mode) qualified by the per-mode threshold, then pick
-a qualified maximum interrupt with the highest privilege mode.
-
-=== smclic Reset Behavior
+=== Reset Behavior
 
 In general in RISC-V, mandatory reset state is minimized but platform
 specifications or company policy might add additional reset
@@ -735,147 +635,42 @@ requirements.  Since the general privileged architecture states that
 mstatus.mie is reset to zero, interrupts will not be enabled coming
 out of reset.
 
-==== smclic mandatory reset state
+==== Mandatory reset state
 
-{mintstatus}.`mil` and {mpintstatus}.`mpil` fields reset to 0.  Interrupt level 0 corresponds to regular
-execution outside of an interrupt handler.
+{mintstatus}.{mipprio} and {mpintstatus}.{mpipprio} fields reset to the highest possible value.
+Depending on the number of implemented priority bits, this is
+
+[source]
+----
+IPRIO_MAX  = 2^(IPRIOLEN)
+IPPRIO_MAX = IPRIO_MAX & IPPRIO_MASK
+----
 
 The reset behavior of other fields is platform-specific.
 
-=== smclic Interrupt Operation
+=== Interrupt Operation
 
 This section describes the operation of smclic interrupts.
 
-==== General Interrupt Overview
+==== Trap behavior
 
-At any time, a hart is running in some privilege mode with some
-interrupt level.  The hart's privilege mode is held internally but is not visible to software running on a hart (to avoid
-virtualization holes), but the current interrupt level is made visible
-in the {intstatus} register.
+The existing trap behavior for interrupts is modified as follows:
 
-Within a privilege mode `*_x_*`, if the associated global
-interrupt-enable {ie} is clear, then no interrupts will be taken in
-that privilege mode, but a pending-enabled interrupt in a higher
-privilege mode will preempt current execution.  If {ie} is set, then
-pending-enabled interrupts at a higher interrupt level in the same
-privilege mode will preempt current execution and run the interrupt
-handler for the higher interrupt level.
+In CLIC mode, when a trap _i_ is taken,
+the current value of {mintstatus}.{mipprio} is written to {mpintstatus}.{mpipprio}.
+If the trap is taken on an interrupt, {mintstatus}.{mipprio} is updated to `iprio[__i__]`.
 
-As with the existing RISC-V mechanism, when an interrupt or
-synchronous exception is taken, the privilege mode and interrupt level
-are modified to reflect the new privilege mode and interrupt level.
-The global interrupt-enable bit of the handler's privilege mode is
-cleared, to prevent preemption by higher-level interrupts in the same
-privilege mode.
-
-The overall behavior of interrupts with `clicintip[__i__]` and `clicintie[__i__]` asserted 
-is summarized in the following table: the Current
-`p/ie/il` fields represent the current privilege mode `P` (not
-software visible), interrupt enable `ie` =
-{status}.{ie} and interrupt
-level `L` = max({intstatus}.{il}, {intthresh}.`th`);
-the CLIC `priv`,`level`, and `id` fields
-represent the highest-ranked interrupt currently present in the CLIC
-with `nP` representing the new privilege mode, `nL` representing the
-new interrupt level, and `id` representing the interrupt's id;
-Current' shows the `p/ie/il` context in the handler's privilege mode;
-`pc` represents the program counter with `V` representing the result
-of any hardware vectoring; `cde` represents the {cause} `exccode`
-field; while the Previous `pp/il/ie/epc` columns represent previous
-context fields in {mpintstatus} and {epc}.
-
-[%autofit]
-----
- Current  |      CLIC          |->      Current'          Previous
- p/ie/il  | priv level   id    |->    p/ie/il  pc  cde   pp/il/ie epc
- P  ?  ?  | nP<P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
- P  0  ?  | nP=P     ?      ?  |->    - -  -   -   -     -  -  -  -   # Interrupts disabled
- P  1  ?  | nP=P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  1  L  | nP=P   0<nL<=L  ?  |->    - -  -   -   -     -  -  -  -   # Interrupt ignored
- P  1  L  | nP=P   L<nL    id  |->    P 0  nL  V   id    P  L  1  pc  # Horizontal interrupt taken
- P  ?  ?  | nP>P     0      ?  |->    - -  -   -   -     -  -  -  -   # No interrupt
- P  ie L  | nP>P   0<nL    id  |->   nP 0  nL  V   id    P  L  ie pc  # Vertical interrupt taken
-----
-
-==== smclic events that cause the hart to resume execution after Wait for Interrupt (WFI) Instruction
-As described in the privileged specification, the Wait for Interrupt instruction (WFI) provides a hint to the implementation that the current hart can be stalled.  The hart may optionally resume execution anytime.  This section describes CLIC events that must cause the hart to resume execution.
-
-NOTE: WFI can be a NOP and not actually pause hart execution. In addition,
-implementations can resume execution after a WFI for any other reason.
-
-As in the privileged specification, if an interrupt is taken while the hart is stalled, the interrupt
-trap will be taken on the following instruction, i.e., execution resumes in the trap handler and mepc
-= pc + 4.  If the event that causes the hart to resume execution does not cause an interrupt to be taken,
-execution will resume at pc + 4.
-
-In smclic mode, similar to CLINT mode, events causing the hart to resume execution after a Wait for Interrupt instruction (WFI) are
-unaffected by the global interrupt-enable bits in {status}.{ie} but should
-honor `clicintie[__i__]` and {intthresh}.
-
-.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
-* has a higher privilege mode than the current privilege mode and
-* the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and
-
-.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
-* has the same privilege mode as the current privilege mode and
-* the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and
-* the interrupt _i_ level is greater than max({intstatus}.{il}, {intthresh}.`th` )
-
-.A pending-and-enabled interrupt _i_ causes the hart to resume execution if interrupt _i_
-* has a lower privilege mode than the current privilege mode and
-* the interrupt priority reduction tree selects interrupt _i_ as the maximum across all pending-and-enabled interrupts and
-
-NOTE: {intthresh} only applies to the current privilege mode.
-
-==== Synchronous Exception Handling
-
-Horizontal synchronous exception traps, which stay within a privilege
-mode, are serviced with the same interrupt level as the instruction
-that raised the exception.
-
-Vertical synchronous exception traps, which are serviced at a higher
-privilege mode, are taken at interrupt level 0 in the higher privilege
-mode.
+NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{mipprio}.
 
 ==== Returns from Handlers
 
 The behavior of an {ret} instruction is modified as follows:
-In CLIC mode, {ret} sets {intstatus}.{il} to {pintstatus}.{pil}.
-The {ret} instruction does not modify the {pintstatus}.{pil} field in {pintstatus}.
 
-If the hart is currently running at some privilege mode `*x*`, an {ret}
-instruction that changes the privilege mode to a mode less
-privileged than `x` also sets {intthresh} to the lowest supported {intthresh} value.
-This helps software avoid a higher privilege mode from having a non-minimum threshold while a lower
-privilege mode is running.
+In CLIC mode, {ret} sets {mintstatus}.{mipprio} to {mpintstatus}.{mpipprio}.
 
 == Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
 
 The Ssclic extension depends on the Smclic and Sscsrind extensions.
-
-=== Interrupt level control
-
-==== Indirect Access to interrupt level CSRs - `clicintlvl[__i__]`
-
-If an interrupt i is not present in the hardware, the corresponding CLIC register locations appear hardwired to zero.
-
-In S-mode, if an interrupt i is not accessible to S-mode, the corresponding CLIC register locations appear hardwired to zero.
-
-In this `siselect` offset range:
-
-*  When XLEN = 32, each `sireg` register controls the clic level setting of four interrupts
-
-[%autowidth]
-|===
-| `siselect` |  `sireg` bits |  `sireg` state              | description
-
-| 0x1000+i   |  7:0          | RW  `clicintlvl[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   | 15:8          | RW  `clicintlvl[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   | 23:16         | RW  `clicintlvl[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   | 31:24         | RW  `clicintlvl[__i__*4+3]` |  setting for interrupt __i__*4+3
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic level setting of eight interrupts.
 
 === Changed and new CSRs
 
