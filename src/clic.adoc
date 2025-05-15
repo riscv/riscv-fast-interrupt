@@ -670,7 +670,7 @@ The behavior of an {mret} instruction is modified as follows:
 
 In CLIC mode, {mret} sets {mintstatus}.{mipprio} to {mpintstatus}.{mpipprio}.
 
-== Same Privilege Mode Interrupt Preemption Support at supervisor level- ssclic
+== Horizontal Nested Interrupt Preemption support for S-mode - ssclic
 
 The Ssclic extension depends on the Smclic and Ssaia extensions.
 When S-mode and the Smclic extensions are implemnted, Ssclic is mandatory.
