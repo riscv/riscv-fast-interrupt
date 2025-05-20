@@ -736,7 +736,7 @@ In CLIC mode, {sret} sets {sintstatus}.{sipprio} to {spintstatus}.{spipprio}.
 
 If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
 implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSRs ({sivt})
+access to the new CSR ({sivt})
 by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
 extension is implemented and the conditions for a virtual instruction
