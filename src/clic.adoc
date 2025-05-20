@@ -593,7 +593,7 @@ ipprio[i]   = iprio[i] & IPPRIO_MASK
 ----
 
 A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
-and the preemption priority of that interrupt ipprio[i] excceds (i.e. is numerically smaller) than {mintstatus}.{mipprio}.
+and the preemption priority of that interrupt ipprio[i] exceeds (i.e. is numerically smaller) than {mintstatus}.{mipprio}.
 
 ==== New Interrupt Status ({mpintstatus}) CSR
 
