@@ -588,7 +588,7 @@ The interrupt preemption priority {ipprio} is defined as follows:
 
 [source]
 ----
-IPPRIO_MASK = 2^(mipreemptcfg.preemptmsk) - 1
+IPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ipprio[i]   = iprio[i] & IPPRIO_MASK
 ----
 
