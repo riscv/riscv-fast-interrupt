@@ -161,7 +161,7 @@ This table provides a summary of the CLIC extensions.
 | ssclicincr   | Increase of the number of local interrupts for S-mode
 | smclic       | Horizontal Nested Interrupt Preemption support for M-mode
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
-| smclichv     | Hardware Vectored Interrupts
+| Smclicivt     | Hardware Vectored Interrupts
 | smclicshv    | Selective Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
 | sditrig      | support for interrupt debug triggering
@@ -535,37 +535,10 @@ It provides additional state to resume execution of the previous handler after a
 [source]
 ----
        Number  Name         Description
-       0x305   mtvec        Trap-handler base address / interrupt mode
  (NEW) 0x346   mpintstatus  Previous interrupt context
  (NEW) 0xFB1   mintstatus   Current interrupt context
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
-
-==== New {mtvec} CSR Mode for CLIC
-
-The CLIC interrupt-handling mode is encoded as a new state in the
-existing {mtvec} WARL register, where {mtvec}.`mode` (the two
-least-significant bits) is `11`.
-
-.CLIC mode xtvec register layout
-include::images/wavedrom/xtvec.edn[]
-
-NOTE: CLINT mode in this specification is defined as `mtvec.mode=00` or `mtvec.mode=01`.
-
-[source]
-----
- mode  PC on interrupt
- ====  ============================================
- 00       OBASE              # CLINT direct mode
- 01       OBASE+4*exccode    # CLINT vectored mode
- 11       OBASE              # CLIC mode
- 10       Reserved
-
-where:
-  OBASE = xtvec[XLEN-1:2]<<2   # vector base is at least 4-byte aligned
-----
-
-Synchronous exception traps always jump to OBASE.
 
 ==== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
 
@@ -659,7 +632,7 @@ This section describes the operation of smclic interrupts.
 
 The existing trap behavior for interrupts is modified as follows:
 
-In CLIC mode, when a trap _i_ is taken,
+When a trap _i_ is taken,
 the current value of {mintstatus}.{mnipprio} is written to {mpintstatus}.{mpnipprio}.
 If the trap is taken on an interrupt, {mintstatus}.{mnipprio} is updated to `iprio[__i__]`.
 
@@ -669,7 +642,7 @@ NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{mnipprio}.
 
 The behavior of an {mret} instruction is modified as follows:
 
-In CLIC mode, {mret} sets {mintstatus}.{mnipprio} to {mpintstatus}.{mpnipprio}.
+{mret} sets {mintstatus}.{mnipprio} to {mpintstatus}.{mpnipprio}.
 
 == Horizontal Nested Interrupt Preemption support for S-mode - ssclic
 
@@ -721,7 +694,7 @@ The behavior is modified in analogy to smclic.
 
 ==== Trap behavior
 
-In CLIC mode, when a trap _i_ is taken,
+When a trap _i_ is taken,
 the current value of {sintstatus}.{snipprio} is written to {spintstatus}.{spnipprio}.
 If the trap is taken on an interrupt, {sintstatus}.{snipprio} is updated to `iprio[__i__]`.
 
@@ -731,7 +704,7 @@ NOTE: Synchronous exceptions do not modify the value of {sintstatus}.{snipprio}.
 
 The behavior of an {sret} instruction is modified as follows:
 
-In CLIC mode, {sret} sets {sintstatus}.{snipprio} to {spintstatus}.{spnipprio}.
+{sret} sets {sintstatus}.{snipprio} to {spintstatus}.{spnipprio}.
 
 ==== State Enable
 
@@ -745,48 +718,56 @@ exception apply, in which case a virtual instruction exception is
 raised when in VS or VU mode instead of an illegal instruction
 exception.
 
-== Support for hardware vectored interrupts - smclichv
+== Support for far hardware vectored interrupts - Smclicivt
 
-This extension requires smclicincr and smclic.
+To increase the range of reachable addresses, this extension adds a new vectoring mode.
+This is useful when handlers are more than 2 MiB away from the vector table entry.
 
-The selective hardware vectoring extension adds the ability for each interrupt
-to be configured to use hardware vectoring or software vectoring.
-Interrupts are always software vectored if smclichv isn't supported when in CLIC mode.
-When a hardware vectored interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to {mivt} CSR),
+In this new mode, when an interrupt is taken, the hart hardware loads the vector
+table entry for the associated interrupt (table pointed to new {mivt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
-The masked vector table entry bit(s) are reserved and should be zero.
-When a software vectored interrupt is taken, the hart jumps to the address in the {tvec} CSR and then
-it is software's responsibility to load the vector table entry for the associated interrupt
-and jump to the address in that entry.
 
-Hardware vectoring has the advantage of lower interrupt latency at the price of a slight
-increase in code size because each hardware vectored interrupt has its own code to perform context save/restore.
-Software vectoring has the advantage of smaller code size by sharing code to perform context save/restore
-at the price of slightly higher interrupt latency. 
+=== Smclicivt Changes to CLIC CSRs
 
-=== smclichv Changes to CLIC Registers
+=== Changed and new CSRs
 
-=== smclichv Changes to CLIC CSRs
+[source]
+----
+       Number  Name         Description
+       0x305   mtvec        Trap-handler base address / interrupt mode
+ (NEW) 0x307   mivt         Interrupt-handler vector table base address
+----
 
 ==== New {mivt} CSR
 
 The {mivt} WARL XLEN-bit CSR holds the base address of the interrupt vector
-table, aligned on a 64-byte or greater power-of-two boundary. The actual
-alignment can be determined by writing ones to the low-order bits then reading
-them back. Values other than 0 in the low 6 bits of {mivt} are reserved.
+table, aligned on a 64-byte or greater power-of-two boundary.
+Values other than 0 in the low 6 bits of {mivt} are reserved.
 
-==== smclichv Changes to {tvec} CSR Mode for CLIC
+NOTE: The actual alignment can be determined
+by writing ones to the low-order bits
+then reading them back.
+
+==== New {mtvec} CSR Mode for CLIC
+
+Far hardware vectored interrupt-handling mode is encoded as a new state in the
+existing {mtvec} WARL register, where {mtvec}.`mode` (the two
+least-significant bits) is `11`.
+
+.xtvec register layout
+include::images/wavedrom/xtvec.edn[]
+
+==== Smclicivt Changes to {tvec} CSR Mode for CLIC
 
 The PC upon interrupt is changed as follows:
 
 [source]
 ----
  mode  PC on Interrupt
- 00    OBASE                                # CLINT direct mode
- 01    OBASE+4*exccode                      # CLINT vectored mode
- 11    M[VTBASE+XLEN/8*exccode] & VTMASK    # CLIC mode
+ 00    OBASE                                # Direct mode
+ 01    OBASE+4*exccode                      # Vectored mode
+ 11    M[VTBASE+XLEN/8*exccode] & VTMASK    # Interrupt vector table mode
  10    Reserved
 
 where:
@@ -796,18 +777,16 @@ where:
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
-In CLIC mode, interrupts are hardware vectored. When these interrupts are taken, the hart
-switches to the handler's privilege mode, and performs the trap side effects described in this and the privileged specification (e.g. update {intstatus}, {pintstatus}, {cause}, {status} fields including clearing {status}.{ie}).
-At this time, if the associated interrupt pending bit is configured for edge-sensitive input, it is cleared by hardware. The hart then fetches an XLEN-bit handler
-address with permissions corresponding to the handler's mode from the in-memory table whose base address (VTBASE) is in
-{ivt}.  The trap handler function address is fetched from
-`VTBASE+XLEN/8*exccode`.  If the fetch is successful, the hart
-clears the low bit(s) (depending on IALIGN) of the handler address and sets the PC to this handler
-address.
+In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
+After executing the required side-effects as required with the existing behavior,
+the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
+from the in-memory table whose base address (VTBASE) is in {ivt}.
+The trap handler function address is fetched from `VTBASE+XLEN/8*exccode`.
+If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
+and sets the PC to this handler address.
+The masked vector table entry bit(s) are reserved and should be zero.
 
-The overall effect is:
-
-     pc := M[VTBASE + XLEN/8 * exccode] & VTMASK
+The vector table layout will look like this for RV32 and RV64, respectively:
 
 [source]
 ----
@@ -824,22 +803,15 @@ The overall effect is:
            0x800018 # Interrupt 3 handler function pointer
 ----
 
-NOTE: The CLINT vectored mode simply jumps to an address in
-the trap vector table, while the CLIC hardware vectored mode reads a
+NOTE: The original vectored mode simply jumps to an address in
+the trap vector table, while the interrupt vector table mode reads a
 handler function address from the table, and jumps to it in hardware.
-
-NOTE: The vector table contains vector addresses rather than
-instructions because it simplifies static initialization in C.
-More specifically, the entries in the table are simple XLEN-bit
-function pointers.
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
 privilege mode of the interrupt handler, and requires execute
 permission; read permission is irrelevant.
 It is recommended that the vector table fetches are ignored for hardware triggers and breakpoints.
-
-NOTE: software vectoring will need vector table read permission.
 
 Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
 
@@ -874,11 +846,11 @@ NOTE: Resuming after a fault on a vector table fetch is currently only seen as u
 
 == Support for selective hardware vectored interrupts - smclicshv
 
-The Smclicshv extension depends upon the Smclichv extension.
+The Smclicshv extension depends upon the Smclicivt extension.
 
 === smclicshv Changes to CLIC CSRs
 
-=== smclichv Changes to CLIC Interrupt Attribute (`clicintattr`)
+=== Smclicivt Changes to CLIC Interrupt Attribute (`clicintattr`)
 
 This is an 8-bit WARL read-write register to specify various attributes for each interrupt.
 
@@ -901,9 +873,9 @@ The PC upon interrupt is changed as follows:
 [source]
 ----
  mode  PC on Interrupt
- 00    OBASE                                               # CLINT direct mode
- 01    OBASE+4*exccode                                     # CLINT vectored mode
- 11    shv ? (M[VTBASE+XLEN/8*exccode] & VTMASK) : OBASE   # CLIC mode
+ 00    OBASE                                               # Direct mode
+ 01    OBASE+4*exccode                                     # Vectored mode
+ 11    shv ? (M[VTBASE+XLEN/8*exccode] & VTMASK) : OBASE   # Far vectored mode
  10    Reserved
 
 where:
@@ -914,7 +886,7 @@ where:
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
 
-In CLIC mode, writing `0` to `clicintattr[__i__].shv`
+In Interrupt vector table mode, writing `0` to `clicintattr[__i__].shv`
 sets interrupt `i` to software vectored,
 where the hart jumps to the
 trap handler address held in the upper XLEN-2 bits of
@@ -924,9 +896,11 @@ trap handler address held in the upper XLEN-2 bits of
 On the other hand, writing `1` to `clicintattr[__i__].shv`
 sets interrupt `i` to hardware vectored.
 
+NOTE: software vectoring will need vector table read permission.
+
 == Synchronous exceptions hardware vectoring- Smclicsehv
 
-The Smclicsehv extension depends upon the Smclichv extension.
+The Smclicsehv extension depends upon the Smclicivt extension.
 
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
@@ -939,9 +913,9 @@ The summarized behavior is the following:
 [source]
 ----
  mode  PC on Synchronous Exception
- 00       OBASE              # CLINT direct mode
- 01       OBASE              # CLINT vectored mode
- 11       OBASE+4*exccode    # CLIC mode
+ 00       OBASE              # Direct mode
+ 01       OBASE              # Vectored mode
+ 11       OBASE+4*exccode    # Far vectored mode
  10       Reserved
 ----
 
