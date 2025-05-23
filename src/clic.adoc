@@ -8,7 +8,7 @@
 
 
 [[riscv-doc-template]]
-= AIA Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
+= Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
 include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Example Specification Document (Zexmpl)
@@ -133,7 +133,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [Preface]
 == Copyright and license information
 
-This RISC-V AIA CLIC extension specification is © 2018-2025 RISC-V international
+This RISC-V CLIC extension specification is © 2018-2025 RISC-V international
 
 This document is released under a Creative Commons Attribution 4.0
 International License. +
@@ -146,11 +146,11 @@ version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
 Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
 Creative Commons Attribution 4.0 International License.
 
-== CLIC extensions to AIA
+== CLIC extensions
 This section gives an overview for the Core-Local Interrupt
-Controller (CLIC) extensions to AIA.
+Controller (CLIC) extensions.
 
-This table provides a summary of the CLIC extensions to AIA.
+This table provides a summary of the CLIC extensions.
 
 [%autowidth]
 |===
@@ -183,22 +183,18 @@ an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
 (`cliciprio[__i__]`) to specify priority, and 
 (`clicmideleg[__i__]`) to delegate interrupts to a lower privilege level.
 
-NOTE: The existing timer (`mtip`/`stip`), software
-(`msip`/`ssip`), and external interrupt inputs
-(`meip`/`seip`) can be treated as additional local interrupt
-sources, where the privilege mode, interrupt level, and priority can
-be altered using `clicintattr[__i__]` and
-`cliciprio[__i__]` and `clicmideleg[__i__]` registers.
-
-With this extension, for implementations that do not require CLINT compatibility, the allocation of interrupt ordering (e.g. meip, mtip, msip) 
-are allowed to be defined by the platform. A platform definition will often be based on a specific RISC-V ISA profile, 
-where RISC-V ISA profiles specify a common set of ISA choices that capture the most value for most users to enable software compatibility.
-
-=== CLIC Interrupt Attribute (`cliciprio`)
+=== CLIC Interrupt Priority (`cliciprio`)
 Each interrupt has an associated priority as defined in the AIA specification.
-For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification.
+For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification and follow the default 
+priorities as specified in the AIA standard major interrupt codes, listed in default priority order table.
+For interrupts after the first 64 interrupts, smaller priority numbers convey higher priority. 
+For interrupts after the first 64 interrupts, when interrupt sources have equal `cliciprio` priority number, the source with the lowest identity number has the highest priority.
+When interrupt sources have equal `cliciprio` priority number, the first 64 interrupts have higher priority than interrupts after the first 64 interrupts.
 
-=== CLIC Interrupt Attribute (`clicmideleg`)
+NOTE: Implementations that do not require software compliance with AIA defined major interrupt numbers 
+may choose to only implement interrupts 64 and above to simplify default priority calculations.
+
+=== CLIC Interrupt Delegation (`clicmideleg`)
 Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
 For the first 64 interrupts, these registers mirror the values of mideleg bits in the AIA specification.
 
