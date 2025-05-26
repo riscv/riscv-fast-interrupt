@@ -107,13 +107,13 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
-:ipprio: pass:q[``**__x__**ipprio``]
+:nipprio: pass:q[``**__x__**nipprio``]
 
 :mpp: pass:q[``mpp``]
 :mpie: pass:q[``mpie``]
-:mipprio: pass:q[``mipprio``]
+:mnipprio: pass:q[``mnipprio``]
 
-:pipprio: pass:q[``**__x__**pipprio``]
+:pnipprio: pass:q[``**__x__**pnipprio``]
 
 :mpippro: pass:q[``mpippro``]
 
@@ -582,18 +582,18 @@ mipreemptcfg fields
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {ipprio}.
+{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {nipprio}.
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
-The interrupt preemption priority {ipprio} is defined as follows:
+The nested interrupt preemption priority {nipprio} is defined as follows:
 
 [source]
 ----
-IPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
-ipprio[i]   = iprio[i] & IPPRIO_MASK
+NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
+nipprio[i]   = iprio[i] & NIPPRIO_MASK
 ----
 
 A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
-and the preemption priority of that interrupt ipprio[i] exceeds (i.e. is numerically smaller) than {mintstatus}.{mipprio}.
+and the preemption priority of that interrupt nipprio[i] exceeds (i.e. is numerically smaller) than {mintstatus}.{mnipprio}.
 
 ==== New Interrupt Status ({mpintstatus}) CSR
 
@@ -602,20 +602,20 @@ A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
 [source]
 ----
 mpintstatus 
-Bits   Field         Description
- XLEN-1 Interrupt     Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
+Bits   Field           Description
+ XLEN-1 Interrupt      Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
  30     (reserved)
- 29:28  mpp[1:0]      Previous privilege mode, mirror of mstatus.mpp
- 27     mpie          Previous interrupt enable, mirror of mstatus.mpie
+ 29:28  mpp[1:0]       Previous privilege mode, mirror of mstatus.mpp
+ 27     mpie           Previous interrupt enable, mirror of mstatus.mpie
  26:24  (reserved)
- 23:16  mpipprio[7:0] Previous interrupt preemption priority
+ 23:16  mpnipprio[7:0] Previous nested interrupt preemption priority
  15:12  (reserved)
- 11:0   exccode[11:0] Exception/interrupt code, mirror of mcause[11:0]
+ 11:0   exccode[11:0]  Exception/interrupt code, mirror of mcause[11:0]
 ----
 
 ==== New Interrupt Status ({mintstatus}) CSR
 
-A new M-mode CSR, `mintstatus`, holds the active interrupt preemption priority for
+A new M-mode CSR, `mintstatus`, holds the active nested interrupt preemption priority for
 each supported privilege mode.  These fields are read-only.  The
 primary reason to expose these fields is to support debug.
 
@@ -623,9 +623,9 @@ primary reason to expose these fields is to support debug.
 ----
 mintstatus fields
  bits    description
- 31:24   mipprio
+ 31:24   mnipprio
  23:16   (reserved)
- 15: 8   sipprio if ssclic is supported
+ 15: 8   snipprio if ssclic is supported
   7: 0   (reserved)
 ----
 
@@ -639,13 +639,13 @@ out of reset.
 
 ==== Mandatory reset state
 
-{mintstatus}.{mipprio} and {mpintstatus}.{mpipprio} fields reset to the highest possible value IPPRIO_MAX.
+{mintstatus}.{mnipprio} and {mpintstatus}.{mpnipprio} fields reset to the highest possible value NIPPRIO_MAX.
 Depending on the number of implemented priority bits, this is
 
 [source]
 ----
 IPRIO_MAX  = 2^(IPRIOLEN)
-IPPRIO_MAX = IPRIO_MAX & IPPRIO_MASK
+NIPPRIO_MAX = IPRIO_MAX & NIPPRIO_MASK
 ----
 
 The reset behavior of other fields is platform-specific.
@@ -659,16 +659,16 @@ This section describes the operation of smclic interrupts.
 The existing trap behavior for interrupts is modified as follows:
 
 In CLIC mode, when a trap _i_ is taken,
-the current value of {mintstatus}.{mipprio} is written to {mpintstatus}.{mpipprio}.
-If the trap is taken on an interrupt, {mintstatus}.{mipprio} is updated to `iprio[__i__]`.
+the current value of {mintstatus}.{mnipprio} is written to {mpintstatus}.{mpnipprio}.
+If the trap is taken on an interrupt, {mintstatus}.{mnipprio} is updated to `iprio[__i__]`.
 
-NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{mipprio}.
+NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{mnipprio}.
 
 ==== Returns from Handlers
 
 The behavior of an {mret} instruction is modified as follows:
 
-In CLIC mode, {mret} sets {mintstatus}.{mipprio} to {mpintstatus}.{mpipprio}.
+In CLIC mode, {mret} sets {mintstatus}.{mnipprio} to {mpintstatus}.{mpnipprio}.
 
 == Horizontal Nested Interrupt Preemption support for S-mode - ssclic
 
@@ -688,16 +688,16 @@ When S-mode and the Smclic extensions are implemnted, Ssclic is mandatory.
 [source]
 ----
 spintstatus
- Bits    Field        Description
- XLEN-1 Interrupt     Interrupt=1, Exception=0, same as scause.Interrupt
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, same as scause.Interrupt
     30  (reserved for smclicshv extension)
     29  (reserved)
-    28  spp           Previous privilege mode, same as sstatus.spp
-    27  spie          Previous interrupt enable, same as sstatus.spie
+    28  spp            Previous privilege mode, same as sstatus.spp
+    27  spie           Previous interrupt enable, same as sstatus.spie
  26:24  (reserved)
- 23:16  spipprio[7:0] Previous interrupt preemption priority
+ 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
  15:12  (reserved)
- 11:0   exccode[11:0] Exception/interrupt code, same as scause[11:0]
+ 11:0   exccode[11:0]  Exception/interrupt code, same as scause[11:0]
 ----
 
 The supervisor {scause} register has only a single `spp` bit (to
@@ -705,7 +705,7 @@ indicate user/supervisor) mirrored from {sstatus}.`spp`.
 
 === Reset Behavior
 
-Interrupt preemption priority IPPRIO_MAX corresponds to regular
+Nested interrupt preemption priority NIPPRIO_MAX corresponds to regular
 execution outside of an interrupt handler.
 
 NOTE: For an S-mode execution environment, the EEI should specify
@@ -721,16 +721,16 @@ The behavior is modified in analogy to smclic.
 ==== Trap behavior
 
 In CLIC mode, when a trap _i_ is taken,
-the current value of {sintstatus}.{sipprio} is written to {spintstatus}.{spipprio}.
-If the trap is taken on an interrupt, {sintstatus}.{sipprio} is updated to `iprio[__i__]`.
+the current value of {sintstatus}.{snipprio} is written to {spintstatus}.{spnipprio}.
+If the trap is taken on an interrupt, {sintstatus}.{snipprio} is updated to `iprio[__i__]`.
 
-NOTE: Synchronous exceptions do not modify the value of {sintstatus}.{sipprio}.
+NOTE: Synchronous exceptions do not modify the value of {sintstatus}.{snipprio}.
 
 ==== Returns from Handlers
 
 The behavior of an {sret} instruction is modified as follows:
 
-In CLIC mode, {sret} sets {sintstatus}.{sipprio} to {spintstatus}.{spipprio}.
+In CLIC mode, {sret} sets {sintstatus}.{snipprio} to {spintstatus}.{spnipprio}.
 
 ==== State Enable
 
