@@ -578,7 +578,8 @@ Synchronous exception traps always jump to OBASE.
 mipreemptcfg fields
  bits        description
  XLEN-1:4    (reserved)
- 3:1         preemptmsk
+ 3:0         preemptmsk
+
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
