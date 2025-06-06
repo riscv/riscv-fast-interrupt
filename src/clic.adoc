@@ -162,7 +162,6 @@ This table provides a summary of the CLIC extensions.
 | smclic       | Horizontal Nested Interrupt Preemption support for M-mode
 | ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | Smclicivt     | Hardware Vectored Interrupts
-| smclicshv    | Selective Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
 | sditrig      | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
@@ -205,7 +204,7 @@ For the first 64 interrupts, these registers mirror the values of mideleg bits i
 This is an 8-bit WARL read-write register to specify various attributes for each interrupt.
 
 NOTE: This register is defined as WARL as some implementations may want to hardwire to fixed values
-only trigger/shv types.
+only trigger types.
 
 .clicintattr[i] register layout
 include::images/wavedrom/clicintattri.edn[]
@@ -217,8 +216,6 @@ as "negative-edge" (0: positive-edge, 1: negative-edge).
 More specifically, there can be four possible combinations:
 positive level-triggered, negative level-triggered, positive edge-triggered,
 and negative edge-triggered.
-
-The shv field is reserved and contains the shv bit when the smclicshv extension is present. 
 
 === CLIC Interrupt Pending (`clicintip`)
 Each interrupt has an associated interrupt pending.
@@ -664,8 +661,7 @@ When S-mode and the Smclic extensions are implemnted, Ssclic is mandatory.
 spintstatus
  Bits    Field         Description
  XLEN-1 Interrupt      Interrupt=1, Exception=0, same as scause.Interrupt
-    30  (reserved for smclicshv extension)
-    29  (reserved)
+ 30:29  (reserved)
     28  spp            Previous privilege mode, same as sstatus.spp
     27  spie           Previous interrupt enable, same as sstatus.spie
  26:24  (reserved)
@@ -843,60 +839,6 @@ As long as synchronous exceptions can occur during the interrupt vector table fe
 side-affects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
-
-== Support for selective hardware vectored interrupts - smclicshv
-
-The Smclicshv extension depends upon the Smclicivt extension.
-
-=== smclicshv Changes to CLIC CSRs
-
-=== Smclicivt Changes to CLIC Interrupt Attribute (`clicintattr`)
-
-This is an 8-bit WARL read-write register to specify various attributes for each interrupt.
-
-.clicintattr register layout
-include::images/wavedrom/clicintattr.edn[]
-
-The 1-bit `shv` field is used for Selective Hardware Vectoring.
-If `shv` is 0, it assigns this interrupt to be software vectored and thus it jumps
-to the common code at {tvec}.
-If `shv` is 1, it assigns this interrupt to be hardware vectored and thus it
-automatically jumps to the trap-handler function pointer specified in {ivt} CSR.
-This feature allows some interrupts to all jump to a common base address held
-in {tvec}, while the others are vectored in hardware via a table pointed to
-by the additional {ivt} CSR.
-
-==== smclicshv Changes to {tvec} CSR Mode for CLIC
-
-The PC upon interrupt is changed as follows:
-
-[source]
-----
- mode  PC on Interrupt
- 00    OBASE                                               # Direct mode
- 01    OBASE+4*exccode                                     # Vectored mode
- 11    shv ? (M[VTBASE+XLEN/8*exccode] & VTMASK) : OBASE   # Far vectored mode
- 10    Reserved
-
-where:
-  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
-  VTBASE = xivt[XLEN-1:6]<<6    # Interrupt Vector Table base is at least 64-byte aligned
-  shv    = clicintattr[i].shv
-  M[a]   = Contents of memory address at address "a"
-  VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
-----
-
-In Interrupt vector table mode, writing `0` to `clicintattr[__i__].shv`
-sets interrupt `i` to software vectored,
-where the hart jumps to the
-trap handler address held in the upper XLEN-2 bits of
-{tvec} for all exceptions and interrupts in privilege mode
-`**__x__**`.
-
-On the other hand, writing `1` to `clicintattr[__i__].shv`
-sets interrupt `i` to hardware vectored.
-
-NOTE: software vectoring will need vector table read permission.
 
 == Synchronous exceptions hardware vectoring- Smclicsehv
 
@@ -1214,17 +1156,6 @@ have a single implementation support different parameterizations of CLIC extensi
 these values configurable and initialized prior to CLIC operation. 
 However, these parameters should functionally be considered static. If the value of these parameters are changed
 during CLIC operation, CLIC behavior is undefined.
-
-=== NVBITS Parameter - Specifying Support for smclicshv Selective Interrupt Hardware Vectoring Extension
-
-The NVBITS Parameter specifies whether
-the smclicshv extension is implemented or not.
-
-When NVBITS is 0, the smclicshv extension is not implemented.
-In this case, all CLIC interrupts are software vectored and are directed to the common code
-at {tvec} register.
-
-When NVBITS is 1, smclicshv extension is implemented.
 
 === CLICINFO Parameters
 

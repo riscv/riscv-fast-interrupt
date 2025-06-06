@@ -1,7 +1,7 @@
 [wavedrom, ,svg]
 ....
 {reg: [
-  {bits: 1, name: 'WARL(0)' },
+  {bits: 1, name: 'WPRI(0)' },
   {bits: 2, name: 'trig' },
   {bits: 5, name: 'WPRI(0)' },
   ]}
