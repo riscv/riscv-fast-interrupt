@@ -66,7 +66,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :intstatus: pass:q[``**__x__**intstatus``]
 :intthresh: pass:q[``**__x__**intthresh``]
 
-// Make M-mode and S-mode of monospace formatting substitutions for smclic and ssclic chapter references to CSRs.
+// Make M-mode and S-mode of monospace formatting substitutions for Smclic and Ssclic chapter references to CSRs.
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
 :mie: pass:q[``mie``]
@@ -157,13 +157,13 @@ This table provides a summary of the CLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
-| smclicincr   | Increase of the number of local interrupts for M-mode
-| ssclicincr   | Increase of the number of local interrupts for S-mode
-| smclic       | Horizontal Nested Interrupt Preemption support for M-mode
-| ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
-| Smclicivt     | Hardware Vectored Interrupts
+| Smclicincr   | Increase of the number of local interrupts for M-mode
+| Ssclicincr   | Increase of the number of local interrupts for S-mode
+| Smclic       | Horizontal Nested Interrupt Preemption support for M-mode
+| Ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
+| Smclicivt    | Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
-| sditrig      | support for interrupt debug triggering
+| Sditrig      | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
 | Sscspsw      | Conditional stack pointer swap at supervisor level
@@ -172,11 +172,11 @@ This table provides a summary of the CLIC extensions.
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of CLIC.
 
-== Increase of AIA local interrupts - smclicincr
+== Increase of AIA local interrupts - Smclicincr
 
 The Smclicincr extension depends on the Smcsrind and Smaia extensions.
 
-The smclicincr extension increases support up to 4096 interrupt inputs per hart.
+The Smclicincr extension increases support up to 4096 interrupt inputs per hart.
 Each interrupt input _i_ has five control
 registers: an interrupt-pending bit (`clicintip[__i__]`),
 an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
@@ -425,7 +425,7 @@ When {mithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
 regardless of the settings of their interrupt-enable bits.
 
-== Increase of AIA local interrupts - ssclicincr
+== Increase of AIA local interrupts - Ssclicincr
 
 The Ssclicincr extension depends on the Sscsrind and Ssaia extensions.
 
@@ -520,7 +520,7 @@ When {sithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
 regardless of the settings of their interrupt-enable bits.
 
-== Horizontal Nested Interrupt Preemption support for M-mode - smclic
+== Horizontal Nested Interrupt Preemption support for M-mode - Smclic
 
 The Smclic extension depends on the Smaia extension.
 
@@ -602,7 +602,7 @@ mintstatus fields
  bits    description
  31:24   mnipprio
  23:16   (reserved)
- 15: 8   snipprio if ssclic is supported
+ 15: 8   snipprio if Ssclic is supported
   7: 0   (reserved)
 ----
 
@@ -622,7 +622,7 @@ The reset behavior of other fields is platform-specific.
 
 === Interrupt Operation
 
-This section describes the operation of smclic interrupts.
+This section describes the operation of Smclic interrupts.
 
 ==== Trap behavior
 
@@ -640,7 +640,7 @@ The behavior of an {mret} instruction is modified as follows:
 
 {mret} sets {mintstatus}.{mnipprio} to {mpintstatus}.{mpnipprio}.
 
-== Horizontal Nested Interrupt Preemption support for S-mode - ssclic
+== Horizontal Nested Interrupt Preemption support for S-mode - Ssclic
 
 The Ssclic extension depends on the Smclic and Ssaia extensions.
 When S-mode and the Smclic extensions are implemnted, Ssclic is mandatory.
@@ -683,8 +683,8 @@ in S-mode.
 
 === Interrupt Operation
 
-This section describes the operation of ssclic interrupts.
-The behavior is modified in analogy to smclic.
+This section describes the operation of Ssclic interrupts.
+The behavior is modified in analogy to Smclic.
 
 ==== Trap behavior
 
@@ -859,7 +859,7 @@ The summarized behavior is the following:
  10       Reserved
 ----
 
-== Interrupt trigger Debug extension- sditrig
+== Interrupt trigger Debug extension- Sditrig
 
 === Interrupt Trigger (`dbginttrig`)
 
@@ -884,7 +884,7 @@ is used as the source for this interrupt trigger.
 The `interrupt_trap_enable` control bit is read-write to enable/disable this
 interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `dbginttrig[__i__]`.interrupt_number and the associated `dbginttrig[__i__]`.interrupt_trap_enable is set.
 
-=== sditrig machine level CSRs
+=== Sditrig machine level CSRs
 
 ==== `dbginttrig[__i__]`
 
