@@ -587,8 +587,7 @@ Bits   Field           Description
  27     mpie           Previous interrupt enable, mirror of mstatus.mpie
  26:24  (reserved)
  23:16  mpnipprio[7:0] Previous nested interrupt preemption priority
- 15:12  (reserved)
- 11:0   exccode[11:0]  Exception/interrupt code, mirror of mcause[11:0]
+ 15:0   (reserved)
 ----
 
 ==== New Interrupt Status ({mintstatus}) CSR
@@ -666,8 +665,7 @@ spintstatus
     27  spie           Previous interrupt enable, same as sstatus.spie
  26:24  (reserved)
  23:16  spnipprio[7:0] Previous nested interrupt preemption priority
- 15:12  (reserved)
- 11:0   exccode[11:0]  Exception/interrupt code, same as scause[11:0]
+ 15:0   (reserved)
 ----
 
 The supervisor {scause} register has only a single `spp` bit (to
