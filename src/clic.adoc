@@ -1146,36 +1146,3 @@ Therefore, if a breakpoint is triggered because of an tpush instruction, the bre
 ==== tpush
 
 ==== tpopxret
-
-== CLIC Parameters
-
-Although these are described as parameters, it is understood that hardware implementations may wish to
-have a single implementation support different parameterizations of CLIC extensions and may make
-these values configurable and initialized prior to CLIC operation. 
-However, these parameters should functionally be considered static. If the value of these parameters are changed
-during CLIC operation, CLIC behavior is undefined.
-
-=== CLICINFO Parameters
-
-The NUM_INTERRUPT 13-bit parameter from 2-4096 that specifies the actual number of maximum interrupt
-inputs supported in this implementation. MSIP, MTIP are always included.
-
-The VERSION 8-bit parameter specifies the implementation version of CLIC. The upper
-4-bit specifies the architecture version, and the lower 4-bit specifies
-the implementation version.
-
-The NUM_TRIGGER 6-bit parameter specifies the number of maximum interrupt
-triggers supported in this implementation. Valid values are 0 to 32.
-
-=== Additional CLIC Parameters
-
-[source]
-----
-Name           Value Range  Description
-CLICMAXID      12-4095      Largest interrupt ID
-
-INTTHRESHBITS  1-8          Number of bits implemented in {intthresh}.th
-CLICMTVECALIGN >= 2         Number of hardwired-zero LSBs in mtvec address.
-----
-NOTE: These parameters are likely to be available by the general
-discovery mechanism that is in development.
