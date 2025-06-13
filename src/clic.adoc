@@ -951,7 +951,7 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
 === Trap handler push and pop functional overview
 
 1. The tpush instruction
-* Conditionally performs a stack pointer swap by executing xcsps
+* Conditionally performs a stack pointer swap by executing cspspush sp
 * Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
@@ -988,7 +988,7 @@ The values of xtval, xtval2, and xinst only need to be written to an argument re
 * Restores registers x10-x15
 * Restores the the hart's state to the point that the hart can return to the interrupted context
 * Adjust the stack pointer to destroy the stack frame
-* Conditionally performs a stack pointer swap by executing xcsps
+* Conditionally performs a stack pointer swap by executing cspspop sp
 * Executes an xret according to the current level
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
