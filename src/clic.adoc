@@ -164,8 +164,8 @@ This table provides a summary of the CLIC extensions.
 | Smclicivt    | Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
 | Smtp         | Support for trap handler push/pop
-| Smcspsw      | Conditional stack pointer swap at machine level
-| Sscspsw      | Conditional stack pointer swap at supervisor level
+| Smcsps      | Conditional stack pointer swap at machine level
+| Sscsps      | Conditional stack pointer swap at supervisor level
 |===
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
@@ -865,11 +865,10 @@ Performing stack pointer swaping in SW can be time consuming, as the conditions 
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
-=== Separate stacks per privilege mode
+=== CSR with stack pointer for conditional swap (msp)
 
-The stack separation per privilege mode is controlled through the xsp CSR.
-If this reads the value zero, no conditional stack swap is performed.
-Else, the xcspw instruction can be used to atomically swap the stack pointer with the xsp register if a mode change happened.
+A new CSR is introduced to hold an alternative stack pointer.
+Conditionally, this stack pointer can be swapped with the currently active one.
 
 [source]
 ----
@@ -877,44 +876,47 @@ Else, the xcspw instruction can be used to atomically swap the stack pointer wit
 (NEW) 0x348   msp          Stack pointer for conditional swap (WARL)
 ----
 
-This mechanism can also be used to initialize the sp value of a less privileged mode.
-If an operating system manages separate stacks per software thread in a lower privileged mode, this mechanism can also be applied.
+=== Instructions for conditional stack pointer swap
 
-=== Separate stacks for interrupts
+To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
+To decide, if a stack pointer swap is required, these instructions assume that stack pointers,
+which shall be swapped in during a push operation, have the LSb asserted.
 
-The same instruction can be used to separate the stack of non-interrupt execution from interrupts at the same privilege level.
-This is beneficial to ensure the integrity of the interrupts stack independently of the non-interrupt stack.
-The interrupt stack pointer at a given privilege level has to be initialized by writing to the xtsp CSR.
-If using xcspsw to swap stack pointers before changing to a lower privilege level, the current value of sp will be used as stack pointer in trap handling at the current privilege level. 
-After a trap, the xcspw instruction will swap the previous sp with the value in xsp if {insert CSR here}.xtspsw is asserted.
+NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, therefore the least significant bits are zero.
 
-=== xcspsw
+If the value of {msp} is zero, no conditional stack pointer swap is performed.
 
-The xcspsw instruction conditional swaps the sp register with the xsp register.
+Encodings tbd.
 
-Encoding tbd. Assume this includes the PRIV field.
+==== Conditional stack pointer swap (push mode) cspspush
 
-Behavior:
+This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
+The stack pointer swap is conditionally executed, if xsp[0] is '1'.
+
+The behavior of the operations is:
 
 [source]
 ----
-
-# Stack pointer swap condition (SPSC) in a trap handler:
-exception_spsc = true if exception was taken from (xnipprio == NIPPRIO_MAX)
-interrupt_spsc = (xnipprio == NIPPRIO_MAX) != (xpnipprio == NIPPRIO_MAX)
-trap_spsc = exception_spsc or interrupt_spsc
-
-if ((xsp != 0) and (trap_spsc or (PRIV != xpp)))
-{
-  tmp = sp
-  sp = xsp
-  xsp = tmp
-}
+if xsp[0] == 1
+    rd = xsp & ~1
 ----
 
-== Sscspsw Conditional Stack Pointer Swap extension
+==== Conditional stack pointer swap (pop mode) cspspop
 
-The Sscspsw depends on the Smcspsw extension.
+This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
+To ensure that cspspush can differentiate the stack pointers, the LSb is asserted when storing the value.
+
+The behavior of the operations is:
+
+[source]
+----
+if xsp != 0
+    xsp = rs | 1
+----
+
+== Sscsps Conditional Stack Pointer Swap extension
+
+The Sscsps depends on the Smcsps extension.
 
 It adds a new supervisor level CSR ssp.
 
@@ -924,8 +926,7 @@ It adds a new supervisor level CSR ssp.
 (NEW) 0x148   ssp          Stack pointer for conditional swap (WARL)
 ----
 
-If ssp reads a non-zero value, the xcspsw conditionally perfoms a stack pointer swap with ssp.
-The behavior is analogous to Smcspsw.
+At supervisor level, the cspspush and cspspop instructions operate on the {ssp} register.
 
 === State Enable
 
@@ -950,7 +951,7 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
 === Trap handler push and pop functional overview
 
 1. The tpush instruction
-* Conditionally performs a stack pointer swap by executing xcspsw
+* Conditionally performs a stack pointer swap by executing xcsps
 * Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
 * Save registers x10-x15 (these are the caller saved registers available in RVC)
 * Adjusts the stack pointer to create the stack frame
@@ -987,7 +988,7 @@ The values of xtval, xtval2, and xinst only need to be written to an argument re
 * Restores registers x10-x15
 * Restores the the hart's state to the point that the hart can return to the interrupted context
 * Adjust the stack pointer to destroy the stack frame
-* Conditionally performs a stack pointer swap by executing xcspsw
+* Conditionally performs a stack pointer swap by executing xcsps
 * Executes an xret according to the current level
 
 NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
