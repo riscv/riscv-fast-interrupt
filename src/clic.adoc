@@ -1026,9 +1026,9 @@ Once the instruction retires, or the interrupts are disabled, no late preemption
 
 === Stack layout
 
-To ease debugging, a stack layout is specified for the saved context.
+To ease debugging, a stack layout is recommended for the saved context.
 
-#TODO: find the best way to specify the memory layout in asciidoc
+NOTE: This stack layout is not mandated to allow e.g. shadow register sets
 
 * xtvec.mode != CLIC:
 ** XXLEN = 32:
