@@ -164,8 +164,8 @@ This table provides a summary of the CLIC extensions.
 | Smclicivt    | Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
 | Smtp         | Support for trap handler push/pop
-| Smcsps      | Conditional stack pointer swap at machine level
-| Sscsps      | Conditional stack pointer swap at supervisor level
+| Smcsps       | Conditional stack pointer swap at machine level
+| Sscsps       | Conditional stack pointer swap at supervisor level
 |===
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
