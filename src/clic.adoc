@@ -930,9 +930,10 @@ Encoding::
 {reg: [
   {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
   {bits: 5, name: 0x2, attr: ['rd'], type: 2},
-  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
   {bits: 5, name: 0x2, attr: ['rs'], type: 4},
-  {bits: 12, name: 0x500, attr: [''], type: 8},
+  {bits: 5, name: 0x9, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
 ]}
 ....
 
@@ -969,9 +970,10 @@ Encoding::
 {reg: [
   {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
   {bits: 5, name: 0x2, attr: ['rd'], type: 2},
-  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
   {bits: 5, name: 0x2, attr: ['rs'], type: 4},
-  {bits: 12, name: 0x700, attr: [''], type: 8},
+  {bits: 5, name: 0xC, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
 ]}
 ....
 
@@ -1158,11 +1160,12 @@ Encoding::
 ....
 {reg: [
   {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
-  {bits: 5, name: 0x0, attr: ['reserved'], type: 2},
-  {bits: 3, name: 0x4, attr: [''], type: 8},
-  {bits: 5, name: 0x0, attr: ['reserved'], type: 4},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 4, name: 0x7, attr: [''], type: 8},
   {bits: 1, name: 'imm1', attr: ['preempt'], type: 3},
-  {bits: 11, name: 0x80, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
 ]}
 ....
 
@@ -1187,10 +1190,11 @@ Encoding::
 ....
 {reg: [
   {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
-  {bits: 5, name: 0x0, attr: ['reserved'], type: 2},
-  {bits: 3, name: 0x4, attr: [''], type: 8},
-  {bits: 5, name: 0x0, attr: ['reserved'], type: 4},
-  {bits: 12, name: 0x300, attr: [''], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 5, name: 0x8, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
 ]}
 ....
 
