@@ -1085,58 +1085,50 @@ To ease debugging, a stack layout is recommended for the saved context.
 
 NOTE: This stack layout is not mandated to allow e.g. shadow register sets
 
-* xtvec.mode != CLIC:
-** XXLEN = 32:
+[source]
+----
+* Smclic/Ssclic not present:
+
+** XLEN = 32:
 
 stack pointer adjustment: 32
 
 24: x15
-
 20: x14
-
 16: x13
-
 12: x12
-
 8: x11
-
 4: x10
 
-** XXLEN = 64:
+** XLEN = 64:
 
 stack pointer adjustment: 48
 
 48: x15
-
 40: x14
-
 32: x13
-
 24: x12
-
 16: x11
-
 8: x10
 
-* xtvec.mode = CLIC:
+* Smclic/Ssclic present:
 
 start of stackframe remains same. In addition:
 
-** XXLEN = 32
+** XLEN = 32
 
 stack pointer adjustment: 32
 
-32: xpintstatus (XXLEN)
+32: xpintstatus (XLEN)
+28: xpepc (XLEN)
 
-28: xpepc (XXLEN)
-
-** XXLEN = 32
+** XLEN = 32
 
 stack pointer adjustment: 64
 
-60: xpintstatus (XXLEN)
-
-56: xpepc (XXLEN)
+60: xpintstatus (XLEN)
+56: xpepc (XLEN)
+----
 
 === Fault handling
 
