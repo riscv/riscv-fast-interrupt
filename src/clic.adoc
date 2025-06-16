@@ -995,7 +995,7 @@ Included in: <<smcsps>>
 <<<
 
 [[smtp, Smtp]]
-== Smtp Trap handler push and pop extension
+== Trap handler push and pop extension (Smtp)
 
 The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
 Trap handler latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
