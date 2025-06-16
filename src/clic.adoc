@@ -865,7 +865,7 @@ Performing stack pointer swaping in SW can be time consuming, as the conditions 
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
-=== CSR with stack pointer for conditional swap (msp)
+==== CSR with stack pointer for conditional swap (msp)
 
 A new CSR is introduced to hold an alternative stack pointer.
 Conditionally, this stack pointer can be swapped with the currently active one.
@@ -876,7 +876,7 @@ Conditionally, this stack pointer can be swapped with the currently active one.
 (NEW) 0x348   msp          Stack pointer for conditional swap (WARL)
 ----
 
-=== Instructions for conditional stack pointer swap
+==== Instructions for conditional stack pointer swap
 
 To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
 To decide, if a stack pointer swap is required, these instructions assume that stack pointers,
@@ -886,35 +886,7 @@ NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, the
 
 If the value of {msp} is zero, no conditional stack pointer swap is performed.
 
-Encodings tbd.
-
-==== Conditional stack pointer swap (push mode) cspspush
-
-This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
-The stack pointer swap is conditionally executed, if xsp[0] is '1'.
-
-The behavior of the operations is:
-
-[source]
-----
-if xsp[0] == 1
-    rd = xsp & ~1
-----
-
-==== Conditional stack pointer swap (pop mode) cspspop
-
-This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-To ensure that cspspush can differentiate the stack pointers, the LSb is asserted when storing the value.
-
-The behavior of the operations is:
-
-[source]
-----
-if xsp != 0
-    xsp = rs | 1
-----
-
-== Sscsps Conditional Stack Pointer Swap extension
+=== Sscsps Conditional Stack Pointer Swap at Supervisor Level
 
 The Sscsps depends on the Smcsps extension.
 
@@ -940,6 +912,89 @@ exception apply, in which case a virtual instruction exception is
 raised when in VS or VU mode instead of an illegal instruction
 exception.
 
+<<<
+
+=== Instructions
+
+==== cspspush
+
+Synopsis::
+Conditional stack pointer swap (push mode)
+
+Mnemonic::
+cspspush rd, rs
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd'], type: 2},
+  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs'], type: 4},
+  {bits: 12, name: 0x500, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
+The stack pointer swap is conditionally executed, if xsp[0] is '1'.
+
+The behavior of the operations is:
+
+[source]
+----
+if xsp[0] == 1
+    tmp = rd
+    rd = xsp & ~1
+    xsp = tmp
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+==== cspspush
+
+Synopsis::
+Pop trap context
+
+Mnemonic::
+tpop
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd'], type: 2},
+  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs'], type: 4},
+  {bits: 12, name: 0x700, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
+To ensure that cspspush can differentiate the stack pointers, the LSb is asserted when storing the value.
+
+Behavior::
+
+[source]
+----
+if xsp != 0
+    tmp = xsp
+    xsp = rs | 1
+    rd = tmp
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+[[smtp, Smtp]]
 == Smtp Trap handler push and pop extension
 
 The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
@@ -1094,10 +1149,60 @@ The critical sections are defined as the time during execution of the tpush and 
 As the execution of tpush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
 Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occured on the subsequent instruction.
 
-=== Instructions
+<<<
 
-#TODO: define encodings, sail etc.
+=== Instructions
 
 ==== tpush
 
+Synopsis::
+Push trap context
+
+Mnemonic::
+tpush preempt
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: ['reserved'], type: 2},
+  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 5, name: 0x0, attr: ['reserved'], type: 4},
+  {bits: 1, name: 'imm1', attr: ['preempt'], type: 3},
+  {bits: 11, name: 0x80, attr: [''], type: 8},
+]}
+....
+
+Description::
+Saves the interrupted context at the beginning of a trap.
+If preempt is '1', interrupts will be enabled at the end of the sequence.
+
+Included in: <<smtp>>
+
+<<<
+
 ==== tpopxret
+
+Synopsis::
+Pop trap context
+
+Mnemonic::
+tpop
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: ['reserved'], type: 2},
+  {bits: 3, name: 0x4, attr: [''], type: 8},
+  {bits: 5, name: 0x0, attr: ['reserved'], type: 4},
+  {bits: 12, name: 0x300, attr: [''], type: 8},
+]}
+....
+
+Description::
+Restores an interrupted context at the end of a trap.
+
+Included in: <<smtp>>
