@@ -163,7 +163,6 @@ This table provides a summary of the CLIC extensions.
 | Ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
 | Smclicivt    | Hardware Vectored Interrupts
 | Smclicsehv   | Synchronous exceptions hardware vectoring
-| Sditrig      | support for interrupt debug triggering
 | Smtp         | Support for trap handler push/pop
 | Smcspsw      | Conditional stack pointer swap at machine level
 | Sscspsw      | Conditional stack pointer swap at supervisor level
@@ -858,51 +857,6 @@ The summarized behavior is the following:
  11       OBASE+4*exccode    # Far vectored mode
  10       Reserved
 ----
-
-== Interrupt trigger Debug extension- Sditrig
-
-=== Interrupt Trigger (`dbginttrig`)
-
-Optional interrupt triggers (`dbginttrig[__i__]`) are used to generate
-a breakpoint exception, entry into Debug Mode, or a trace action.
-If these registers are not implemented, they appear as hard-wired zeros.
-
-NOTE: The notation [__i__] for the dbginttrig register in this section treats __i__ not an interrupt number
-but is instead as a trigger number.
-
-This logic is intended to be used with `tmexttrigger`.`intctl`` as described in the RISC-V debug specification.
-
-Each interrupt trigger is a 32-bit WARL register with the
-following layout:
-
-.dbginttrig register layout
-include::images/wavedrom/dbginttrig.edn[]
-
-The `interrupt_number` field selects which number of interrupt input
-is used as the source for this interrupt trigger.
-
-The `interrupt_trap_enable` control bit is read-write to enable/disable this
-interrupt trigger.  A trigger is signaled to the debug module if an interrupt trap is taken and the interrupt code matches a `dbginttrig[__i__]`.interrupt_number and the associated `dbginttrig[__i__]`.interrupt_trap_enable is set.
-
-=== Sditrig machine level CSRs
-
-==== `dbginttrig[__i__]`
-
-In this `miselect` offset range:
-
-* When XLEN = 32, each `mireg` register controls an interrupt trigger register.
-
-[%autowidth]
-|===
-| `miselect`     |  `mireg` bits |  `mireg` state              |  description
-
-| 0x1480         |     31:0      |   RW   `dbginttrig[0]`     |  interrupt trigger 0
-| 0x1480 + __i__ |     31:0      |   RW   `dbginttrig[__i__]` |  interrupt trigger __i__
-4*^| ...
-| 0x149F         |     31:0      |   RW   `dbginttrig[31]`    |  interrupt trigger 31
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the interrupt trigger setting of two interrupts.
 
 == Smcspsw Conditional Stack Pointer Swap extension
 
