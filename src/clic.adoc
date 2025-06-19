@@ -1195,7 +1195,7 @@ irq_enter:
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xintstatus
   bgez a0, handle_exc       # Handle synchronous exception
-  /* clear xip if possible - no assembly equivalent */
+  csrr zero, xtopi          # Clear ip bit of interrupt if possible
 finish_push:
   addi sp, sp, -FRAMESIZE   # Adjust stack pointer
   csrrsi zero, xstatus, XIE # Enable interrupts
