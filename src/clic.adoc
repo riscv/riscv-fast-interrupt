@@ -1173,15 +1173,17 @@ Description::
 Saves the interrupted context at the beginning of a trap.
 If preempt is '1', interrupts will be enabled at the end of the sequence.
 
-
 Behavior::
 
-The behavior in RISC-V asssembly when preempt is '1' is as follows
+The behavior in RISC-V asssembly when preempt is '1' is as follows.
+If preempt is '0', enabling interrupts shall be skipped.
+The behavior is assuming Smclic is present. Otherwise, xintstatus will not be saved.
 
 [source]
 ----
-irq_enter:
+push:
   cspspush sp, sp           # Conditionally swap stack pointer
+  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
   sr a0, OFFSET(sp)         # Save a1
   sr a1, OFFSET(sp)         # Save a2
   sr a2, OFFSET(sp)         # Save a3
@@ -1197,7 +1199,6 @@ irq_enter:
   bgez a0, handle_exc       # Handle synchronous exception
   csrr zero, xtopi          # Clear ip bit of interrupt if possible
 finish_push:
-  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
   csrrsi zero, xstatus, XIE # Enable interrupts
 
 handle_exc:
@@ -1238,5 +1239,34 @@ Encoding::
 
 Description::
 Restores an interrupted context at the end of a trap.
+
+Behavior::
+
+The behavior in RISC-V asssembly is as follows.
+The behavior is assuming Smclic is present. Otherwise, the xintstatus CSR will not be restored.
+
+[source]
+----
+pop:
+  csrrsi zero, xstatus, XIE # Disable interrupts
+  lr a4, OFFSET(sp)         # Restore xepc
+  lr a5, OFFSET(sp)         # Restore xintstatus
+  csrw xepc, a4             # Write xepc back to CSR
+  csrw xintstatus, a5       # Write xintstatus back to CSR
+  lr a0, OFFSET(sp)         # Restore a1
+  lr a1, OFFSET(sp)         # Restore a2
+  lr a2, OFFSET(sp)         # Restore a3
+  lr a3, OFFSET(sp)         # Restore a4
+  lr a4, OFFSET(sp)         # Restore a5
+  lr a5, OFFSET(sp)         # Restore a6
+  lr a6, OFFSET(sp)         # Restore a7
+  addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  cspspop sp, sp            # Swap stack pointer with xsp
+  xret
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
 
 Included in: <<smtp>>
