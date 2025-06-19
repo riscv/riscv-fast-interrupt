@@ -1173,6 +1173,44 @@ Description::
 Saves the interrupted context at the beginning of a trap.
 If preempt is '1', interrupts will be enabled at the end of the sequence.
 
+
+Behavior::
+
+The behavior in RISC-V asssembly when preempt is '1' is as follows
+
+[source]
+----
+irq_enter:
+  cspspush sp, sp           # Conditionally swap stack pointer
+  sr a0, OFFSET(sp)         # Save a1
+  sr a1, OFFSET(sp)         # Save a2
+  sr a2, OFFSET(sp)         # Save a3
+  sr a3, OFFSET(sp)         # Save a4
+  sr a4, OFFSET(sp)         # Save a5
+  sr a5, OFFSET(sp)         # Save a6
+  sr a6, OFFSET(sp)         # Save a7
+  csrr a0, xcause           # Get xcause of interrupted context
+  csrr a4, xepc             # Get xepc of interrupt context
+  csrr a5, xintstatus       # Get xintstatus of interrupt context
+  sr a4, OFFSET(sp)         # Save xepc
+  sr a5, OFFSET(sp)         # Save xintstatus
+  bgez a0, handle_exc       # Handle synchronous exception
+  /* clear xip if possible - no assembly equivalent */
+finish_push:
+  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
+  csrrsi zero, xstatus, XIE # Enable interrupts
+
+handle_exc:
+  csrr a1, xtval            # Get xcause of interrupted context
+  csrr a2, xtval2           # Get xepc of interrupt context
+  csrr a3, xtinst           # Get xintstatus of interrupt context
+  j finish_push             # Jump back to rest of push sequence
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
+
 Included in: <<smtp>>
 
 <<<
