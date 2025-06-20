@@ -522,6 +522,37 @@ When {sithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
 regardless of the settings of their interrupt-enable bits.
 
+=== Indirect Access HS-mode CLIC interrupt CSRs
+
+In addition to the access to S-mode interrupt CSRs,
+HS-mode can access the interrupt delegation array.
+
+If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
+locations appear hardwired to zero.
+
+In HS-mode, if an interrupt _i_ is not accessible to HS-mode, the corresponding CLIC register
+locations appear hardwired to zero.
+
+==== `clichideleg[__i__]`
+
+In this `hiselect` offset range:
+
+* When HSXLEN = 32, each `hireg3` register controls the interrupt delegation of thirty-two interrupts.
+
+[%autowidth]
+|===
+| `hiselect` |  `hireg3` bits |  `hireg3` state            | description
+| 0x1400     |   31:0        | RW `clichideleg[31:0]`      | settings for interrupts 31 through 0
+| 0x1401     |   31:0        | RW `clichideleg[63:32]`     | settings for interrupts 63 through 32
+4*^| ...
+| 0x147F     |   31:0        | RW `clichideleg[4095:4064]` | settings for interrupts 4095 through 4064
+|===
+
+* When HSXLEN = 64, only the even-numbered registers exist and each `hireg3` register controls the interrupt delegation of sixty-four interrupts.
+
+Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
+For the first 64 interrupts, the clichideleg registers mirror the values of hideleg bits in the AIA specification.
+
 === Indirect Access VS-mode CSRs
 
 If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
