@@ -427,6 +427,8 @@ regardless of the settings of their interrupt-enable bits.
 == Increase of AIA local interrupts - Ssclicincr
 
 The Ssclicincr extension depends on the Sscsrind and Ssaia extensions.
+It increases the number of internal interrupts in S-mode,
+and if the H extension is present, in HS- and VS-mode.
 
 === Indirect Access S-mode CSRs
 
@@ -493,7 +495,7 @@ and each `sireg2` register controls the interrupt enable of thirty-two interrupt
 * When XLEN = 64, only the even-numbered registers exist and each `sireg` register reflects the interrupt pending of sixty-four interrupts and
 each `sireg2` register controls the interrupt enable of sixty-four interrupts.
 
-=== New CSRs
+=== New S-Mode CSRs
 
 [source]
 ----
@@ -517,6 +519,100 @@ number) for an interrupt to be to be considered enabled.
 Register {smithreshold} implements exactly IPRIOLEN bits,
 and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
 When {sithreshold} is a nonzero value P,
+interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
+regardless of the settings of their interrupt-enable bits.
+
+=== Indirect Access VS-mode CSRs
+
+If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
+locations appear hardwired to zero.
+
+In VS-mode, if an interrupt _i_ is not accessible to VS-mode, the corresponding CLIC register
+locations appear hardwired to zero.
+
+==== `clicintattr[__i__]`
+
+In this `siselect` offset range:
+
+* When VSXLEN = 32, each `vsireg` register controls the clic priority setting of four interrupts
+and each `vsireg2` register controls the clic attribute setting of four interrupts.
+All attributes are read-only in VS-mode.
+
+[%autowidth]
+|===
+| `vsiselect`  |  `vsireg2` bits |  `vsireg2` state         | description
+
+| 0x1000+_i_   |   7:0        | R   `clicintattr[_i_*4+0]` |  setting for interrupt _i_*4+0
+| 0x1000+_i_   |  15:8        | R   `clicintattr[_i_*4+1]` |  setting for interrupt _i_*4+1
+| 0x1000+_i_   |  23:16       | R   `clicintattr[_i_*4+2]` |  setting for interrupt _i_*4+2
+| 0x1000+_i_   |  31:24       | R   `clicintattr[_i_*4+3]` |  setting for interrupt _i_*4+3
+|===
+
+* When VSXLEN = 64, only the even-numbered registers exist and each register controls the clic attribute setting of eight interrupts.
+
+==== `cliciprio[__i__]`
+
+In this `vsiselect` offset range:
+
+* When VSXLEN = 32, each `vsireg3` register controls the clic priority setting of four interrupts.
+Priority settings are read-only
+
+[%autowidth]
+|===
+| `vsiselect` |  `vsireg3` bits |  `vsireg3` state             | description
+
+| 0x1000+i   |   7:0          | R   `cliciprio[__i__*4+0]` |  setting for interrupt __i__*4+0
+| 0x1000+i   |  15:8          | R   `cliciprio[__i__*4+1]` |  setting for interrupt __i__*4+1
+| 0x1000+i   |  23:16         | R   `cliciprio[__i__*4+2]` |  setting for interrupt __i__*4+2
+| 0x1000+i   |  31:24         | R   `cliciprio[__i__*4+3]` |  setting for interrupt __i__*4+3
+|===
+
+* When VSXLEN = 64, only the even-numbered registers exist and each register controls the clic priority setting of eight interrupts.
+
+==== `clicintip[__i__]` and `clicintie[__i__]`
+
+In this `vsiselect` offset range:
+
+* When VSXLEN = 32, each `vsireg` register reflects the interrupt pending of thirty-two interrupts.
+and each `vsireg2` register controls the interrupt enable of thirty-two interrupts.
+
+[%autowidth]
+|===
+| `vsiselect`  |  `vsireg` bits |  `vsireg` state        |  `vsireg2` bits |  `vsireg2` state         | description
+
+| 0x1400    |   31:0   | RW `clicintip[31:0]`      |   31:0    | RW `clicintie[31:0]`       | settings for interrupts 31 through 0
+| 0x1401    |   31:0   | RW `clicintip[63:32]`     |   31:0    | RW `clicintie[63:32]`      | settings for interrupts 63 through 32
+6*^| ...
+| 0x147F    |   31:0   | RW `clicintip[4095:4064]` |   31:0    | RW `clicintie[4095:4064]`  | settings for interrupts 4095 through 4064
+|===
+
+* When VSXLEN = 64, only the even-numbered registers exist and each `vsireg` register reflects the interrupt pending of sixty-four interrupts and
+each `vsireg2` register controls the interrupt enable of sixty-four interrupts.
+
+=== New VS-Mode CSRs
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x???   vsclaimi     Claim top interrupt
+ (NEW) 0x???   vsithreshold Interrupt enable threshold
+----
+
+==== Claim top interrupt (vsclaimi)
+
+Register {vsclaimi} has the same value as {vstopi}.
+When this value is not zero,
+reading {vsclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
+if possible.
+Writes to {vsclaimi} are ignored.
+
+==== Interrupt enable threshold (vsmithreshold)
+
+{vsithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
+number) for an interrupt to be to be considered enabled.
+Register {vsmithreshold} implements exactly IPRIOLEN bits,
+and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
+When {vsithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
 regardless of the settings of their interrupt-enable bits.
 
