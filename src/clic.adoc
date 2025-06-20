@@ -880,7 +880,7 @@ Conditionally, this stack pointer can be swapped with the currently active one.
 
 To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
 To decide, if a stack pointer swap is required, these instructions assume that stack pointers,
-which shall be swapped in during a push operation, have the LSb asserted.
+which shall be swapped in during a push operation, have the LSB asserted.
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, therefore the least significant bits are zero.
 
@@ -956,7 +956,7 @@ Included in: <<smcsps>>
 
 <<<
 
-==== cspspush
+==== cspspop
 
 Synopsis::
 Pop trap context
@@ -980,7 +980,7 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-To ensure that cspspush can differentiate the stack pointers, the LSb is asserted when storing the value.
+To ensure that cspspush can differentiate the stack pointers, the LSB is asserted when storing the value.
 
 Behavior::
 
@@ -1183,7 +1183,7 @@ Synopsis::
 Pop trap context
 
 Mnemonic::
-tpop
+tpopxret
 
 Encoding::
 [wavedrom, ,svg]
