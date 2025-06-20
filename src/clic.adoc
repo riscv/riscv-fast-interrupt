@@ -499,6 +499,7 @@ each `sireg2` register controls the interrupt enable of sixty-four interrupts.
 ----
        Number  Name         Description
  (NEW) 0x???   sclaimi      Claim top interrupt
+ (NEW) 0x???   sithreshold  Interrupt enable threshold
 ----
 
 ==== Claim top interrupt (sclaimi)
