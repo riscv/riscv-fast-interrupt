@@ -267,7 +267,7 @@ NOTE: This register bit is defined as WARL as unimplemented interrupts appear ha
 
 === Indirect Access M-mode CLIC interrupt CSRs
 
-Access to CLIC registers `clicintattr[__i__]`, `clicintip[__i__]`, `clicintie[__i__]`, `cliciprio[__i__]`, and `clicideleg[__i__]`
+Access to CLIC registers `clicintattr[__i__]`, `clicintip[__i__]`, `clicintie[__i__]`, `cliciprio[__i__]`, and `clicmideleg[__i__]`
 utilizes the Indirect CSR Access extension (Smcsrind/Sscsrind). Implementations may support
 another method to access these CSRs (e.g., via memory-mapped accesses) and any such a definition is outside the scope
 of the CLIC specification.
@@ -372,7 +372,7 @@ each `mireg2` register controls the interrupt enable of sixty-four interrupts.
 6*^| ...
 |===
 
-==== `clicideleg[__i__]`
+==== `clicmideleg[__i__]`
 
 In this `miselect` offset range:
 
@@ -381,10 +381,10 @@ In this `miselect` offset range:
 [%autowidth]
 |===
 | `miselect` |  `mireg3` bits |  `mireg3` state            | description
-| 0x1400     |   31:0        | RW `clicideleg[31:0]`      | settings for interrupts 31 through 0
-| 0x1401     |   31:0        | RW `clicideleg[63:32]`     | settings for interrupts 63 through 32
+| 0x1400     |   31:0        | RW `clicmideleg[31:0]`      | settings for interrupts 31 through 0
+| 0x1401     |   31:0        | RW `clicmideleg[63:32]`     | settings for interrupts 63 through 32
 4*^| ...
-| 0x147F     |   31:0        | RW `clicideleg[4095:4064]` | settings for interrupts 4095 through 4064
+| 0x147F     |   31:0        | RW `clicmideleg[4095:4064]` | settings for interrupts 4095 through 4064
 |===
 
 * When XLEN = 64, only the even-numbered registers exist and each `mireg3` register controls the interrupt delegation of sixty-four interrupts.
@@ -392,8 +392,8 @@ In this `miselect` offset range:
 [%autowidth]
 |===
 | `miselect` |  `mireg3` bits |  `mireg3` state            | description
-| 0x1400     |   63:0        | RW `clicideleg[63:0]`       | settings for interrupts 63 through 0
-| 0x1402     |   127:64      | RW `clicideleg[127:64]`     | settings for interrupts 127 through 64
+| 0x1400     |   63:0        | RW `clicmideleg[63:0]`       | settings for interrupts 63 through 0
+| 0x1402     |   127:64      | RW `clicmideleg[127:64]`     | settings for interrupts 127 through 64
 4*^| ...
 |===
 
