@@ -80,6 +80,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
 :mpintstatus: pass:q[``mpintstatus``]
+:mpnipprio: pass:q[``mpnipprio``]
 :mintstatus: pass:q[``mintstatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
 :preemptmsk: pass:q[``preemptmsk``]
@@ -100,6 +101,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
 :spintstatus: pass:q[``spintstatus``]
+:spnipprio: pass:q[``spnipprio``]
+:sintstatus: pass:q[``sintstatus``]
+:snipprio: pass:q[``snipprio``]
 :sintthresh: pass:q[``sintthresh``]
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
@@ -119,6 +123,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 
 :ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
+:sret: pass:q[``sret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -509,11 +514,11 @@ reading {sclaimi} has the simultaneous side effect of clearing the pending bit f
 if possible.
 Writes to {sclaimi} are ignored.
 
-==== Interrupt enable threshold (smithreshold)
+==== Interrupt enable threshold (sithreshold)
 
 {sithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
 number) for an interrupt to be to be considered enabled.
-Register {smithreshold} implements exactly IPRIOLEN bits,
+Register {sithreshold} implements exactly IPRIOLEN bits,
 and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
 When {sithreshold} is a nonzero value P,
 interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
