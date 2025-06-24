@@ -415,9 +415,9 @@ In this `miselect` offset range:
 
 Register {mclaimi} has the same value as {mtopi}.
 When this value is not zero,
-reading {mclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
+any write to {mclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
 if possible.
-Writes to {mclaimi} are ignored.
+Writes to {mclaimi} do not affect the value of {mtopi}.
 
 ==== Interrupt enable threshold (mithreshold)
 
@@ -510,9 +510,9 @@ each `sireg2` register controls the interrupt enable of sixty-four interrupts.
 
 Register {sclaimi} has the same value as {stopi}.
 When this value is not zero,
-reading {sclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
+any write to {sclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
 if possible.
-Writes to {sclaimi} are ignored.
+Writes to {sclaimi} do not affect the value of {stopi}.
 
 ==== Interrupt enable threshold (sithreshold)
 
@@ -1202,7 +1202,7 @@ push:
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xintstatus
   bgez a0, handle_exc       # Handle synchronous exception
-  csrr zero, xclaimi        # Clear ip bit of interrupt if possible
+  csrrwi xclaimi, 0         # Clear ip bit of interrupt if possible by writing to xclaimi
 finish_push:
   csrrsi zero, xstatus, XIE # Enable interrupts
 
