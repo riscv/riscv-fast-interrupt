@@ -1178,6 +1178,47 @@ Description::
 Saves the interrupted context at the beginning of a trap.
 If preempt is '1', interrupts will be enabled at the end of the sequence.
 
+Behavior::
+
+The behavior in RISC-V asssembly when preempt is '1' is as follows.
+If preempt is '0', enabling interrupts shall be skipped.
+The behavior is assuming Smclic is present. Otherwise, xintstatus will not be saved.
+
+[source]
+----
+push:
+  cspspush sp, sp           # Conditionally swap stack pointer
+  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
+  sr a0, OFFSET(sp)         # Save a0
+  sr a1, OFFSET(sp)         # Save a1
+  sr a2, OFFSET(sp)         # Save a2
+  sr a3, OFFSET(sp)         # Save a3
+  sr a4, OFFSET(sp)         # Save a4
+  sr a5, OFFSET(sp)         # Save a5
+  sr a6, OFFSET(sp)         # Save a6
+  csrr a0, xcause           # Get xcause of interrupted context
+  csrr a4, xepc             # Get xepc of interrupt context
+  csrr a5, xintstatus       # Get xintstatus of interrupt context
+  sr a4, OFFSET(sp)         # Save xepc
+  sr a5, OFFSET(sp)         # Save xintstatus
+  bgez a0, handle_exc       # Handle synchronous exception
+  csrr zero, xclaimi        # Clear ip bit of interrupt if possible
+finish_push:
+  csrrsi zero, xstatus, XIE # Enable interrupts
+
+handle_exc:
+  csrr a1, xtval            # Get xcause of interrupted context
+  csrr a2, xtval2           # Get xepc of interrupt context
+  csrr a3, xtinst           # Get xintstatus of interrupt context
+  j finish_push             # Jump back to rest of push sequence
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
+
+NOTE: Note that implementations do not need to execute these exact instructions, as long as the functional behavior is achieved.
+
 Included in: <<smtp>>
 
 <<<
@@ -1205,5 +1246,34 @@ Encoding::
 
 Description::
 Restores an interrupted context at the end of a trap.
+
+Behavior::
+
+The behavior in RISC-V asssembly is as follows.
+The behavior is assuming Smclic is present. Otherwise, the xintstatus CSR will not be restored.
+
+[source]
+----
+pop:
+  csrrsi zero, xstatus, XIE # Disable interrupts
+  lr a4, OFFSET(sp)         # Restore xepc
+  lr a5, OFFSET(sp)         # Restore xintstatus
+  csrw xepc, a4             # Write xepc back to CSR
+  csrw xintstatus, a5       # Write xintstatus back to CSR
+  lr a0, OFFSET(sp)         # Restore a0
+  lr a1, OFFSET(sp)         # Restore a1
+  lr a2, OFFSET(sp)         # Restore a2
+  lr a3, OFFSET(sp)         # Restore a3
+  lr a4, OFFSET(sp)         # Restore a4
+  lr a5, OFFSET(sp)         # Restore a5
+  lr a6, OFFSET(sp)         # Restore a6
+  addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  cspspop sp, sp            # Swap stack pointer with xsp
+  xret
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
 
 Included in: <<smtp>>
