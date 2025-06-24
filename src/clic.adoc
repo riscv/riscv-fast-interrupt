@@ -1212,6 +1212,8 @@ where
   lr is lr on RV32 and ld on RV64
 ----
 
+NOTE: Note that implementations do not need to execute these exact instructions, as long as the functional behavior is achieved.
+
 Included in: <<smtp>>
 
 <<<
