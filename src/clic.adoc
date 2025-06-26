@@ -753,9 +753,6 @@ Far hardware vectored interrupt-handling mode is encoded as a new state in the
 existing {mtvec} WARL register, where {mtvec}.`mode` (the two
 least-significant bits) is `11`.
 
-.xtvec register layout
-include::images/wavedrom/xtvec.edn[]
-
 ==== Smclicivt Changes to {tvec} CSR Mode for CLIC
 
 The PC upon interrupt is changed as follows:
