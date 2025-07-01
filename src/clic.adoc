@@ -8,7 +8,7 @@
 
 
 [[riscv-doc-template]]
-= Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions
+= Advanced Core-Local Interrupt Controller (ACLIC) RISC-V Privileged Architecture Extensions
 include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Example Specification Document (Zexmpl)
@@ -50,6 +50,7 @@ endif::[]
 
 Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
 
+:xstatus: pass:q[``**__x__**xstatus``]
 :status: pass:q[``**__x__**status``]
 :ideleg: pass:q[``**__x__**ideleg``]
 :ie: pass:q[``**__x__**ie``]
@@ -64,14 +65,32 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :ip: pass:q[``**__x__**ip``]
 :pintstatus: pass:q[``**__x__**pintstatus``]
 :intstatus: pass:q[``**__x__**intstatus``]
+:xpintstatus: pass:q[``**__x__**xpintstatus``]
+:xintstatus: pass:q[``**__x__**xintstatus``]
+:xpnipprio: pass:q[``xpnipprio``]
+:xnipprio: pass:q[``xnipprio``]
 :intthresh: pass:q[``**__x__**intthresh``]
 
-// Make M-mode and S-mode of monospace formatting substitutions for Smclic and Ssclic chapter references to CSRs.
+:eidelivery: pass:q[``**__x__**eidelivery``]
+:eithreshold: pass:q[``**__x__**eithreshold``]
+:eipN: pass:q[``**__x__**eipN``]
+:eieN: pass:q[``**__x__**eieN``]
+:setie: pass:q[``**__x__**setie``]
+:setip: pass:q[``**__x__**setip``]
+:ithreshold: pass:q[``**__x__**ithreshold``]
+:xtopei: pass:q[``**__x__**xtopei``]
+:topi: pass:q[``**__x__**topi``]
+:vstopei: pass:q[``**__x__**vstopei``]
+:xtopi: pass:q[``**__x__**xtopi``]
+:xtopei: pass:q[``**__x__**xtopei``]
+:claimi: pass:q[``**__x__**claimi``]
+
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
 :mie: pass:q[``mie``]
 :mtvec: pass:q[``mtvec``]
 :mivt: pass:q[``mivt``]
+:meivt: pass:q[``meivt``]
 :mscratch: pass:q[``mscratch``]
 :msp: pass:q[``msp``]
 :mepc: pass:q[``mepc``]
@@ -124,6 +143,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
 :sret: pass:q[``sret``]
+:xret: pass:q[``xret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -140,398 +160,164 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 [Preface]
 == Copyright and license information
 
-This RISC-V CLIC extension specification is © 2018-2025 RISC-V international
+This RISC-V ACLIC extension specification is © 2018-2025 RISC-V international
 
 This document is released under a Creative Commons Attribution 4.0
 International License. +
 https://creativecommons.org/licenses/by/4.0/.
 
-Please cite as: “Core-Local Interrupt Controller (CLIC) RISC-V Privileged Architecture Extensions",  RISC-V International
+== ACLIC extensions
+This section gives an overview for the Advanced Core-Local Interrupt
+Controller (ACLIC) extensions.
 
-This document is a derivative of the "The RISC-V Instruction Set Manual, Volume II: Privileged Architecture, Document
-version 1.9.1" released under following license: © 2010–2017 Andrew Waterman,
-Yunsup Lee, Rimas Aviˇzienis, David Patterson, Krste Asanovi ́c.
-Creative Commons Attribution 4.0 International License.
-
-== CLIC extensions
-This section gives an overview for the Core-Local Interrupt
-Controller (CLIC) extensions.
-
-This table provides a summary of the CLIC extensions.
+This table provides a summary of the ACLIC extensions.
 
 [%autowidth]
 |===
 | Extension Name | Description
-| Smclicincr   | Increase of the number of local interrupts for M-mode
-| Ssclicincr   | Increase of the number of local interrupts for S-mode
-| Smclic       | Horizontal Nested Interrupt Preemption support for M-mode
-| Ssclic       | Horizontal Nested Interrupt Preemption support for S-mode
-| Smclicivt    | Hardware Vectored Interrupts
-| Smclicsehv   | Synchronous exceptions hardware vectoring
+| Smaclic      | Advanced Core Local Interrupt Controller at Machine level
+| Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
+| Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
+| Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
+| Smivt        | Support for interrupt vector table
+| Smehv        | Synchronous exceptions hardware vectoring
 | Smtp         | Support for trap handler push/pop
-| Smcsps       | Conditional stack pointer swap at machine level
-| Sscsps       | Conditional stack pointer swap at supervisor level
+| Smcsps       | Conditional stack pointer swap at Machine level
+| Sscsps       | Conditional stack pointer swap at Supervisor level
 |===
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
-machanisms. Their behavior is unchanged by the extensions of CLIC.
+machanisms. Their behavior is unchanged by the extensions of ACLIC.
 
-== Increase of AIA local interrupts - Smclicincr
+== Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smclicincr extension depends on the Smcsrind and Smaia extensions.
+The Smaclic extension depends on the Smaia extension.
+The Ssaclic extension depends on the Ssia extension.
 
-The Smclicincr extension increases support up to 4096 interrupt inputs per hart.
-Each interrupt input _i_ has five control
-registers: an interrupt-pending bit (`clicintip[__i__]`),
-an interrupt-enable bit (`clicintie[__i__]`), interrupt attributes
-(`clicintattr[__i__]`) to specify trigger type, 
-(`cliciprio[__i__]`) to specify priority, and 
-(`clicmideleg[__i__]`) to delegate interrupts to a lower privilege level.
+The Advanced Core Local Interrupt Controller (ACLIC) is an interrupt controller defined for
+- low and predictable latency interrupt handling
+- high throughput/low handling overhead
+- resource efficient implementation
+- compatibility with AIA
 
-=== CLIC Interrupt Priority (`cliciprio`)
-Each interrupt has an associated priority as defined in the AIA specification.
-For the first 64 interrupts, these registers mirror the values of iprio registers in the AIA specification and follow the default 
-priorities as specified in the AIA standard major interrupt codes, listed in default priority order table.
-For interrupts after the first 64 interrupts, smaller priority numbers convey higher priority. 
-For interrupts after the first 64 interrupts, when interrupt sources have equal `cliciprio` priority number, the source with the lowest identity number has the highest priority.
-When interrupt sources have equal `cliciprio` priority number, the first 64 interrupts have higher priority than interrupts after the first 64 interrupts.
+To achieve this, ACLIC builds upon the hart-level extensions of AIA (Smaia and Ssaia),
+and the Advanced Platform Level Interrupt Controller (APLIC).
+The ACLIC is a tailored APLIC, directly integrated with one hart.
 
-NOTE: Implementations that do not require software compliance with AIA defined major interrupt numbers 
-may choose to only implement interrupts 64 and above to simplify default priority calculations.
+=== New Interrupt Delivery Mode
 
-=== CLIC Interrupt Delegation (`clicmideleg`)
-Each interrupt has an associated interrupt privilege mode delegation as defined in the AIA specification.
-For the first 64 interrupts, these registers mirror the values of mideleg bits in the AIA specification.
+The Incoming Message Signalled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
+which defines the interrupt delivery mode.
+A new delivery mode is defined:
 
-=== CLIC Interrupt Attribute (`clicintattr`)
+[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+|===
+|0 = | Interrupt delivery is disabled
+|1 = | Interrupt delivery from the interrupt file is enabled
+|0x20000000 = | Interrupt delivery from an ACLIC
+|0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
+|===
 
-This is an 8-bit WARL read-write register to specify various attributes for each interrupt.
+If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
-NOTE: This register is defined as WARL as some implementations may want to hardwire to fixed values
-only trigger types.
+In that mode, {eithreshold}, {eipN} and {eieN} do exist independently,
+but mirror the corresponding {ithreshold}, {setip}[k], and {setie}[k] of the connected APLIC domain.
 
-.clicintattr[i] register layout
-include::images/wavedrom/clicintattri.edn[]
+Likewise, the {xtopei} registers mirror the {topi} register of the connected APLIC domain.
+Specifically, {vstopei} mirrors the {topi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
+On write access, {xtopei} also clears the indicated interrupt pending bit if possible.
+At the APLIC, this behavior is achieved by reading from {claimi} instead.
+The side-effect on the write of {xtopei} is retained in this mode.
 
-The 2-bit `trig` WARL field specifies the trigger type and polarity for each
-interrupt input. Bit 1, `trig[0]`, is defined as "edge-triggered"
-(0: level-triggered, 1: edge-triggered); while bit 2, `trig[1]`, is defined
-as "negative-edge" (0: positive-edge, 1: negative-edge).
-More specifically, there can be four possible combinations:
-positive level-triggered, negative level-triggered, positive edge-triggered,
-and negative edge-triggered.
+NOTE: Mirroring these APLIC registers at a core level has several advantages.
+It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
+Additionally, it simlifies the handling of level-sensitive interrupts.
 
-=== CLIC Interrupt Pending (`clicintip`)
-Each interrupt has an associated interrupt pending.
-For the first 64 interrupts, these registers mirror the values of mip CSR.
+In this delivery mode, the {xtopi} CSRs reflect both the interrupt identity and the interrupt priority.
 
-When the input is configured for level-sensitive input, the
-`clicintip[__i__]` bit reflects the value of an input signal to the
-interrupt controller after any conditional inversion specified by the
-`clicintattr[__i__]` field, and software writes to the bit are ignored.
-Software clears the interrupt at the source device.
+[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+|===
+|bits 26:16| Interrupt identity
+|bits 10:0 | Interrupt priority (configured target[identity].iprio)
+|===
 
-When the input is configured for edge-sensitive input,
-`clicintip[__i__]` is a read-write register that can be updated both
-by hardware interrupt inputs and by software.  The bit is set by
-hardware after an edge of the appropriate polarity is observed on the
-interrupt input, as determined by the `clicintattr[__i__]` field.
-Software writes to `clicintip[__i__]` can set or
-clear edge-triggered pending bits directly by writes to the
-`clicintip[__i__]` register. 
-`clicintip[__i__]` behavior is unaffected by `clicintie[__i__]` setting.
+=== Indirect CSR access to APLIC registers
 
+The APLIC registers used in the ACLIC configuration can all be accessed by indirect CSRs,
+eliminating the overheads associated with a memory mapped device,
+and presenting a consistent SW interface for any hart.
 
-The value in the `clicintip[__i__]` is undefined when switching from
-level-sensitive mode to edge-triggered mode in `clicintattr[__i__]`.
+To have full control over the necessary APLIC registers, the following indirect CSR access is added.
 
-NOTE: Software cannot rely on the underlying `clicintip[__i__]`
-register bits used in edge-triggered mode to hold state while in
-level-sensitive mode.
+==== Interrupt Priority (iprio)
 
-=== CLIC Interrupt Enable (`clicintie`)
-Each interrupt has an associated interrupt enable.
-For the first 64 interrupts, these bits mirror the values of mie CSR.
-
-Each interrupt input has a dedicated interrupt-enable WARL bit (`clicintie[__i__]`)
-This control bit is read-write to enable/disable the corresponding interrupt.
-Software should assume `clicintie[__i__]`=0 means no interrupt enabled, and `clicintie[__i__]`=1 indicates an interrupt is enabled.
-
-NOTE: `clicintie[__i__]` is the individual enable bit while {status}.{ie} is
-the global enable bit for the current privilege mode. Therefore, for an
-interrupt `_i_` to be enabled in the current privilege mode, both `clicintie[__i__]`
-and {status}.{ie} have to be set.
-
-
-NOTE: In contrast, since {status}.{ie} only takes effect in the current privilege
-mode according to RISC-V convention, an interrupt `_i_` from a higher privilege mode
-is enabled as long as `clicintie[__i__]` is set (regardless of the setting
-of {status}.{ie} in the higher privilege modes).
-
-NOTE: This register bit is defined as WARL as unimplemented interrupts appear hardwired to zero.
-
-=== Indirect Access M-mode CLIC interrupt CSRs
-
-Access to CLIC registers `clicintattr[__i__]`, `clicintip[__i__]`, `clicintie[__i__]`, `cliciprio[__i__]`, and `clicideleg[__i__]`
-utilizes the Indirect CSR Access extension (Smcsrind/Sscsrind). Implementations may support
-another method to access these CSRs (e.g., via memory-mapped accesses) and any such a definition is outside the scope
-of the CLIC specification.
-
-If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
-locations appear hardwired to zero.
-
-All CLIC registers are visible to M-mode.
-
-NOTE: Since accessing clic registers via indirect CSR access is not atomic, 
-indirect CSR access of these registers while same privilege mode {mstatus}.`mie` is enabled 
-requires `mireg` register state to be part of the interrupt handler's overall context state save/restore, 
-although this is expected to be an atypical need for most interrupt handlers.
-
-==== `clicintattr[__i__]`
-
-In this `miselect` offset range:
-
-* When XLEN = 32, each `mireg2` register controls the clic attribute setting of four interrupts, with one 8-bit byte per interrupt.
+When XLEN = 32, each `xireg` register controls the ALIC priority setting of four interrupts.
 
 [%autowidth]
 |===
-| `miselect` |  `mireg2` bits |  `mireg2` state              | description
-
-| 0x1000+i   |   7:0          | RW  `clicintattr[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   |  15:8          | RW  `clicintattr[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   |  23:16         | RW  `clicintattr[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   |  31:24         | RW  `clicintattr[__i__*4+3]` |  setting for interrupt __i__*4+3
+| `xiselect` |  `xireg` size |  `xireg` state
+| 0x1000     |   4B          | `acliciprio0`
+| ...        |   ...         | ...
+| 0x1100     |   4B          | `acliciprio255`
 |===
 
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic attribute setting of eight interrupts.
+Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+
+When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
+Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+
+==== Source Configuration (sourcecfg)
+
+When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
+as the rest of the register is reserved.
+
+When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
 
 [%autowidth]
 |===
-| `miselect` |  `mireg2` bits |  `mireg2` state              | description
-
-| 0x1000+i   |   7:0          | RW  `clicintattr[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   |  15:8          | RW  `clicintattr[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   |  23:16         | RW  `clicintattr[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   |  31:24         | RW  `clicintattr[__i__*4+3]` |  setting for interrupt __i__*4+3
-| 0x1000+i   |  39:32         | RW  `clicintattr[__i__*4+4]` |  setting for interrupt __i__*4+4
-| 0x1000+i   |  47:40         | RW  `clicintattr[__i__*4+5]` |  setting for interrupt __i__*4+5
-| 0x1000+i   |  55:48         | RW  `clicintattr[__i__*4+6]` |  setting for interrupt __i__*4+6
-| 0x1000+i   |  63:56         | RW  `clicintattr[__i__*4+7]` |  setting for interrupt __i__*4+7
+| `xiselect` |  `xireg2/3 size |  `xireg2` state     |  `xireg3` state
+| 0x1000     |   4B            | `aclicsourcecfg0`   | `aclicsourcecfg1`
+| ...        |   ...           | ...                 | ...
+| 0x1100     |   4B            | `aclicsourcecfg510` | `aclicsourcecfg511`
 |===
 
+Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
 
-==== `cliciprio[__i__]`
+When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
+Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
 
-In this `miselect` offset range:
+=== APLIC configured for ACLIC operation
 
-* When XLEN = 32, each `mireg3` register controls the clic priority setting of four interrupts
+All other APLIC registers not accessible via indirect CSRs are not needed in the ACLIC operation.
+Several registers are considered to perform in a fixed setting.
 
-[%autowidth]
-|===
-| `miselect` |  `mireg3` bits |  `mireg3` state              | description
-| 0x1000+i   |   7:0          | RW  `cliciprio[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   |  15:8          | RW  `cliciprio[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   |  23:16         | RW  `cliciprio[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   |  31:24         | RW  `cliciprio[__i__*4+3]` |  setting for interrupt __i__*4+3
-|===
+The domain configuration (register domaincfg) behaves as follows:
+- IE bit is not needed as it has the same function as the {xstatus}.xIE bits at the hart.
+- DM (Delivery Mode) is always 0 = direct delivery mode
+- BE: endianess setting is not not needed
 
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic priority setting of eight interrupts.
+As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not accessible and not used.
 
-[%autowidth]
-|===
-| `miselect` |  `mireg3` bits |  `mireg3` state              | description
-| 0x1000+i   |   7:0          | RW  `cliciprio[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   |  15:8          | RW  `cliciprio[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   |  23:16         | RW  `cliciprio[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   |  31:24         | RW  `cliciprio[__i__*4+3]` |  setting for interrupt __i__*4+3
-| 0x1000+i   |  39:32         | RW  `cliciprio[__i__*4+4]` |  setting for interrupt __i__*4+4
-| 0x1000+i   |  47:40         | RW  `cliciprio[__i__*4+5]` |  setting for interrupt __i__*4+5
-| 0x1000+i   |  55:48         | RW  `cliciprio[__i__*4+6]` |  setting for interrupt __i__*4+6
-| 0x1000+i   |  63:56         | RW  `cliciprio[__i__*4+7]` |  setting for interrupt __i__*4+7
-|===
+The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
+Therefore, the registers setipnum, in_clrip[N], clripnum, setienum, clrie[N], clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
 
-==== `clicintip[__i__]` and `clicintie[__i__]`
+The target registers are not fully implemented.
+The iprio portion of it can be accessed as described in the section on indirect access.
 
-In this `miselect` offset range:
+Disabling interrupt delivery in ACLIC is achieved through by setting the CSR {eidelivery} = 0.
+Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode.
 
-* When XLEN = 32, each `mireg` register reflects the interrupt pending of thirty-two interrupts and
-each `mireg2` register controls the interrupt enable of thirty-two interrupts.
+The interrupt force feature is not supported in ACLIC mode.
 
-[%autowidth]
-|===
-| `miselect` |  `mireg` bits |  `mireg` state            |  `mireg2` bits |  `mireg2` state           | description
-| 0x1400     |   31:0        | RW `clicintip[31:0]`      |   31:0         | RW `clicintie[31:0]`      | settings for interrupts 31 through 0
-| 0x1401     |   31:0        | RW `clicintip[63:32]`     |   31:0         | RW `clicintie[63:32]`     | settings for interrupts 63 through 32
-6*^| ...
-| 0x147F     |   31:0        | RW `clicintip[4095:4064]` |   31:0         | RW `clicintie[4095:4064]` | settings for interrupts 4095 through 4064
-|===
+== Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-* When XLEN = 64, only the even-numbered registers exist and each `mireg` register reflects the interrupt pending of sixty-four interrupts and
-each `mireg2` register controls the interrupt enable of sixty-four interrupts.
+The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
+The Ssnip extension depends on the Ssmaia extension and adds nested preemption support at supervisor level.
 
-[%autowidth]
-|===
-| `miselect` |  `mireg` bits |  `mireg` state            |  `mireg2` bits |  `mireg2` state           | description
-| 0x1400     |   63:0        | RW `clicintip[63:0]`      |   63:0         | RW `clicintie[63:0]`      | settings for interrupts 63 through 0
-| 0x1402     |   63:0        | RW `clicintip[127:64]`    |   63:0         | RW `clicintie[127:64]`    | settings for interrupts 127 through 64
-6*^| ...
-|===
-
-==== `clicideleg[__i__]`
-
-In this `miselect` offset range:
-
-* When XLEN = 32, each `mireg3` register controls the interrupt delegation of thirty-two interrupts.
-
-[%autowidth]
-|===
-| `miselect` |  `mireg3` bits |  `mireg3` state            | description
-| 0x1400     |   31:0        | RW `clicideleg[31:0]`      | settings for interrupts 31 through 0
-| 0x1401     |   31:0        | RW `clicideleg[63:32]`     | settings for interrupts 63 through 32
-4*^| ...
-| 0x147F     |   31:0        | RW `clicideleg[4095:4064]` | settings for interrupts 4095 through 4064
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each `mireg3` register controls the interrupt delegation of sixty-four interrupts.
-
-[%autowidth]
-|===
-| `miselect` |  `mireg3` bits |  `mireg3` state            | description
-| 0x1400     |   63:0        | RW `clicideleg[63:0]`       | settings for interrupts 63 through 0
-| 0x1402     |   127:64      | RW `clicideleg[127:64]`     | settings for interrupts 127 through 64
-4*^| ...
-|===
-
-=== New CSRs
-
-[source]
-----
-       Number  Name         Description
- (NEW) 0x???   mclaimi      Claim top interrupt
- (NEW) 0x???   mithreshold  Interrupt enable threshold
-----
-
-==== Claim top interrupt (mclaimi)
-
-Register {mclaimi} has the same value as {mtopi}.
-When this value is not zero,
-reading {mclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
-if possible.
-Writes to {mclaimi} are ignored.
-
-==== Interrupt enable threshold (mithreshold)
-
-{mithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
-number) for an interrupt to be to be considered enabled.
-Register {mithreshold} implements exactly IPRIOLEN bits,
-and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
-When {mithreshold} is a nonzero value P,
-interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
-regardless of the settings of their interrupt-enable bits.
-
-== Increase of AIA local interrupts - Ssclicincr
-
-The Ssclicincr extension depends on the Sscsrind and Ssaia extensions.
-
-=== Indirect Access S-mode CSRs
-
-If an interrupt _i_ is not present in the hardware, the corresponding CLIC register
-locations appear hardwired to zero.
-
-In S-mode, if an interrupt _i_ is not accessible to S-mode, the corresponding CLIC register
-locations appear hardwired to zero.
-
-==== `clicintattr[__i__]`
-
-In this `siselect` offset range:
-
-* When XLEN = 32, each `sireg` register controls the clic priority setting of four interrupts
-and each `sireg2` register controls the clic attribute setting of four interrupts
-
-[%autowidth]
-|===
-| `siselect`   |  `sireg2` bits |  `sireg2` state          | description
-
-| 0x1000+_i_   |   7:0        | RW  `clicintattr[_i_*4+0]` |  setting for interrupt _i_*4+0
-| 0x1000+_i_   |  15:8        | RW  `clicintattr[_i_*4+1]` |  setting for interrupt _i_*4+1
-| 0x1000+_i_   |  23:16       | RW  `clicintattr[_i_*4+2]` |  setting for interrupt _i_*4+2
-| 0x1000+_i_   |  31:24       | RW  `clicintattr[_i_*4+3]` |  setting for interrupt _i_*4+3
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic attribute setting of eight interrupts.
-
-==== `cliciprio[__i__]`
-
-In this `siselect` offset range:
-
-* When XLEN = 32, each `sireg3` register controls the clic priority setting of four interrupts
-
-[%autowidth]
-|===
-| `siselect` |  `sireg3` bits |  `sireg3` state              | description
-
-| 0x1000+i   |   7:0          | RW  `cliciprio[__i__*4+0]` |  setting for interrupt __i__*4+0
-| 0x1000+i   |  15:8          | RW  `cliciprio[__i__*4+1]` |  setting for interrupt __i__*4+1
-| 0x1000+i   |  23:16         | RW  `cliciprio[__i__*4+2]` |  setting for interrupt __i__*4+2
-| 0x1000+i   |  31:24         | RW  `cliciprio[__i__*4+3]` |  setting for interrupt __i__*4+3
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each register controls the clic priority setting of eight interrupts.
-
-==== `clicintip[__i__]` and `clicintie[__i__]`
-
-In this `siselect` offset range:
-
-* When XLEN = 32, each `sireg` register reflects the interrupt pending of thirty-two interrupts.
-and each `sireg2` register controls the interrupt enable of thirty-two interrupts.
-
-[%autowidth]
-|===
-| `siselect`   |  `sireg` bits |  `sireg` state          |  `sireg2` bits |  `sireg2` state          | description
-
-| 0x1400    |   31:0   | RW `clicintip[31:0]`      |   31:0    | RW `clicintie[31:0]`       | settings for interrupts 31 through 0
-| 0x1401    |   31:0   | RW `clicintip[63:32]`     |   31:0    | RW `clicintie[63:32]`      | settings for interrupts 63 through 32
-6*^| ...
-| 0x147F    |   31:0   | RW `clicintip[4095:4064]` |   31:0    | RW `clicintie[4095:4064]`  | settings for interrupts 4095 through 4064
-|===
-
-* When XLEN = 64, only the even-numbered registers exist and each `sireg` register reflects the interrupt pending of sixty-four interrupts and
-each `sireg2` register controls the interrupt enable of sixty-four interrupts.
-
-=== New CSRs
-
-[source]
-----
-       Number  Name         Description
- (NEW) 0x???   sclaimi      Claim top interrupt
-----
-
-==== Claim top interrupt (sclaimi)
-
-Register {sclaimi} has the same value as {stopi}.
-When this value is not zero,
-reading {sclaimi} has the simultaneous side effect of clearing the pending bit for the reported interrupt identity,
-if possible.
-Writes to {sclaimi} are ignored.
-
-==== Interrupt enable threshold (sithreshold)
-
-{sithreshold} is a WLRL register that determines the minimum interrupt priority (maximum priority
-number) for an interrupt to be to be considered enabled.
-Register {sithreshold} implements exactly IPRIOLEN bits,
-and thus is capable of holding all priority numbers from 0 to latexmath:[${{2}^{\textrm{IPRIOLEN}} - {1}}$].
-When {sithreshold} is a nonzero value P,
-interrupt sources with priority numbers P and higher behave as though those sources were not enabled,
-regardless of the settings of their interrupt-enable bits.
-
-== Horizontal Nested Interrupt Preemption support for M-mode - Smclic
-
-The Smclic extension depends on the Smaia extension.
-
-The Smclic extension enables higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
+The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
 
-=== Changed and new CSRs
+=== Changed and new CSRs at Machine Level
 
 [source]
 ----
@@ -606,50 +392,11 @@ mintstatus fields
  bits    description
  31:24   mnipprio
  23:16   (reserved)
- 15: 8   snipprio if Ssclic is supported
+ 15: 8   snipprio if Ssnip is supported
   7: 0   (reserved)
 ----
 
-=== Reset Behavior
-
-In general in RISC-V, mandatory reset state is minimized but platform
-specifications or company policy might add additional reset
-requirements.  Since the general privileged architecture states that
-mstatus.mie is reset to zero, interrupts will not be enabled coming
-out of reset.
-
-==== Mandatory reset state
-
-{mintstatus}.{mnipprio} and {mpintstatus}.{mpnipprio} fields reset to the highest possible value NIPPRIO_MAX.
-
-The reset behavior of other fields is platform-specific.
-
-=== Interrupt Operation
-
-This section describes the operation of Smclic interrupts.
-
-==== Trap behavior
-
-The existing trap behavior for interrupts is modified as follows:
-
-When a trap _i_ is taken,
-the current value of {mintstatus}.{mnipprio} is written to {mpintstatus}.{mpnipprio}.
-If the trap is taken on an interrupt, {mintstatus}.{mnipprio} is updated to `iprio[__i__]`.
-
-NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{mnipprio}.
-
-==== Returns from Handlers
-
-The behavior of an {mret} instruction is modified as follows:
-
-{mret} sets {mintstatus}.{mnipprio} to {mpintstatus}.{mpnipprio}.
-
-== Horizontal Nested Interrupt Preemption support for S-mode - Ssclic
-
-The Ssclic extension depends on the Smclic and Ssaia extensions.
-When S-mode and the Smclic extensions are implemnted, Ssclic is mandatory.
-
-=== Changed and new CSRs
+=== Changed and new CSRs at Supervisor Level
 
 [source]
 ----
@@ -677,6 +424,12 @@ indicate user/supervisor) mirrored from {sstatus}.`spp`.
 
 === Reset Behavior
 
+In general in RISC-V, mandatory reset state is minimized but platform
+specifications or company policy might add additional reset
+requirements.  Since the general privileged architecture states that
+mstatus.mie is reset to zero, interrupts will not be enabled coming
+out of reset.
+
 Nested interrupt preemption priority NIPPRIO_MAX corresponds to regular
 execution outside of an interrupt handler.
 
@@ -685,29 +438,36 @@ that {sstatus}.`sie` is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
+==== Mandatory reset state
+
+{mintstatus}.{mnipprio} and {mpintstatus}.{mpnipprio} fields reset to the highest possible value NIPPRIO_MAX.
+
+The reset behavior of other fields is platform-specific.
+
 === Interrupt Operation
 
-This section describes the operation of Ssclic interrupts.
-The behavior is modified in analogy to Smclic.
+This section describes the operation of interrupts.
 
 ==== Trap behavior
 
-When a trap _i_ is taken,
-the current value of {sintstatus}.{snipprio} is written to {spintstatus}.{spnipprio}.
-If the trap is taken on an interrupt, {sintstatus}.{snipprio} is updated to `iprio[__i__]`.
+The existing trap behavior for interrupts is modified as follows:
 
-NOTE: Synchronous exceptions do not modify the value of {sintstatus}.{snipprio}.
+When a trap _i_ is taken into level `x`,
+the current value of {xintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
+If the trap is taken on an interrupt, {xintstatus}.{xnipprio} is updated to `iprio[__i__]`.
+
+NOTE: Synchronous exceptions do not modify the value of {xintstatus}.{xnipprio}.
 
 ==== Returns from Handlers
 
-The behavior of an {sret} instruction is modified as follows:
+The behavior of an {xret} instruction is modified as follows:
 
-{sret} sets {sintstatus}.{snipprio} to {spintstatus}.{spnipprio}.
+{xret} sets {xintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
 
 ==== State Enable
 
-If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
-implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
+If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is
+implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero, then
 access to the new CSR ({sivt})
 by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
@@ -716,17 +476,17 @@ exception apply, in which case a virtual instruction exception is
 raised when in VS or VU mode instead of an illegal instruction
 exception.
 
-== Support for far hardware vectored interrupts - Smclicivt
+== Support for interrupt vector table (Smivt)
 
-To increase the range of reachable addresses, this extension adds a new vectoring mode.
+This extension adds a new mode for taking interrupts via a dedicated interrupt vector table.
+
+This increases the range of reachable addresses to the entire address space.
 This is useful when handlers are more than 2 MiB away from the vector table entry.
 
 In this new mode, when an interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to new {mivt} CSR),
+table entry for the associated interrupt (table pointed to new {mivt} or {meivt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
-
-=== Smclicivt Changes to CLIC CSRs
 
 === Changed and new CSRs
 
@@ -735,25 +495,31 @@ and then jumps to the masked address.
        Number  Name         Description
        0x305   mtvec        Trap-handler base address / interrupt mode
  (NEW) 0x307   mivt         Interrupt-handler vector table base address
+ (NEW) 0x???   meivt        External Interrupt-handler vector table base address
 ----
 
-==== New {mivt} CSR
+==== New {mivt} and {meivt} CSR
 
-The {mivt} WARL XLEN-bit CSR holds the base address of the interrupt vector
-table, aligned on a 64-byte or greater power-of-two boundary.
-Values other than 0 in the low 6 bits of {mivt} are reserved.
+Two new base addresses for vector tables are introduced.
+One for internal interrupt (major and local interrupts),
+and one for external interrupts.
+
+Both {mivt} and {meivt} are WARL XLEN-bit CSRs,
+which hold the base address of the interrupt vector table.
+The address held in {meivt} is aligned on a 64-byte or greater power-of-two boundary.
+Values other than 0 in the low 6 bits are reserved of {meivt} are reserved.
 
 NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
 then reading them back.
 
-==== New {mtvec} CSR Mode for CLIC
+==== New {mtvec} CSR Mode
 
-Far hardware vectored interrupt-handling mode is encoded as a new state in the
+Interrupt vector table mode is encoded as a new state in the
 existing {mtvec} WARL register, where {mtvec}.`mode` (the two
 least-significant bits) is `11`.
 
-==== Smclicivt Changes to {tvec} CSR Mode for CLIC
+==== Smivt Changes to {tvec} CSR Mode
 
 The PC upon interrupt is changed as follows:
 
@@ -767,7 +533,11 @@ The PC upon interrupt is changed as follows:
 
 where:
   OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
-  VTBASE = xivt[XLEN-1:6]<<6    # Interrupt Vector Table base is at least 64-byte aligned
+  if external interrupt:
+    VTBASE = xeivt[XLEN-1:6]<<6   # External Interrupt Vector Table base is at least 64-byte aligned
+  else
+    VTBASE = xivt[XLEN-1:2]<<2    # Interrupt Vector Table base is at least 4-byte aligned
+
   M[a]   = Contents of memory address at address "a"
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
 ----
@@ -775,28 +545,11 @@ where:
 In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
 After executing the required side-effects as required with the existing behavior,
 the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
-from the in-memory table whose base address (VTBASE) is in {ivt}.
+from the in-memory table whose base address (VTBASE).
 The trap handler function address is fetched from `VTBASE+XLEN/8*exccode`.
 If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
 and sets the PC to this handler address.
 The masked vector table entry bit(s) are reserved and should be zero.
-
-The vector table layout will look like this for RV32 and RV64, respectively:
-
-[source]
-----
-           # Vector table layout for RV32 (4-byte function pointers)
-  mivt ->  0x800000 # Interrupt 0 handler function pointer
-           0x800004 # Interrupt 1 handler function pointer
-           0x800008 # Interrupt 2 handler function pointer
-           0x80000c # Interrupt 3 handler function pointer
-
-           # Vector table layout for RV64 (8-byte function pointers)
-  mivt ->  0x800000 # Interrupt 0 handler function pointer
-           0x800008 # Interrupt 1 handler function pointer
-           0x800010 # Interrupt 2 handler function pointer
-           0x800018 # Interrupt 3 handler function pointer
-----
 
 NOTE: The original vectored mode simply jumps to an address in
 the trap vector table, while the interrupt vector table mode reads a
@@ -839,9 +592,9 @@ side-affects of the trap may only be executed if they allow resuming of operatio
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
 
-== Synchronous exceptions hardware vectoring- Smclicsehv
+== Synchronous exceptions hardware vectoring- Smnipsehv
 
-The Smclicsehv extension depends upon the Smclicivt extension.
+The Smnipsehv extension depends upon the Smivt extension.
 
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
@@ -856,11 +609,11 @@ The summarized behavior is the following:
  mode  PC on Synchronous Exception
  00       OBASE              # Direct mode
  01       OBASE              # Vectored mode
- 11       OBASE+4*exccode    # Far vectored mode
+ 11       OBASE+4*exccode    # Interrupt vector table mode
  10       Reserved
 ----
 
-== Smcspsw Conditional Stack Pointer Swap extension
+== Conditional Stack Pointer Swap extension (Smcspsw)
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swaping in SW can be time consuming, as the conditions for swapping have to be checked first.
@@ -888,7 +641,7 @@ NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, the
 
 If the value of {msp} is zero, no conditional stack pointer swap is performed.
 
-=== Sscsps Conditional Stack Pointer Swap at Supervisor Level
+=== Conditional Stack Pointer Swap at Supervisor Level (Sscsps)
 
 The Sscsps depends on the Smcsps extension.
 
@@ -904,8 +657,8 @@ At supervisor level, the cspspush and cspspop instructions operate on the {ssp} 
 
 === State Enable
 
-If the Smstateen extension is implemented, then the bit 53 (CLIC) in mstateen0 is
-implemented. If bit 53 (CLIC) of a controlling mstateen0 CSR is zero, then
+If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is
+implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero, then
 access to the new CSRs ({ssp})
 by S-mode or a lower privilege mode
 results in an illegal instruction exception, except if the hypervisor
@@ -1031,11 +784,11 @@ The following table summarizes the written trap information:
 
 [%autowidth]
 |===
-| Register | synchronous exception | interrupt
-| a0       | xcause | xcause
-| a1       | xtval | no write
-| a2       | xtval2 | no write
-| a3       | xtinst | no write
+| Register | synchronous exception | Major Interrupt | External Interrupt (when in interrupt vector table mode)
+| a0       | xcause (equal to exccode) | Major identity | Minor Identity
+| a1       | xtval | no write | no write
+| a2       | xtval2 | no write | no write
+| a3       | xtinst | no write | no write
 |===
 
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
@@ -1091,7 +844,7 @@ NOTE: This stack layout is not mandated to allow e.g. shadow register sets
 
 [source]
 ----
-* Smclic/Ssclic not present:
+* Smnip/Ssnip not present:
 
 ** XLEN = 32:
 
@@ -1115,7 +868,7 @@ stack pointer adjustment: 48
 16: x11
 8: x10
 
-* Smclic/Ssclic present:
+* Smnip/Ssnip present:
 
 start of stackframe remains same. In addition:
 
@@ -1179,7 +932,7 @@ Behavior::
 
 The behavior in RISC-V asssembly when preempt is '1' is as follows.
 If preempt is '0', enabling interrupts shall be skipped.
-The behavior is assuming Smclic is present. Otherwise, xintstatus will not be saved.
+The behavior is assuming Smnip is present. Otherwise, xintstatus will not be saved.
 
 [source]
 ----
@@ -1193,15 +946,24 @@ push:
   sr a4, OFFSET(sp)         # Save a4
   sr a5, OFFSET(sp)         # Save a5
   sr a6, OFFSET(sp)         # Save a6
-  csrr a0, xcause           # Get xcause of interrupted context
+  csrr a0, xcause           # Get xcause of interrupted context to determine if exception
   csrr a4, xepc             # Get xepc of interrupt context
   csrr a5, xintstatus       # Get xintstatus of interrupt context
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xintstatus
   bgez a0, handle_exc       # Handle synchronous exception
-  csrr zero, xclaimi        # Clear ip bit of interrupt if possible
+  csrr a0, xtopi            # Read major interrupt number into a0
+  li a1, xEI                # Write major identity of external interrupt to a1
+  beq a0, a1, handle_ei     # Handle external interrupt
+  # clear major interrupt pending bit - no single instruction equivalent
+shift_idenity:
+  srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
   csrrsi zero, xstatus, XIE # Enable interrupts
+
+handle_ei:
+  csrr a0, xtopei           # Read minor interrupt number into a0
+  j shift_identity           # Jump back to rest of push sequence
 
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
@@ -1247,7 +1009,7 @@ Restores an interrupted context at the end of a trap.
 Behavior::
 
 The behavior in RISC-V asssembly is as follows.
-The behavior is assuming Smclic is present. Otherwise, the xintstatus CSR will not be restored.
+The behavior is assuming Smnip is present. Otherwise, the xintstatus CSR will not be restored.
 
 [source]
 ----
