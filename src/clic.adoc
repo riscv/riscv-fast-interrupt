@@ -794,6 +794,13 @@ The following table summarizes the written trap information:
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
 The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 
+As a consequence, the following prototype could serve for an interrupt handler at machine level.
+
+[source,c]
+----
+void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpintstatus")));
+----
+
 2. The tpopxret instruction
 * Disables interrupts
 * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
