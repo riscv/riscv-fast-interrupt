@@ -56,6 +56,11 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :ie: pass:q[``**__x__**ie``]
 :tvec: pass:q[``**__x__**tvec``]
 :ivt: pass:q[``**__x__**ivt``]
+:xivt: pass:q[``xivt``]
+:xeivt: pass:q[``xeivt``]
+:xtvec: pass:q[``xtvec``]
+:xepc: pass:q[``xepc``]
+:xsp: pass:q[``xsp``]
 :scratch: pass:q[``**__x__**scratch``]
 :scratchcsw: pass:q[``**__x__**scratchcsw``]
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
@@ -127,6 +132,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
 :sithreshold: pass:q[``sithreshold``]
+
+:hpintstatus: pass:q[``hpintstatus``]
+:vspintstatus: pass:q[``vspintstatus``]
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
