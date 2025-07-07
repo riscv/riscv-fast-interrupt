@@ -50,7 +50,7 @@ endif::[]
 
 Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
 
-:xstatus: pass:q[``**__x__**xstatus``]
+:xstatus: pass:q[``xstatus``]
 :status: pass:q[``**__x__**status``]
 :ideleg: pass:q[``**__x__**ideleg``]
 :ie: pass:q[``**__x__**ie``]
@@ -200,7 +200,7 @@ machanisms. Their behavior is unchanged by the extensions of ACLIC.
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
 The Smaclic extension depends on the Smaia extension.
-The Ssaclic extension depends on the Ssia extension.
+The Ssaclic extension depends on the Ssaia extension.
 
 The Advanced Core Local Interrupt Controller (ACLIC) is an interrupt controller defined for
 - low and predictable latency interrupt handling
