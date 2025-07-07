@@ -509,18 +509,6 @@ The behavior of an {xret} instruction is modified as follows:
 
 {xret} sets {mintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
 
-==== State Enable
-
-If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is
-implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero, then
-access to the new CSR ({sivt})
-by S-mode or a lower privilege mode
-results in an illegal instruction exception, except if the hypervisor
-extension is implemented and the conditions for a virtual instruction
-exception apply, in which case a virtual instruction exception is
-raised when in VS or VU mode instead of an illegal instruction
-exception.
-
 == Support for interrupt vector table (Smivt, Ssivt)
 
 These extensions adds a new mode for taking interrupts via a dedicated interrupt vector table.
@@ -642,6 +630,18 @@ As long as synchronous exceptions can occur during the interrupt vector table fe
 side-affects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+
+==== State Enable
+
+If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is
+implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero, then
+access to the new CSR ({sivt})
+by S-mode or a lower privilege mode
+results in an illegal instruction exception, except if the hypervisor
+extension is implemented and the conditions for a virtual instruction
+exception apply, in which case a virtual instruction exception is
+raised when in VS or VU mode instead of an illegal instruction
+exception.
 
 == Synchronous exceptions hardware vectoring- Smnipsehv
 
