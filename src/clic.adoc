@@ -521,15 +521,15 @@ exception apply, in which case a virtual instruction exception is
 raised when in VS or VU mode instead of an illegal instruction
 exception.
 
-== Support for interrupt vector table (Smivt)
+== Support for interrupt vector table (Smivt, Ssivt)
 
-This extension adds a new mode for taking interrupts via a dedicated interrupt vector table.
+These extensions adds a new mode for taking interrupts via a dedicated interrupt vector table.
 
 This increases the range of reachable addresses to the entire address space.
 This is useful when handlers are more than 2 MiB away from the vector table entry.
 
 In this new mode, when an interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to new {mivt} or {meivt} CSR),
+table entry for the associated interrupt (table pointed to new {xivt} or {xeivt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
 
@@ -538,33 +538,39 @@ and then jumps to the masked address.
 [source]
 ----
        Number  Name         Description
-       0x305   mtvec        Trap-handler base address / interrupt mode
- (NEW) 0x307   mivt         Interrupt-handler vector table base address
- (NEW) 0x???   meivt        External Interrupt-handler vector table base address
+       0x305   mtvec        M-mode Trap-handler base address / interrupt mode
+ (NEW) 0x307   mivt         M-mode Interrupt-handler vector table base address
+ (NEW) 0x308   meivt        M-mode External Interrupt-handler vector table base address
+       0x105   stvec        S-mode Trap-handler base address / interrupt mode
+ (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
+ (NEW) 0x108   seivt        S-mode External Interrupt-handler vector table base address
+       0x205   vstvec       VS-mode Trap-handler base address / interrupt mode
+ (NEW) 0x207   vsivt        VS-mode Interrupt-handler vector table base address
+ (NEW) 0x208   vseivt       VS-mode External Interrupt-handler vector table base address
 ----
 
-==== New {mivt} and {meivt} CSR
+==== New {xivt} and {xeivt} CSR
 
 Two new base addresses for vector tables are introduced.
 One for internal interrupt (major and local interrupts),
 and one for external interrupts.
 
-Both {mivt} and {meivt} are WARL XLEN-bit CSRs,
+Both {xivt} and {xeivt} are WARL XLEN-bit CSRs,
 which hold the base address of the interrupt vector table.
-The address held in {meivt} is aligned on a 64-byte or greater power-of-two boundary.
-Values other than 0 in the low 6 bits are reserved of {meivt} are reserved.
+The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boundary.
+Values other than 0 in the low 6 bits are reserved of {xeivt} are reserved.
 
 NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
 then reading them back.
 
-==== New {mtvec} CSR Mode
+==== New {xtvec} CSR Mode
 
 Interrupt vector table mode is encoded as a new state in the
-existing {mtvec} WARL register, where {mtvec}.`mode` (the two
+existing {xtvec} WARL register, where {xtvec}.`mode` (the two
 least-significant bits) is `11`.
 
-==== Smivt Changes to {tvec} CSR Mode
+==== Smivt Changes to {xtvec} CSR Mode
 
 The PC upon interrupt is changed as follows:
 
@@ -621,7 +627,7 @@ NOTE: Resuming after a fault on a vector table fetch is currently only seen as u
 In this case, if an exception trap occurs during the interrupt handler function address fetch,
 the following holds true:
 Depending on where the second trap is handled,
-the corresponding exception pc ({mepc} or {mnepc}) value is set to the exception pc of the first trap.
+the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
 In addition, {tval} is either set to zero or written with the faulting address.
 
 NOTE: For simpler systems, we do not require that {tval} is written
