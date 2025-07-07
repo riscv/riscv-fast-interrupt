@@ -66,7 +66,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :pintstatus: pass:q[``**__x__**pintstatus``]
 :intstatus: pass:q[``**__x__**intstatus``]
 :xpintstatus: pass:q[``**__x__**xpintstatus``]
-:xintstatus: pass:q[``**__x__**xintstatus``]
+:mintstatus: pass:q[``**__x__**mintstatus``]
 :xpnipprio: pass:q[``xpnipprio``]
 :xnipprio: pass:q[``xnipprio``]
 :intthresh: pass:q[``**__x__**intthresh``]
@@ -391,7 +391,7 @@ primary reason to expose these fields is to support debug.
 mintstatus fields
  bits    description
  31:24   mnipprio
- 23:16   (reserved)
+ 23:16   hnipprio if Ssnip and H are supported
  15: 8   snipprio if Ssnip is supported
   7: 0   (reserved)
 ----
@@ -410,17 +410,62 @@ mintstatus fields
 ----
 spintstatus
  Bits    Field         Description
- XLEN-1 Interrupt      Interrupt=1, Exception=0, same as scause.Interrupt
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
  30:29  (reserved)
-    28  spp            Previous privilege mode, same as sstatus.spp
-    27  spie           Previous interrupt enable, same as sstatus.spie
+    28  spp            Previous privilege mode, mirror of sstatus.spp
+    27  spie           Previous interrupt enable, mirror of sstatus.spie
  26:24  (reserved)
  23:16  spnipprio[7:0] Previous nested interrupt preemption priority
  15:0   (reserved)
 ----
 
-The supervisor {scause} register has only a single `spp` bit (to
-indicate user/supervisor) mirrored from {sstatus}.`spp`.
+The supervisor {sstatus} register has only a single `spp` bit (to
+indicate user/supervisor).
+
+=== Changed and new CSRs at Hypervisor and VS level
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x???   hpintstatus  Previous interrupt context at hypervisor level
+ (NEW) 0x???   vspintstatus Previous interrupt context at virtual supervisor level
+----
+
+==== New Interrupt Status ({hpintstatus}) CSR
+
+[source]
+----
+spintstatus
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ 30:29  (reserved)
+    28  spp            Previous privilege mode, mirror of sstatus.spp
+    27  spie           Previous interrupt enable, mirror of sstatus.spie
+    26  spv            Supervisor previous virtualization mode, mirror of hstatus.spv
+    25  spvp           Supervisor Previous Virtual Privilege, mirror of hstatus.spvp
+    24  gva            Previous guest virtual address, mirror of hstatus.gva
+ 26:24  (reserved)
+ 23:16  hpnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
+
+==== New Interrupt Status ({vspintstatus}) CSR
+
+When V=1, {vspintstatus} substitutes for the usual {spintstatus}, so instructions that normally
+read or modify {spintstatus} actually access {vspintstatus} instead.
+
+[source]
+----
+vspintstatus
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ 30:29  (reserved)
+    28  spp            Previous privilege mode, mirror of vsstatus.spp
+    27  spie           Previous interrupt enable, mirror of vsstatus.spie
+ 26:24  (reserved)
+ 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
 
 === Reset Behavior
 
@@ -453,16 +498,16 @@ This section describes the operation of interrupts.
 The existing trap behavior for interrupts is modified as follows:
 
 When a trap _i_ is taken into level `x`,
-the current value of {xintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
-If the trap is taken on an interrupt, {xintstatus}.{xnipprio} is updated to `iprio[__i__]`.
+the current value of {mintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
+If the trap is taken on an interrupt, {mintstatus}.{xnipprio} is updated to `iprio[__i__]`.
 
-NOTE: Synchronous exceptions do not modify the value of {xintstatus}.{xnipprio}.
+NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{xnipprio}.
 
 ==== Returns from Handlers
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {xintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
+{xret} sets {mintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
 
 ==== State Enable
 
@@ -939,7 +984,7 @@ Behavior::
 
 The behavior in RISC-V asssembly when preempt is '1' is as follows.
 If preempt is '0', enabling interrupts shall be skipped.
-The behavior is assuming Smnip is present. Otherwise, xintstatus will not be saved.
+The behavior is assuming Smnip is present. Otherwise, mintstatus will not be saved.
 
 [source]
 ----
@@ -955,9 +1000,9 @@ push:
   sr a6, OFFSET(sp)         # Save a6
   csrr a0, xcause           # Get xcause of interrupted context to determine if exception
   csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, xintstatus       # Get xintstatus of interrupt context
+  csrr a5, mintstatus       # Get mintstatus of interrupt context
   sr a4, OFFSET(sp)         # Save xepc
-  sr a5, OFFSET(sp)         # Save xintstatus
+  sr a5, OFFSET(sp)         # Save mintstatus
   bgez a0, handle_exc       # Handle synchronous exception
   csrr a0, xtopi            # Read major interrupt number into a0
   li a1, xEI                # Write major identity of external interrupt to a1
@@ -975,7 +1020,7 @@ handle_ei:
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
   csrr a2, xtval2           # Get xepc of interrupt context
-  csrr a3, xtinst           # Get xintstatus of interrupt context
+  csrr a3, xtinst           # Get mintstatus of interrupt context
   j finish_push             # Jump back to rest of push sequence
 
 where
@@ -1016,16 +1061,16 @@ Restores an interrupted context at the end of a trap.
 Behavior::
 
 The behavior in RISC-V asssembly is as follows.
-The behavior is assuming Smnip is present. Otherwise, the xintstatus CSR will not be restored.
+The behavior is assuming Smnip is present. Otherwise, the mintstatus CSR will not be restored.
 
 [source]
 ----
 pop:
   csrrsi zero, xstatus, XIE # Disable interrupts
   lr a4, OFFSET(sp)         # Restore xepc
-  lr a5, OFFSET(sp)         # Restore xintstatus
+  lr a5, OFFSET(sp)         # Restore mintstatus
   csrw xepc, a4             # Write xepc back to CSR
-  csrw xintstatus, a5       # Write xintstatus back to CSR
+  csrw mintstatus, a5       # Write mintstatus back to CSR
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
