@@ -664,22 +664,26 @@ The summarized behavior is the following:
  10       Reserved
 ----
 
-== Conditional Stack Pointer Swap extension (Smcspsw)
+== Conditional Stack Pointer Swap extension (Smcspsw, Sscsps)
+
+The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swaping in SW can be time consuming, as the conditions for swapping have to be checked first.
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
-==== CSR with stack pointer for conditional swap (msp)
+==== CSR with stack pointer for conditional swap
 
-A new CSR is introduced to hold an alternative stack pointer.
+New CSRs are introduced to hold an alternative stack pointer.
 Conditionally, this stack pointer can be swapped with the currently active one.
 
 [source]
 ----
       Number  Name         Description
-(NEW) 0x348   msp          Stack pointer for conditional swap (WARL)
+(NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
+(NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
+(NEW) 0x148   vssp         VS-mode stack pointer for conditional swap (WARL)
 ----
 
 ==== Instructions for conditional stack pointer swap
@@ -690,21 +694,7 @@ which shall be swapped in during a push operation, have the LSB asserted.
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, therefore the least significant bits are zero.
 
-If the value of {msp} is zero, no conditional stack pointer swap is performed.
-
-=== Conditional Stack Pointer Swap at Supervisor Level (Sscsps)
-
-The Sscsps depends on the Smcsps extension.
-
-It adds a new supervisor level CSR ssp.
-
-[source]
-----
-      Number  Name         Description
-(NEW) 0x148   ssp          Stack pointer for conditional swap (WARL)
-----
-
-At supervisor level, the cspspush and cspspop instructions operate on the {ssp} register.
+If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 
 === State Enable
 
