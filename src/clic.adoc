@@ -266,15 +266,15 @@ When XLEN = 32, each `xireg` register controls the ALIC priority setting of four
 [%autowidth]
 |===
 | `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `acliciprio0`
+| 0x1000     |   4B          | `xacliciprio0`
 | ...        |   ...         | ...
-| 0x1100     |   4B          | `acliciprio255`
+| 0x1100     |   4B          | `xacliciprio255`
 |===
 
-Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
 
 ==== Source Configuration (sourcecfg)
 
@@ -285,16 +285,16 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg2/3` size |  `xireg2` state     |  `xireg3` state
-| 0x1000     |   4B             | `aclicsourcecfg0`   | `aclicsourcecfg1`
-| ...        |   ...            | ...                 | ...
-| 0x1100     |   4B             | `aclicsourcecfg510` | `aclicsourcecfg511`
+| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
+| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
+| ...        |   ...            | ...                  | ...
+| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
 |===
 
-Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
 
 When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
 
 === APLIC configured for ACLIC operation
 
@@ -318,6 +318,30 @@ Disabling interrupt delivery in ACLIC is achieved through by setting the CSR {ei
 Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode.
 
 The interrupt force feature is not supported in ACLIC mode.
+
+=== State Enable
+
+Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
+
+Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
+
+If the Smstateen extension is implemented,
+then the bit ?? in mstateen0 is implemented.
+If bit ?? of a controlling mstateen0 CSR is zero,
+then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`, `vsacliciprio[k]`, `vsaclicsourcecfg[k]`) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+Anologously, if Sstateen is implemented,
+bit ?? of hstateen0 controls less-privileged access to `vsacliciprio[k]`, `vsaclicsourcecfg[k]`.
+
+NOTE: Clearing the corresponding control bit in hstateen0
+allows a hypervisor to maintain full control over the priority assignment.
+Any guest OS access will result in a virtual instruction exception, 
+which can be handled by the hypervisor.
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
@@ -532,7 +556,7 @@ in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
 Anologously, if Sstateen is implemented,
-bit 53 of sstateen0 controls less-privileged access to to {vspintstatus}.
+bit 53 of hstateen0 controls less-privileged access to {vspintstatus}.
 
 == Support for interrupt vector table (Smivt, Ssivt)
 
@@ -669,7 +693,7 @@ in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
 Anologously, if Sstateen is implemented,
-bit 53 of sstateen0 controls less-privileged access to to {vsivt}.
+bit 53 of hstateen0 controls less-privileged access to {vsivt}.
 
 == Synchronous exceptions hardware vectoring- Smnipsehv
 
@@ -737,7 +761,7 @@ in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
 Anologously, if Sstateen is implemented,
-bit 53 of sstateen0 controls less-privileged access to to {vssp}.
+bit 53 of hstateen0 controls less-privileged access to {vssp}.
 
 <<<
 
