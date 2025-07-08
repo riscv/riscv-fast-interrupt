@@ -135,6 +135,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 
 :hpintstatus: pass:q[``hpintstatus``]
 :vspintstatus: pass:q[``vspintstatus``]
+:vsivt: pass:q[``vsivt``]
+:vssp: pass:q[``vssp``]
 
 :pp: pass:q[``**__x__**pp``]
 :pie: pass:q[``**__x__**pie``]
