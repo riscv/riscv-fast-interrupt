@@ -202,7 +202,7 @@ machanisms. Their behavior is unchanged by the extensions of ACLIC.
 The Smaclic extension depends on the Smaia extension.
 The Ssaclic extension depends on the Ssaia extension.
 
-The Advanced Core Local Interrupt Controller (ACLIC) is an interrupt controller defined for
+The Advanced Core Local Interrupt Controller (ACLIC) is a single hart interrupt controller defined for
 - low and predictable latency interrupt handling
 - high throughput/low handling overhead
 - resource efficient implementation
