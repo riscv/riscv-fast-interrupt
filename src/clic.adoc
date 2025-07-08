@@ -285,10 +285,10 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg2/3 size |  `xireg2` state     |  `xireg3` state
-| 0x1000     |   4B            | `aclicsourcecfg0`   | `aclicsourcecfg1`
-| ...        |   ...           | ...                 | ...
-| 0x1100     |   4B            | `aclicsourcecfg510` | `aclicsourcecfg511`
+| `xiselect` |  `xireg2/3` size |  `xireg2` state     |  `xireg3` state
+| 0x1000     |   4B             | `aclicsourcecfg0`   | `aclicsourcecfg1`
+| ...        |   ...            | ...                 | ...
+| 0x1100     |   4B             | `aclicsourcecfg510` | `aclicsourcecfg511`
 |===
 
 Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
