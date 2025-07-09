@@ -1053,9 +1053,9 @@ push:
   sr a6, OFFSET(sp)         # Save a6
   csrr a0, xcause           # Get xcause of interrupted context to determine if exception
   csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, mintstatus       # Get mintstatus of interrupt context
+  csrr a5, xpintstatus      # Get xpintstatus of interrupt context
   sr a4, OFFSET(sp)         # Save xepc
-  sr a5, OFFSET(sp)         # Save mintstatus
+  sr a5, OFFSET(sp)         # Save xpintstatus
   bgez a0, handle_exc       # Handle synchronous exception
   csrr a0, xtopi            # Read major interrupt number into a0
   li a1, xEI                # Write major identity of external interrupt to a1
@@ -1073,7 +1073,7 @@ handle_ei:
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
   csrr a2, xtval2           # Get xepc of interrupt context
-  csrr a3, xtinst           # Get mintstatus of interrupt context
+  csrr a3, xtinst           # Get xpintstatus of interrupt context
   j finish_push             # Jump back to rest of push sequence
 
 where
@@ -1125,9 +1125,9 @@ The behavior is assuming Smnip is present. Otherwise, the mintstatus CSR will no
 pop:
   csrrsi zero, xstatus, XIE # Disable interrupts
   lr a4, OFFSET(sp)         # Restore xepc
-  lr a5, OFFSET(sp)         # Restore mintstatus
+  lr a5, OFFSET(sp)         # Restore xpintstatus
   csrw xepc, a4             # Write xepc back to CSR
-  csrw mintstatus, a5       # Write mintstatus back to CSR
+  csrw xpintstatus, a5      # Write xpintstatus back to CSR
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
