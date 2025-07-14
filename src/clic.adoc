@@ -231,10 +231,10 @@ A new delivery mode is defined:
 If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
 In that mode, {eithreshold}, {eipN} and {eieN} do exist independently,
-but mirror the corresponding {ithreshold}, {setip}[k], and {setie}[k] of the connected APLIC domain.
+but act as an alias for the corresponding {ithreshold}, {setip}[k], and {setie}[k] of the connected APLIC domain.
 
-Likewise, the {xtopei} registers mirror the {topi} register of the connected APLIC domain.
-Specifically, {vstopei} mirrors the {topi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
+Likewise, the {xtopei} registers is an alias of the {xtopi} register of the connected APLIC domain.
+Specifically, {vstopei} is an alias of the {vstopi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
 On write access, {xtopei} also clears the indicated interrupt pending bit if possible.
 At the APLIC, this behavior is achieved by reading from {claimi} instead.
 The side-effect on the write of {xtopei} is retained in this mode.
@@ -261,7 +261,7 @@ To have full control over the necessary APLIC registers, the following indirect 
 
 ==== Interrupt Priority (iprio)
 
-When XLEN = 32, each `xireg` register controls the ALIC priority setting of four interrupts.
+When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
 
 [%autowidth]
 |===
