@@ -13,7 +13,7 @@
 # the Doc Template for RISC-V Extensions.
 
 DOCS := \
-	clic.adoc
+	aclic.adoc
 
 DATE ?= $(shell date +%Y-%m-%d)
 VERSION ?= dev

@@ -1,0 +1,1160 @@
+:sectnums:
+:toc: left
+
+:le: &#8804;
+:ge: &#8805;
+:lt: &#60;
+:gt: &#62;
+
+
+[[riscv-doc-template]]
+= Advanced Core-Local Interrupt Controller (ACLIC) RISC-V Privileged Architecture Extensions
+include::../docs-resources/global-config.adoc[]
+:docgroup: RISC-V Task Group
+:description: RISC-V Example Specification Document (Zexmpl)
+:revdate: current
+:revnumber: dev
+:revremark: This document is under development. Expect potential changes. Visit http://riscv.org/spec-state for further details.
+:revinfo:
+:preface-title: Preamble
+:colophon:
+:appendix-caption: Appendix
+// https://docs.asciidoctor.org/asciidoc/latest/macros/images-directory/
+:imagesdir: ../docs-resources/images
+:title-logo-image: image:risc-v_logo.png["RISC-V International Logo",pdfwidth=3.25in,align=center]
+// Settings:
+:experimental:
+:reproducible:
+//:WaveDromEditorApp: app/wavedrom-editor.app
+:imagesoutdir: images
+//:srcdir: src
+:bibtex-file: src/example.bib
+:bibtex-order: alphabetical
+:bibtex-style: apa
+:icons: font
+:lang: en
+:listing-caption: Listing
+:sectnums:
+:toc: left
+:toclevels: 4
+:source-highlighter: pygments
+ifdef::backend-pdf[]
+:source-highlighter: coderay
+endif::[]
+:data-uri:
+:hide-uri-scheme:
+:stem: latexmath
+:footnote:
+:xrefstyle: short
+
+
+Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
+
+:xstatus: pass:q[``xstatus``]
+:status: pass:q[``**__x__**status``]
+:ideleg: pass:q[``**__x__**ideleg``]
+:ie: pass:q[``**__x__**ie``]
+:tvec: pass:q[``**__x__**tvec``]
+:ivt: pass:q[``**__x__**ivt``]
+:xivt: pass:q[``xivt``]
+:xeivt: pass:q[``xeivt``]
+:xtvec: pass:q[``xtvec``]
+:xepc: pass:q[``xepc``]
+:xsp: pass:q[``xsp``]
+:scratch: pass:q[``**__x__**scratch``]
+:scratchcsw: pass:q[``**__x__**scratchcsw``]
+:scratchcswl: pass:q[``**__x__**scratchcswl``]
+:epc: pass:q[``**__x__**epc``]
+:cause: pass:q[``**__x__**cause``]
+:tval: pass:q[``**__x__**tval``]
+:ip: pass:q[``**__x__**ip``]
+:pintstatus: pass:q[``**__x__**pintstatus``]
+:intstatus: pass:q[``**__x__**intstatus``]
+:xpintstatus: pass:q[``**__x__**xpintstatus``]
+:mintstatus: pass:q[``**__x__**mintstatus``]
+:xpnipprio: pass:q[``xpnipprio``]
+:xnipprio: pass:q[``xnipprio``]
+:intthresh: pass:q[``**__x__**intthresh``]
+
+:eidelivery: pass:q[``eidelivery``]
+:eithreshold: pass:q[``eithreshold``]
+:eipk: pass:q[``eip__k__``]
+:eiek: pass:q[``eie__k__``]
+:setie: pass:q[``setie``]
+:setip: pass:q[``setip``]
+:ithreshold: pass:q[``ithreshold``]
+:xtopei: pass:q[``xtopei``]
+:topi: pass:q[``topi``]
+:vstopei: pass:q[``vstopei``]
+:xtopi: pass:q[``xtopi``]
+:xtopei: pass:q[``xtopei``]
+:claimi: pass:q[``claimi``]
+
+:mstatus: pass:q[``mstatus``]
+:mideleg: pass:q[``mideleg``]
+:mie: pass:q[``mie``]
+:mtvec: pass:q[``mtvec``]
+:mivt: pass:q[``mivt``]
+:meivt: pass:q[``meivt``]
+:mscratch: pass:q[``mscratch``]
+:msp: pass:q[``msp``]
+:mepc: pass:q[``mepc``]
+:mnepc: pass:q[``mnepc``]
+:mcause: pass:q[``mcause``]
+:mtval: pass:q[``mtval``]
+:mip: pass:q[``mip``]
+:mpintstatus: pass:q[``mpintstatus``]
+:mpnipprio: pass:q[``mpnipprio``]
+:mintstatus: pass:q[``mintstatus``]
+:mipreemptcfg: pass:q[``mipreemptcfg``]
+:preemptmsk: pass:q[``preemptmsk``]
+:mintthresh: pass:q[``mintthresh``]
+:mtopi: pass:q[``mtopi``]
+:mclaimi: pass:q[``mclaimi``]
+:mithreshold: pass:q[``mithreshold``]
+
+:sstatus: pass:q[``sstatus``]
+:sideleg: pass:q[``sideleg``]
+:sie: pass:q[``sie``]
+:stvec: pass:q[``stvec``]
+:sivt: pass:q[``sivt``]
+:sscratch: pass:q[``sscratch``]
+:ssp: pass:q[``ssp``]
+:sepc: pass:q[``sepc``]
+:scause: pass:q[``scause``]
+:stval: pass:q[``stval``]
+:sip: pass:q[``sip``]
+:spintstatus: pass:q[``spintstatus``]
+:spnipprio: pass:q[``spnipprio``]
+:sintstatus: pass:q[``sintstatus``]
+:snipprio: pass:q[``snipprio``]
+:sintthresh: pass:q[``sintthresh``]
+:stopi: pass:q[``stopi``]
+:sclaimi: pass:q[``sclaimi``]
+:sithreshold: pass:q[``sithreshold``]
+
+:hpintstatus: pass:q[``hpintstatus``]
+:vspintstatus: pass:q[``vspintstatus``]
+:vsivt: pass:q[``vsivt``]
+:vssp: pass:q[``vssp``]
+
+:pp: pass:q[``**__x__**pp``]
+:pie: pass:q[``**__x__**pie``]
+:nipprio: pass:q[``**__x__**nipprio``]
+
+:mpp: pass:q[``mpp``]
+:mpie: pass:q[``mpie``]
+:mnipprio: pass:q[``mnipprio``]
+
+:pnipprio: pass:q[``**__x__**pnipprio``]
+
+:mpippro: pass:q[``mpippro``]
+
+:ret: pass:q[``**__x__**ret``]
+:mret: pass:q[``mret``]
+:sret: pass:q[``sret``]
+:xret: pass:q[``xret``]
+
+:le: &#8804;
+:ge: &#8805;
+:lt: &#60;
+:gt: &#62;
+
+// SPDX-License-Identifier: CC-BY-4.0
+//
+// licensing.adoc: licensing information
+//
+// Copyright and licensing information for the specification.
+//
+
+[Preface]
+== Copyright and license information
+
+This RISC-V ACLIC extension specification is © 2018-2025 RISC-V international
+
+This document is released under a Creative Commons Attribution 4.0
+International License. +
+https://creativecommons.org/licenses/by/4.0/.
+
+== Introduction
+
+The set of extensions defined in this specification enhance the existing interrupt specifications to achieve the following goals:
+
+  * Low latency interrupt handling (achieved through nested preemption)
+  * High throughput interrupt handling
+  * Up to 1023 external interrupts
+  * Low area overhead
+
+The table below provides a summary of the ACLIC extensions.
+
+[%autowidth]
+|===
+| Extension Name | Description
+| Smaclic      | Advanced Core Local Interrupt Controller at Machine level
+| Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
+| Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
+| Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
+| Smivt        | Support for interrupt vector table
+| Smehv        | Synchronous exceptions hardware vectoring
+| Smtp         | Support for trap handler push/pop
+| Smcsps       | Conditional stack pointer swap at Machine level
+| Sscsps       | Conditional stack pointer swap at Supervisor level
+|===
+
+NOTE: The extensions defined here are orthogonal to the NMI and RNMI
+machanisms. Their behavior is unchanged by the extensions of ACLIC.
+
+== Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
+
+The Smaclic extension depends on the Smaia extension.
+The Ssaclic extension depends on the Ssaia extension.
+
+The Advanced Core Local Interrupt Controller (ACLIC) is a single hart interrupt controller defined for
+- low and predictable latency interrupt handling
+- high throughput/low handling overhead
+- resource efficient implementation
+- compatibility with AIA
+
+To achieve this, ACLIC builds upon the hart-level extensions of AIA (Smaia and Ssaia),
+and the Advanced Platform Level Interrupt Controller (APLIC).
+The ACLIC is a tailored APLIC, directly integrated with one hart.
+
+=== New Interrupt Delivery Mode
+
+The Incoming Message Signalled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
+which defines the interrupt delivery mode.
+A new delivery mode is defined:
+
+[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+|===
+|0 = | Interrupt delivery is disabled
+|1 = | Interrupt delivery from the interrupt file is enabled
+|0x20000000 = | Interrupt delivery from an ACLIC
+|0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
+|===
+
+If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
+
+In that mode, {eithreshold}, {eipk} and {eiek} do exist independently,
+but act as an alias for the corresponding {ithreshold}, {setip}[_k_], and {setie}[_k_] of the connected APLIC domain.
+
+For XLEN=32, {eipk} and {eiek} are a direct alias of {setip}[_k_] and {setie}[_k_], respectively.
+For XLEN=64, {eipk} and {eiek} only exist for even numbered indeces of _k_. In this case,
+{eipk} and {eiek} alias {setip}[_k_] and {setie}[_k_] in the lower half of the CSR,
+and {setip}[_k+1_] and {setie}[_k+1_] in the upper half of the CSR, respectively.
+
+Likewise, the {xtopei} registers is an alias of the {xtopi} register of the connected APLIC domain.
+Specifically, {vstopei} is an alias of the {vstopi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
+On write access, {xtopei} also clears the indicated interrupt pending bit if possible.
+At the APLIC, this behavior is achieved by reading from {claimi} instead.
+The side-effect on the write of {xtopei} is retained in this mode.
+
+NOTE: Mirroring these APLIC registers at a core level has several advantages.
+  * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
+  * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
+  * It simlifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
+  * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
+  * It simplifies the register interface, as CSR instructions have single bit operations
+
+In this delivery mode, the {xtopi} CSRs reflect both the interrupt identity and the interrupt priority.
+
+[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+|===
+|bits 26:16| Interrupt identity
+|bits 10:0 | Interrupt priority (configured target[identity].iprio)
+|===
+
+=== Indirect CSR access to APLIC registers
+
+The APLIC registers used in the ACLIC configuration can all be accessed by indirect CSRs,
+eliminating the overheads associated with a memory mapped device,
+and presenting a consistent SW interface for any hart.
+
+To have full control over the necessary APLIC registers, the following indirect CSR access is added.
+
+==== Interrupt Priority (iprio)
+
+When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
+
+[%autowidth]
+|===
+| `xiselect` |  `xireg` size |  `xireg` state
+| 0x1000     |   4B          | `xacliciprio0`
+| ...        |   ...         | ...
+| 0x1100     |   4B          | `xacliciprio255`
+|===
+
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+
+When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+
+==== Source Configuration (sourcecfg)
+
+When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
+as the rest of the register is reserved.
+
+When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
+
+[%autowidth]
+|===
+| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
+| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
+| ...        |   ...            | ...                  | ...
+| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
+|===
+
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+
+When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+
+=== APLIC configured for ACLIC operation
+
+All other APLIC registers not accessible via indirect CSRs are not needed in the ACLIC operation.
+Several registers are considered to perform in a fixed setting.
+
+The domain configuration (register domaincfg) behaves as follows:
+- IE bit is not needed as it has the same function as the {xstatus}.xIE bits at the hart.
+- DM (Delivery Mode) is always 0 = direct delivery mode
+- BE: endianess setting is not not needed
+
+As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not accessible and not used.
+
+The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
+Therefore, the registers setipnum, in_clrip[N], clripnum, setienum, clrie[N], clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
+
+The target registers are not fully implemented.
+The iprio portion of it can be accessed as described in the section on indirect access.
+
+Disabling interrupt delivery in ACLIC is achieved through by setting the CSR {eidelivery} = 0.
+Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode and thus, no access to it is provided.
+
+The interrupt force feature is not supported in ACLIC mode.
+
+=== State Enable
+
+Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
+
+Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
+
+If the Smstateen extension is implemented,
+then the bit ?? in mstateen0 is implemented.
+If bit ?? of a controlling mstateen0 CSR is zero,
+then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`, `vsacliciprio[k]`, `vsaclicsourcecfg[k]`) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+Anologously, if Sstateen is implemented,
+bit ?? of hstateen0 controls less-privileged access to `vsacliciprio[k]`, `vsaclicsourcecfg[k]`.
+
+NOTE: Clearing the corresponding control bit in hstateen0
+allows a hypervisor to maintain full control over the priority assignment.
+Any guest OS access will result in a virtual instruction exception, 
+which can be handled by the hypervisor.
+
+== Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
+
+The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
+The Ssnip extension depends on the Ssmaia extension and adds nested preemption support at supervisor level.
+
+The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
+It provides additional state to resume execution of the previous handler after a nested preemption.
+
+=== Changed and new CSRs at Machine Level
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x346   mpintstatus  Previous interrupt context
+ (NEW) 0xFB1   mintstatus   Current interrupt context
+ (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
+----
+
+==== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
+
+[source]
+----
+mipreemptcfg fields
+ bits        description
+ XLEN-1:4    (reserved)
+ 3:0         preemptmsk
+
+----
+
+{mipreemptcfg} is a WARL register used to configure the behavior of preemption.
+{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {nipprio}.
+The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
+The nested interrupt preemption priority {nipprio} is defined as follows:
+
+[source]
+----
+NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
+nipprio[i]   = iprio[i] & NIPPRIO_MASK
+----
+
+A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
+and the preemption priority of that interrupt nipprio[i] exceeds (i.e. is numerically smaller) than {mintstatus}.{mnipprio}.
+
+Depending on the number of implemented priority bits, the maximum value of {nipprio} is
+
+[source]
+----
+IPRIO_MAX  = 2^(IPRIOLEN)
+NIPPRIO_MAX = IPRIO_MAX & NIPPRIO_MASK
+----
+
+In order to differentiate between regular and interrupt execution,
+interrupts shall not be configured in a way, that {nipprio} equals NIPPRIO_MAX.
+
+==== New Interrupt Status ({mpintstatus}) CSR
+
+A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
+
+[source]
+----
+mpintstatus 
+Bits   Field           Description
+ XLEN-1 Interrupt      Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
+ 30     (reserved)
+ 29:28  mpp[1:0]       Previous privilege mode, mirror of mstatus.mpp
+ 27     mpie           Previous interrupt enable, mirror of mstatus.mpie
+ 26:24  (reserved)
+ 23:16  mpnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
+
+==== New Interrupt Status ({mintstatus}) CSR
+
+A new M-mode CSR, `mintstatus`, holds the active nested interrupt preemption priority for
+each supported privilege mode.  These fields are read-only.  The
+primary reason to expose these fields is to support debug.
+
+[source]
+----
+mintstatus fields
+ bits    description
+ 31:24   mnipprio
+ 23:16   hnipprio if Ssnip and H are supported
+ 15: 8   snipprio if Ssnip is supported
+  7: 0   (reserved)
+----
+
+=== Changed and new CSRs at Supervisor Level
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x146   spintstatus  Previous interrupt context
+----
+
+==== New Interrupt Status ({spintstatus}) CSR
+
+[source]
+----
+spintstatus
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ 30:29  (reserved)
+    28  spp            Previous privilege mode, mirror of sstatus.spp
+    27  spie           Previous interrupt enable, mirror of sstatus.spie
+ 26:24  (reserved)
+ 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
+
+The supervisor {sstatus} register has only a single `spp` bit (to
+indicate user/supervisor).
+
+=== Changed and new CSRs at Hypervisor and VS level
+
+[source]
+----
+       Number  Name         Description
+ (NEW) 0x???   hpintstatus  Previous interrupt context at hypervisor level
+ (NEW) 0x???   vspintstatus Previous interrupt context at virtual supervisor level
+----
+
+==== New Interrupt Status ({hpintstatus}) CSR
+
+[source]
+----
+spintstatus
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ 30:29  (reserved)
+    28  spp            Previous privilege mode, mirror of sstatus.spp
+    27  spie           Previous interrupt enable, mirror of sstatus.spie
+    26  spv            Supervisor previous virtualization mode, mirror of hstatus.spv
+    25  spvp           Supervisor Previous Virtual Privilege, mirror of hstatus.spvp
+    24  gva            Previous guest virtual address, mirror of hstatus.gva
+ 26:24  (reserved)
+ 23:16  hpnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
+
+==== New Interrupt Status ({vspintstatus}) CSR
+
+When V=1, {vspintstatus} substitutes for the usual {spintstatus}, so instructions that normally
+read or modify {spintstatus} actually access {vspintstatus} instead.
+
+[source]
+----
+vspintstatus
+ Bits    Field         Description
+ XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ 30:29  (reserved)
+    28  spp            Previous privilege mode, mirror of vsstatus.spp
+    27  spie           Previous interrupt enable, mirror of vsstatus.spie
+ 26:24  (reserved)
+ 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
+ 15:0   (reserved)
+----
+
+=== Reset Behavior
+
+In general in RISC-V, mandatory reset state is minimized but platform
+specifications or company policy might add additional reset
+requirements.  Since the general privileged architecture states that
+mstatus.mie is reset to zero, interrupts will not be enabled coming
+out of reset.
+
+Nested interrupt preemption priority NIPPRIO_MAX corresponds to regular
+execution outside of an interrupt handler.
+
+NOTE: For an S-mode execution environment, the EEI should specify
+that {sstatus}.`sie` is also reset on entry. It is then responsibility of
+the execution environment to ensure that is true before beginning execution
+in S-mode.
+
+==== Mandatory reset state
+
+{mintstatus}.{mnipprio} and {mpintstatus}.{mpnipprio} fields reset to the highest possible value NIPPRIO_MAX.
+
+The reset behavior of other fields is platform-specific.
+
+=== Interrupt Operation
+
+This section describes the operation of interrupts.
+
+==== Trap behavior
+
+The existing trap behavior for interrupts is modified as follows:
+
+When a trap _i_ is taken into level `x`,
+the current value of {mintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
+If the trap is taken on an interrupt, {mintstatus}.{xnipprio} is updated to `iprio[__i__]`.
+
+NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{xnipprio}.
+
+==== Returns from Handlers
+
+The behavior of an {xret} instruction is modified as follows:
+
+{xret} sets {mintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
+
+=== State Enable
+
+If the Smstateen extension is implemented,
+then the bit 53 (ACLIC) in mstateen0 is implemented.
+If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then access to the new CSRs ({spintstatus}, {hpintstatus}, {vspintstatus}) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+Anologously, if Sstateen is implemented,
+bit 53 of hstateen0 controls less-privileged access to {vspintstatus}.
+
+== Support for interrupt vector table (Smivt, Ssivt)
+
+These extensions adds a new mode for taking interrupts via a dedicated interrupt vector table.
+
+This increases the range of reachable addresses to the entire address space.
+This is useful when handlers are more than 2 MiB away from the vector table entry.
+
+In this new mode, when an interrupt is taken, the hart hardware loads the vector
+table entry for the associated interrupt (table pointed to new {xivt} or {xeivt} CSR),
+masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
+and then jumps to the masked address.
+
+=== Changed and new CSRs
+
+[source]
+----
+       Number  Name         Description
+       0x305   mtvec        M-mode Trap-handler base address / interrupt mode
+ (NEW) 0x307   mivt         M-mode Interrupt-handler vector table base address
+ (NEW) 0x308   meivt        M-mode External Interrupt-handler vector table base address
+       0x105   stvec        S-mode Trap-handler base address / interrupt mode
+ (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
+ (NEW) 0x108   seivt        S-mode External Interrupt-handler vector table base address
+       0x205   vstvec       VS-mode Trap-handler base address / interrupt mode
+ (NEW) 0x207   vsivt        VS-mode Interrupt-handler vector table base address
+ (NEW) 0x208   vseivt       VS-mode External Interrupt-handler vector table base address
+----
+
+==== New {xivt} and {xeivt} CSR
+
+Two new base addresses for vector tables are introduced.
+One for internal interrupt (major and local interrupts),
+and one for external interrupts.
+
+Both {xivt} and {xeivt} are WARL XLEN-bit CSRs,
+which hold the base address of the interrupt vector table.
+The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boundary.
+Values other than 0 in the low 6 bits are reserved of {xeivt} are reserved.
+
+NOTE: The actual alignment can be determined
+by writing ones to the low-order bits
+then reading them back.
+
+==== New {xtvec} CSR Mode
+
+Interrupt vector table mode is encoded as a new state in the
+existing {xtvec} WARL register, where {xtvec}.`mode` (the two
+least-significant bits) is `11`.
+
+==== Smivt Changes to {xtvec} CSR Mode
+
+The PC upon interrupt is changed as follows:
+
+[source]
+----
+ mode  PC on Interrupt
+ 00    OBASE                                # Direct mode
+ 01    OBASE+4*exccode                      # Vectored mode
+ 11    M[VTBASE+XLEN/8*exccode] & VTMASK    # Interrupt vector table mode
+ 10    Reserved
+
+where:
+  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
+  if external interrupt:
+    VTBASE = xeivt[XLEN-1:6]<<6   # External Interrupt Vector Table base is at least 64-byte aligned
+  else
+    VTBASE = xivt[XLEN-1:2]<<2    # Interrupt Vector Table base is at least 4-byte aligned
+
+  M[a]   = Contents of memory address at address "a"
+  VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
+----
+
+In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
+After executing the required side-effects as required with the existing behavior,
+the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
+from the in-memory table whose base address (VTBASE).
+The trap handler function address is fetched from `VTBASE+XLEN/8*exccode`.
+If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
+and sets the PC to this handler address.
+The masked vector table entry bit(s) are reserved and should be zero.
+
+NOTE: The original vectored mode simply jumps to an address in
+the trap vector table, while the interrupt vector table mode reads a
+handler function address from the table, and jumps to it in hardware.
+
+For permissions-checking purposes, the memory access to retrieve the
+function pointer for hardware vectoring is an _implicit_ fetch at the
+privilege mode of the interrupt handler, and requires execute
+permission; read permission is irrelevant.
+It is recommended that the vector table fetches are ignored for hardware triggers and breakpoints.
+
+Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
+
+It is recommended that the second fetch be ignored for hardware triggers and breakpoints.
+
+==== Vector table fault handling
+
+Faults that occur during the fetch of interrupt vector table entries are only recoverable,
+if the double trap extension(s) are implemented.
+For interrupts in M-mode, this additionally requires the Smrnmi extension.
+
+NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+
+In this case, if an exception trap occurs during the interrupt handler function address fetch,
+the following holds true:
+Depending on where the second trap is handled,
+the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
+In addition, {tval} is either set to zero or written with the faulting address.
+
+NOTE: For simpler systems, we do not require that {tval} is written
+with the faulting address.  For systems with demand paging, {tval}
+should be written with the faulting address to simplify page-fault
+handling code.
+
+NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
+In case a higher priority interrupt became pending and enabled, this will trap first.
+
+As long as synchronous exceptions can occur during the interrupt vector table fetch,
+side-affects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+
+NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+
+==== State Enable
+
+If the Smstateen extension is implemented,
+then the bit 53 (ACLIC) in mstateen0 is implemented.
+If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then access to the new CSRs ({sivt}, {vsivt}) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+Anologously, if Sstateen is implemented,
+bit 53 of hstateen0 controls less-privileged access to {vsivt}.
+
+== Synchronous exceptions hardware vectoring- Smnipsehv
+
+The Smnipsehv extension depends upon the Smivt extension.
+
+Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
+During synchronous exceptions, interrupts are disabled.
+Acceleration of this critical segment decreases the time during which interrupts are masked.
+Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
+
+With this extension, synchronous exceptions are vectored using xtvec as an offset.
+The summarized behavior is the following:
+
+[source]
+----
+ mode  PC on Synchronous Exception
+ 00       OBASE              # Direct mode
+ 01       OBASE              # Vectored mode
+ 11       OBASE+4*exccode    # Interrupt vector table mode
+ 10       Reserved
+----
+
+== Conditional Stack Pointer Swap extension (Smcspsw, Sscsps)
+
+The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
+
+For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
+Performing stack pointer swaping in SW can be time consuming, as the conditions for swapping have to be checked first.
+However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
+To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
+
+=== CSR with stack pointer for conditional swap
+
+New CSRs are introduced to hold an alternative stack pointer.
+Conditionally, this stack pointer can be swapped with the currently active one.
+
+[source]
+----
+      Number  Name         Description
+(NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
+(NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
+(NEW) 0x148   vssp         VS-mode stack pointer for conditional swap (WARL)
+----
+
+=== Instructions for conditional stack pointer swap
+
+To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
+To decide, if a stack pointer swap is required, these instructions assume that stack pointers,
+which shall be swapped in during a push operation, have the LSB asserted.
+
+NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned, therefore the least significant bits are zero.
+
+If the value of {xsp} is zero, no conditional stack pointer swap is performed.
+
+=== State Enable
+
+If the Smstateen extension is implemented,
+then the bit 53 (ACLIC) in mstateen0 is implemented.
+If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then access to the new CSRs ({ssp}, {vssp}) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+Anologously, if Sstateen is implemented,
+bit 53 of hstateen0 controls less-privileged access to {vssp}.
+
+<<<
+
+=== Instructions
+
+==== cspspush
+
+Synopsis::
+Conditional stack pointer swap (push mode)
+
+Mnemonic::
+cspspush rd, rs
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs'], type: 4},
+  {bits: 5, name: 0x9, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
+The stack pointer swap is conditionally executed, if xsp[0] is '1'.
+
+The behavior of the operations is:
+
+[source]
+----
+if xsp[0] == 1
+    tmp = rd
+    rd = xsp & ~1
+    xsp = tmp
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+==== cspspop
+
+Synopsis::
+Pop trap context
+
+Mnemonic::
+tpop
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs'], type: 4},
+  {bits: 5, name: 0xC, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
+To ensure that cspspush can differentiate the stack pointers, the LSB is asserted when storing the value.
+
+Behavior::
+
+[source]
+----
+if xsp != 0
+    tmp = xsp
+    xsp = rs | 1
+    rd = tmp
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+[[smtp, Smtp]]
+== Trap handler push and pop extension (Smtp)
+
+The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
+Trap handler latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
+Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt or synchronous exception.
+Trap handling throughput is increased by allowing tail-chaing of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+The instructions are designed to be applicable to all RISC-V trap handling schemes.
+
+=== Trap handler push and pop functional overview
+
+1. The tpush instruction
+  * Conditionally performs a stack pointer swap by executing cspspush sp
+  * Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
+  * Save registers x10-x15 (these are the caller saved registers available in RVC)
+  * Adjusts the stack pointer to create the stack frame
+  * Clear the ip bit if writable
+  * Write trap information to argument registers
+  * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
+
+  NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
+  The preempting trap is expected to fully save and restore the architectural state that it overwrites.
+  If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
+  In this case, if the instruction is resumed, any store operations must be re-executed.
+
+  The tpush instruction writes the value of the xcause CSR into register a0.
+  This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
+  For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
+
+  The following table summarizes the written trap information:
+
+  [%autowidth]
+  |===
+  | Register | synchronous exception | Major Interrupt | External Interrupt (when in interrupt vector table mode)
+  | a0       | xcause (equal to exccode) | Major identity | Minor Identity
+  | a1       | xtval | no write | no write
+  | a2       | xtval2 | no write | no write
+  | a3       | xtinst | no write | no write
+  |===
+
+  Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
+  The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
+
+  As a consequence, the following prototype could serve for an interrupt handler at machine level.
+
+  [source,c]
+  ----
+  void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpintstatus")));
+  ----
+
+It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
+
+2. The tpopxret instruction
+  * Disables interrupts
+  * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
+  * Restores registers x10-x15
+  * Restores the the hart's state to the point that the hart can return to the interrupted context
+  * Adjust the stack pointer to destroy the stack frame
+  * Conditionally performs a stack pointer swap by executing cspspop sp
+  * Executes an xret according to the current level
+
+  NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
+  A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
+
+  There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
+  Interrupts shall not be enabled before completing the context save/restore operations of the tpush instruction.
+  Interrupts must be disabled before starting to restore context in the tpopxret instruction.
+  As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
+
+  If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
+
+  NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
+
+  With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
+
+=== Late Preemption of the interrupt handler
+
+While executing the tpush instruction, a hart may optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this trap handler instead.
+Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
+
+=== Tail chaining of interrupts handlers
+
+While executing the tpopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
+If such an interrupt exists, the hart may abort executing the tpopxret instruction and trigger the following actions:
+  - Update the xcause.exccode to the corresponding interrupt id.
+  - Perform the trap handler fetch.
+  - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
+
+Explicitly, xepc, xpil, and xpp remain unchanged.
+
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
+
+Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
+
+=== Stack layout
+
+To ease debugging, a stack layout is recommended for the saved context.
+
+NOTE: This stack layout is not mandated to allow e.g. shadow register sets
+
+[source]
+----
+* Smnip/Ssnip not present:
+
+** XLEN = 32:
+
+stack pointer adjustment: 32
+
+24: x15
+20: x14
+16: x13
+12: x12
+8: x11
+4: x10
+
+** XLEN = 64:
+
+stack pointer adjustment: 48
+
+48: x15
+40: x14
+32: x13
+24: x12
+16: x11
+8: x10
+
+* Smnip/Ssnip present:
+
+start of stackframe remains same. In addition:
+
+** XLEN = 32
+
+stack pointer adjustment: 32
+
+32: xpintstatus (XLEN)
+28: xpepc (XLEN)
+
+** XLEN = 32
+
+stack pointer adjustment: 64
+
+60: xpintstatus (XLEN)
+56: xpepc (XLEN)
+----
+
+=== Fault handling
+
+Unless it can be guaranteed by design that faults causing synchronous exceptions cannot occure during the critical section,
+handling can only be resumed if the double trap extension is supported.
+The critical sections are defined as the time during execution of the tpush and tpopxret instruction, during which interrupts are disabled.
+
+=== Debug
+
+As the execution of tpush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
+Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occured on the subsequent instruction.
+
+<<<
+
+=== Instructions
+
+==== tpush
+
+Synopsis::
+Push trap context
+
+Mnemonic::
+tpush preempt
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 4, name: 0x7, attr: [''], type: 8},
+  {bits: 1, name: 'imm1', attr: ['preempt'], type: 3},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+Saves the interrupted context at the beginning of a trap.
+If preempt is '1', interrupts will be enabled at the end of the sequence.
+
+Behavior::
+
+The behavior in RISC-V asssembly when preempt is '1' is as follows.
+If preempt is '0', enabling interrupts shall be skipped.
+The behavior is assuming Smnip is present. Otherwise, mintstatus will not be saved.
+
+[source]
+----
+push:
+  cspspush sp, sp           # Conditionally swap stack pointer
+  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
+  sr a0, OFFSET(sp)         # Save a0
+  sr a1, OFFSET(sp)         # Save a1
+  sr a2, OFFSET(sp)         # Save a2
+  sr a3, OFFSET(sp)         # Save a3
+  sr a4, OFFSET(sp)         # Save a4
+  sr a5, OFFSET(sp)         # Save a5
+  sr a6, OFFSET(sp)         # Save a6
+  csrr a0, xcause           # Get xcause of interrupted context to determine if exception
+  csrr a4, xepc             # Get xepc of interrupt context
+  csrr a5, xpintstatus      # Get xpintstatus of interrupt context
+  sr a4, OFFSET(sp)         # Save xepc
+  sr a5, OFFSET(sp)         # Save xpintstatus
+  bgez a0, handle_exc       # Handle synchronous exception
+  csrr a0, xtopi            # Read major interrupt number into a0
+  li a1, xEI                # Write major identity of external interrupt to a1
+  beq a0, a1, handle_ei     # Handle external interrupt
+  # clear major interrupt pending bit - no single instruction equivalent
+shift_idenity:
+  srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
+finish_push:
+  csrrsi zero, xstatus, XIE # Enable interrupts
+
+handle_ei:
+  csrr a0, xtopei           # Read minor interrupt number into a0
+  j shift_identity           # Jump back to rest of push sequence
+
+handle_exc:
+  csrr a1, xtval            # Get xcause of interrupted context
+  csrr a2, xtval2           # Get xepc of interrupt context
+  csrr a3, xtinst           # Get xpintstatus of interrupt context
+  j finish_push             # Jump back to rest of push sequence
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
+
+NOTE: Note that implementations do not need to execute these exact instructions, as long as the functional behavior is achieved.
+
+While this assembly sequence clobbers a4 and a5 to save CSRs,
+this is not a requirement. 
+SW shall not make assumptions about value of registers, with the exception of the a0-a3 as described earlier.
+
+Included in: <<smtp>>
+
+<<<
+
+==== tpopxret
+
+Synopsis::
+Pop trap context
+
+Mnemonic::
+tpopxret
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 5, name: 0x8, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+Restores an interrupted context at the end of a trap.
+
+Behavior::
+
+The behavior in RISC-V asssembly is as follows.
+The behavior is assuming Smnip is present. Otherwise, the mintstatus CSR will not be restored.
+
+[source]
+----
+pop:
+  csrrsi zero, xstatus, XIE # Disable interrupts
+  lr a4, OFFSET(sp)         # Restore xepc
+  lr a5, OFFSET(sp)         # Restore xpintstatus
+  csrw xepc, a4             # Write xepc back to CSR
+  csrw xpintstatus, a5      # Write xpintstatus back to CSR
+  lr a0, OFFSET(sp)         # Restore a0
+  lr a1, OFFSET(sp)         # Restore a1
+  lr a2, OFFSET(sp)         # Restore a2
+  lr a3, OFFSET(sp)         # Restore a3
+  lr a4, OFFSET(sp)         # Restore a4
+  lr a5, OFFSET(sp)         # Restore a5
+  lr a6, OFFSET(sp)         # Restore a6
+  addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  cspspop sp, sp            # Swap stack pointer with xsp
+  xret
+
+where
+  sr is sw on RV32 and sd on RV64
+  lr is lr on RV32 and ld on RV64
+----
+
+Included in: <<smtp>>
