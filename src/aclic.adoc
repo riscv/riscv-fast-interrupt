@@ -78,8 +78,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 
 :eidelivery: pass:q[``eidelivery``]
 :eithreshold: pass:q[``eithreshold``]
-:eipN: pass:q[``eipN``]
-:eieN: pass:q[``eieN``]
+:eipk: pass:q[``eip__k__``]
+:eiek: pass:q[``eie__k__``]
 :setie: pass:q[``setie``]
 :setip: pass:q[``setip``]
 :ithreshold: pass:q[``ithreshold``]
@@ -235,8 +235,13 @@ A new delivery mode is defined:
 
 If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
-In that mode, {eithreshold}, {eipN} and {eieN} do exist independently,
-but act as an alias for the corresponding {ithreshold}, {setip}[k], and {setie}[k] of the connected APLIC domain.
+In that mode, {eithreshold}, {eipk} and {eiek} do exist independently,
+but act as an alias for the corresponding {ithreshold}, {setip}[_k_], and {setie}[_k_] of the connected APLIC domain.
+
+For XLEN=32, {eipk} and {eiek} are a direct alias of {setip}[_k_] and {setie}[_k_], respectively.
+For XLEN=64, {eipk} and {eiek} only exist for even numbered indeces of _k_. In this case,
+{eipk} and {eiek} alias {setip}[_k_] and {setie}[_k_] in the lower half of the CSR,
+and {setip}[_k+1_] and {setie}[_k+1_] in the upper half of the CSR, respectively.
 
 Likewise, the {xtopei} registers is an alias of the {xtopi} register of the connected APLIC domain.
 Specifically, {vstopei} is an alias of the {vstopi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
