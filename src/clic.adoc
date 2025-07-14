@@ -176,11 +176,16 @@ This document is released under a Creative Commons Attribution 4.0
 International License. +
 https://creativecommons.org/licenses/by/4.0/.
 
-== ACLIC extensions
-This section gives an overview for the Advanced Core-Local Interrupt
-Controller (ACLIC) extensions.
+== Introduction
 
-This table provides a summary of the ACLIC extensions.
+The set of extensions defined in this specification enhance the existing interrupt specifications to achieve the following goals:
+
+  * Low latency interrupt handling (achieved through nested preemption)
+  * High throughput interrupt handling
+  * Up to 1023 external interrupts
+  * Low area overhead
+
+The table below provides a summary of the ACLIC extensions.
 
 [%autowidth]
 |===
