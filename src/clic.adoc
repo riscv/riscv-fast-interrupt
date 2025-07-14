@@ -320,7 +320,7 @@ The target registers are not fully implemented.
 The iprio portion of it can be accessed as described in the section on indirect access.
 
 Disabling interrupt delivery in ACLIC is achieved through by setting the CSR {eidelivery} = 0.
-Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode.
+Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode and thus, no access to it is provided.
 
 The interrupt force feature is not supported in ACLIC mode.
 
