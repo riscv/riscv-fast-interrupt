@@ -871,7 +871,7 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
 
 === Trap handler push and pop functional overview
 
-1. The tpush instruction
+. The tpush instruction
   * Conditionally performs a stack pointer swap by executing cspspush sp
   * Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
@@ -879,40 +879,40 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
   * Clear the ip bit if writable
   * Write trap information to argument registers
   * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
-
-  NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
-  The preempting trap is expected to fully save and restore the architectural state that it overwrites.
-  If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
-  In this case, if the instruction is resumed, any store operations must be re-executed.
-
-  The tpush instruction writes the value of the xcause CSR into register a0.
-  This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
-  For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
-
-  The following table summarizes the written trap information:
-
-  [%autowidth]
-  |===
-  | Register | synchronous exception | Major Interrupt | External Interrupt (when in interrupt vector table mode)
-  | a0       | xcause (equal to exccode) | Major identity | Minor Identity
-  | a1       | xtval | no write | no write
-  | a2       | xtval2 | no write | no write
-  | a3       | xtinst | no write | no write
-  |===
-
-  Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
-  The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
-
-  As a consequence, the following prototype could serve for an interrupt handler at machine level.
-
-  [source,c]
-  ----
-  void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpintstatus")));
-  ----
++
+NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
+The preempting trap is expected to fully save and restore the architectural state that it overwrites.
+If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
+In this case, if the instruction is resumed, any store operations must be re-executed.
++
+The tpush instruction writes the value of the xcause CSR into register a0.
+This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
+For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
++
+The following table summarizes the written trap information:
++
+[%autowidth]
+|===
+| Register | Synchronous Exception | Major Interrupt | External Interrupt (Interrupt Vector Table Mode)
+| a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Minor Identity
+| a1 | `xtval` | No Write | No Write
+| a2 | `xtval2` | No Write | No Write
+| a3 | `xtinst` | No Write | No Write
+|===
++
+Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
+The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
++
+As a consequence, the following prototype could serve for an interrupt handler at machine level.
++
+[source,c]
+----
+void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpintstatus")));
+----
 
 It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
 
-2. The tpopxret instruction
+. Second The tpopxret instruction
   * Disables interrupts
   * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
   * Restores registers x10-x15
@@ -920,20 +920,20 @@ It is explicitly allowed for the push instruction to clobber any of the saved GP
   * Adjust the stack pointer to destroy the stack frame
   * Conditionally performs a stack pointer swap by executing cspspop sp
   * Executes an xret according to the current level
-
-  NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
-  A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
-
-  There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
-  Interrupts shall not be enabled before completing the context save/restore operations of the tpush instruction.
-  Interrupts must be disabled before starting to restore context in the tpopxret instruction.
-  As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
-
-  If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
-
-  NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
-
-  With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
++
+NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
+A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
++
+There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
+Interrupts shall not be enabled before completing the context save/restore operations of the tpush instruction.
+Interrupts must be disabled before starting to restore context in the tpopxret instruction.
+As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
++
+If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
++
+NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
++
+With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
 
 === Late Preemption of the interrupt handler
 
