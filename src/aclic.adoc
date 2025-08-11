@@ -386,7 +386,8 @@ mipreemptcfg fields
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {nipprio}.
+Tests for preemption are based on a change in the upper bits of iprio.
+{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio treated as zero when constructing {nipprio}.
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 The nested interrupt preemption priority {nipprio} is defined as follows:
 
