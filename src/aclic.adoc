@@ -404,7 +404,7 @@ Depending on the number of implemented priority bits, the maximum value of {nipp
 
 [source]
 ----
-IPRIO_MAX  = 2^(IPRIOLEN)
+IPRIO_MAX  = 2^(IPRIOLEN) - 1
 NIPPRIO_MAX = IPRIO_MAX & NIPPRIO_MASK
 ----
 
