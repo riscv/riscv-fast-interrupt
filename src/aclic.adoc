@@ -229,13 +229,13 @@ A new delivery mode is defined:
 |===
 |0 = | Interrupt delivery is disabled
 |1 = | Interrupt delivery from the interrupt file is enabled
-|0x20000000 = | Interrupt delivery from an ACLIC
+|0x20000000 = | Interrupt delivery from an ACLIC (new)
 |0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
 |===
 
 If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
-In that mode, {eithreshold}, {eipk} and {eiek} do exist independently,
+When interrupts are delivered from an ACLIC, the IMSIC registers {eithreshold}, {eipk} and {eiek} do exist independently,
 but act as an alias for the corresponding {ithreshold}, {setip}[_k_], and {setie}[_k_] of the connected APLIC domain.
 
 For XLEN=32, {eipk} and {eiek} are a direct alias of {setip}[_k_] and {setie}[_k_], respectively.
