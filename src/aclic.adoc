@@ -639,8 +639,9 @@ where:
   else
     VTBASE = xivt[XLEN-1:2]<<2    # Interrupt Vector Table base is at least 4-byte aligned
 
-  M[a]   = Contents of memory address at address "a"
-  VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
+  M[a]    = Contents of memory address at address "a"
+  VTMASK  = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
+  exccode = xstatus.Exception Code
 ----
 
 In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
