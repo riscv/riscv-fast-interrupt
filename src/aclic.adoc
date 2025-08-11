@@ -944,11 +944,11 @@ Once the instruction retires, or the interrupts are disabled, no late preemption
 
 While executing the tpopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
 If such an interrupt exists, the hart may abort executing the tpopxret instruction and trigger the following actions:
-  - Update the xcause.exccode to the corresponding interrupt id.
+  - Update the `xcause.Exception Code` to the corresponding interrupt id.
   - Perform the trap handler fetch.
   - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
 
-Explicitly, xepc, xpil, and xpp remain unchanged.
+Explicitly, {xepc}, {xpnipprio}, and {xpp} remain unchanged.
 
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
 
