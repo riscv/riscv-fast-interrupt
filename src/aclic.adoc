@@ -629,19 +629,22 @@ The PC upon interrupt is changed as follows:
  mode  PC on Interrupt
  00    OBASE                                # Direct mode
  01    OBASE+4*exccode                      # Vectored mode
- 11    M[VTBASE+XLEN/8*exccode] & VTMASK    # Interrupt vector table mode
+ 11    M[VTBASE+XLEN/8*vtoffset] & VTMASK   # Interrupt vector table mode
  10    Reserved
 
 where:
+  M[a]     = Contents of memory address at address "a"
+  VTMASK   = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
+  exccode  = xstatus.Exception Code
+
   OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
   if external interrupt:
     VTBASE = xeivt[XLEN-1:6]<<6   # External Interrupt Vector Table base is at least 64-byte aligned
+    vtoffset = Minor Interrupt Identity
+    # Corresponds to xtopei[26:16] with interrupt delivery from interrupt file or ACLIC
   else
     VTBASE = xivt[XLEN-1:2]<<2    # Interrupt Vector Table base is at least 4-byte aligned
-
-  M[a]    = Contents of memory address at address "a"
-  VTMASK  = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
-  exccode = xstatus.Exception Code
+    vtoffset = Major Interrupt Identity (xstatus.exccode)
 ----
 
 In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
