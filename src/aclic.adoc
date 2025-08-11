@@ -386,7 +386,8 @@ mipreemptcfg fields
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio masked out for constructing {nipprio}.
+Tests for preemption are based on a change in the upper bits of iprio.
+{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio treated as zero when constructing {nipprio}.
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 The nested interrupt preemption priority {nipprio} is defined as follows:
 
@@ -403,12 +404,28 @@ Depending on the number of implemented priority bits, the maximum value of {nipp
 
 [source]
 ----
-IPRIO_MAX  = 2^(IPRIOLEN)
+IPRIO_MAX  = 2^(IPRIOLEN) - 1
 NIPPRIO_MAX = IPRIO_MAX & NIPPRIO_MASK
 ----
 
 In order to differentiate between regular and interrupt execution,
 interrupts shall not be configured in a way, that {nipprio} equals NIPPRIO_MAX.
+
+==== New Interrupt Status ({mintstatus}) CSR
+
+A new M-mode CSR, `mintstatus`, holds the active nested interrupt preemption priority for
+each supported privilege mode.  These fields are read-only.  The
+primary reason to expose these fields is to support debug.
+
+[source]
+----
+mintstatus fields
+ bits    description
+ 31:24   mnipprio
+ 23:16   hnipprio if Ssnip and H are supported
+ 15: 8   snipprio if Ssnip is supported
+  7: 0   (reserved)
+----
 
 ==== New Interrupt Status ({mpintstatus}) CSR
 
@@ -425,22 +442,6 @@ Bits   Field           Description
  26:24  (reserved)
  23:16  mpnipprio[7:0] Previous nested interrupt preemption priority
  15:0   (reserved)
-----
-
-==== New Interrupt Status ({mintstatus}) CSR
-
-A new M-mode CSR, `mintstatus`, holds the active nested interrupt preemption priority for
-each supported privilege mode.  These fields are read-only.  The
-primary reason to expose these fields is to support debug.
-
-[source]
-----
-mintstatus fields
- bits    description
- 31:24   mnipprio
- 23:16   hnipprio if Ssnip and H are supported
- 15: 8   snipprio if Ssnip is supported
-  7: 0   (reserved)
 ----
 
 === Changed and new CSRs at Supervisor Level
