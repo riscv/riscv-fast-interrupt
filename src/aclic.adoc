@@ -201,6 +201,9 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 |===
 
+As this specification aims for single-hart systems, no support for the H extension is foreseen.
+Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
+
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of ACLIC.
 
