@@ -341,20 +341,12 @@ Additional control is provided for the newly added registers `xacliciprio[k]` an
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`, `vsacliciprio[k]`, `vsaclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
-
-Anologously, if Sstateen is implemented,
-bit ?? of hstateen0 controls less-privileged access to `vsacliciprio[k]`, `vsaclicsourcecfg[k]`.
-
-NOTE: Clearing the corresponding control bit in hstateen0
-allows a hypervisor to maintain full control over the priority assignment.
-Any guest OS access will result in a virtual instruction exception, 
-which can be handled by the hypervisor.
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
@@ -470,51 +462,6 @@ spintstatus
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
 
-=== Changed and new CSRs at Hypervisor and VS level
-
-[source]
-----
-       Number  Name         Description
- (NEW) 0x???   hpintstatus  Previous interrupt context at hypervisor level
- (NEW) 0x???   vspintstatus Previous interrupt context at virtual supervisor level
-----
-
-==== New Interrupt Status ({hpintstatus}) CSR
-
-[source]
-----
-spintstatus
- Bits    Field         Description
- XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
- 30:29  (reserved)
-    28  spp            Previous privilege mode, mirror of sstatus.spp
-    27  spie           Previous interrupt enable, mirror of sstatus.spie
-    26  spv            Supervisor previous virtualization mode, mirror of hstatus.spv
-    25  spvp           Supervisor Previous Virtual Privilege, mirror of hstatus.spvp
-    24  gva            Previous guest virtual address, mirror of hstatus.gva
- 26:24  (reserved)
- 23:16  hpnipprio[7:0] Previous nested interrupt preemption priority
- 15:0   (reserved)
-----
-
-==== New Interrupt Status ({vspintstatus}) CSR
-
-When V=1, {vspintstatus} substitutes for the usual {spintstatus}, so instructions that normally
-read or modify {spintstatus} actually access {vspintstatus} instead.
-
-[source]
-----
-vspintstatus
- Bits    Field         Description
- XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
- 30:29  (reserved)
-    28  spp            Previous privilege mode, mirror of vsstatus.spp
-    27  spie           Previous interrupt enable, mirror of vsstatus.spie
- 26:24  (reserved)
- 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
- 15:0   (reserved)
-----
-
 === Reset Behavior
 
 In general in RISC-V, mandatory reset state is minimized but platform
@@ -562,15 +509,12 @@ The behavior of an {xret} instruction is modified as follows:
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs ({spintstatus}, {hpintstatus}, {vspintstatus}) by S-mode or a lower privilege mode
+then access to the new CSR {spintstatus} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
-
-Anologously, if Sstateen is implemented,
-bit 53 of hstateen0 controls less-privileged access to {vspintstatus}.
 
 == Support for interrupt vector table (Smivt, Ssivt)
 
@@ -595,9 +539,6 @@ and then jumps to the masked address.
        0x105   stvec        S-mode Trap-handler base address / interrupt mode
  (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
  (NEW) 0x108   seivt        S-mode External Interrupt-handler vector table base address
-       0x205   vstvec       VS-mode Trap-handler base address / interrupt mode
- (NEW) 0x207   vsivt        VS-mode Interrupt-handler vector table base address
- (NEW) 0x208   vseivt       VS-mode External Interrupt-handler vector table base address
 ----
 
 ==== New {xivt} and {xeivt} CSR
@@ -703,15 +644,12 @@ NOTE: Resuming after a fault on a vector table fetch is currently only seen as u
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs ({sivt}, {vsivt}) by S-mode or a lower privilege mode
+then access to the new CSR {sivt} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
-
-Anologously, if Sstateen is implemented,
-bit 53 of hstateen0 controls less-privileged access to {vsivt}.
 
 == Synchronous exceptions hardware vectoring- Smnipsehv
 
@@ -753,7 +691,6 @@ Conditionally, this stack pointer can be swapped with the currently active one.
       Number  Name         Description
 (NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
 (NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
-(NEW) 0x148   vssp         VS-mode stack pointer for conditional swap (WARL)
 ----
 
 === Instructions for conditional stack pointer swap
@@ -771,15 +708,12 @@ If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs ({ssp}, {vssp}) by S-mode or a lower privilege mode
+then access to the new CSR {ssp} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
-
-Anologously, if Sstateen is implemented,
-bit 53 of hstateen0 controls less-privileged access to {vssp}.
 
 <<<
 
