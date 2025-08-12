@@ -178,14 +178,12 @@ https://creativecommons.org/licenses/by/4.0/.
 
 == Introduction
 
-The set of extensions defined in this specification enhance the existing interrupt specifications.
-The Advanced Core Local Interrupt Controller (ACLIC) is a single hart interrupt controller defined for:
+The set of extensions defined in this specification enhance the existing interrupt specifications to achieve the following goals:
 
   * Low latency interrupt handling (achieved through nested preemption)
   * High throughput interrupt handling
   * Up to 1023 external interrupts
   * Low area overhead
-  * Maximize compatibility with AIA
 
 The table below provides a summary of the ACLIC extensions.
 
@@ -211,20 +209,15 @@ machanisms. Their behavior is unchanged by the extensions of ACLIC.
 The Smaclic extension depends on the Smaia extension.
 The Ssaclic extension depends on the Ssaia extension.
 
-Of the main ACLIC goals, tese targets are addressed here:
-  * Up to 1023 external interrupts
-  * Low area overhead
-  * Maximize compatibility with AIA
+The Advanced Core Local Interrupt Controller (ACLIC) is a single hart interrupt controller defined for
+- low and predictable latency interrupt handling
+- high throughput/low handling overhead
+- resource efficient implementation
+- compatibility with AIA
 
 To achieve this, ACLIC builds upon the hart-level extensions of AIA (Smaia and Ssaia),
 and the Advanced Platform Level Interrupt Controller (APLIC).
-The ACLIC is a tailored APLIC, optimized for resource efficiency, directly integrated with one hart.
-
-In terms of compatibility, the goal is that a hart with Smaclic/Ssaclic extensions
-can be used at with the same trap handlers as one developed for AIA.
-
-At config-time, the interface differs,
-but ACLIC uses the same structure for configuration as the APLIC.
+The ACLIC is a tailored APLIC, directly integrated with one hart.
 
 === New Interrupt Delivery Mode
 
