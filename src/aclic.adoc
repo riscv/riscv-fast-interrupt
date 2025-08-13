@@ -256,7 +256,7 @@ NOTE: Mirroring these APLIC registers at a core level has several advantages.
   * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
   * It simplifies the register interface, as CSR instructions have single bit operations
 
-In this delivery mode, the {xtopi} CSRs reflect both the interrupt identity and the interrupt priority.
+In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
 |===
