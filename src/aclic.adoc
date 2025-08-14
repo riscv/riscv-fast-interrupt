@@ -739,7 +739,7 @@ The summarized behavior is the following:
 The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
-Performing stack pointer swaping in SW can be time consuming, as the conditions for swapping have to be checked first.
+Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
@@ -810,6 +810,8 @@ Description::
 
 This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
 The stack pointer swap is conditionally executed, if xsp[0] is '1'.
+After swapping the stack pointer, the low bit is cleared,
+indicating that the correct stack pointer for the given mode is active.
 
 The behavior of the operations is:
 
