@@ -82,6 +82,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :eiek: pass:q[``eie__k__``]
 :setie: pass:q[``setie``]
 :setip: pass:q[``setip``]
+:clrie: pass:q[``clrie``]
+:in_clrip: pass:q[``in_clrip``]
 :ithreshold: pass:q[``ithreshold``]
 :xtopei: pass:q[``xtopei``]
 :topi: pass:q[``topi``]
@@ -235,13 +237,19 @@ A new delivery mode is defined:
 
 If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
-When interrupts are delivered from an ACLIC, the IMSIC registers {eithreshold}, {eipk} and {eiek} do exist independently,
-but act as an alias for the corresponding {ithreshold}, {setip}[_k_], and {setie}[_k_] of the connected APLIC domain.
+When interrupts are delivered from an ACLIC, the IMSIC registers {eithreshold}, {eipk} and {eiek}
+interact with the corresponding {ithreshold}, {setip}[_k_]/{in_clrip}[_k_], and {setie}[_k_]/{clrie}[_k_] of the connected APLIC domain.
 
-For XLEN=32, {eipk} and {eiek} are a direct alias of {setip}[_k_] and {setie}[_k_], respectively.
+The {eithreshold} CSR is an alias of the {ithreshold}.
+For the interrupt enable and interrupt pending bits {eipk} and {eiek},
+a write with the value 1 performs a write access with the value 1 to the corresponding {setip} or {setie} register,
+while a write with the value 0 performans a write access with value 1 to the corresponding {in_clrip} or {clrie} register.
+On read of {eipk} or {eiek}, these CSRs are an alias of {setip}[_k_] and {setie}[_k_], respectively.
+
+For XLEN=32, {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_], respectively.
 For XLEN=64, {eipk} and {eiek} only exist for even numbered indeces of _k_. In this case,
-{eipk} and {eiek} alias {setip}[_k_] and {setie}[_k_] in the lower half of the CSR,
-and {setip}[_k+1_] and {setie}[_k+1_] in the upper half of the CSR, respectively.
+{eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_] in the lower half of the CSR,
+and {setip}[_k+1_]/{in_clrip}[_k_] and {setie}[_k+1_]/{clrie}[_k_] in the upper half of the CSR, respectively.
 
 Likewise, the {xtopei} registers is an alias of the {xtopi} register of the connected APLIC domain.
 Specifically, {vstopei} is an alias of the {vstopi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
@@ -322,7 +330,7 @@ The domain configuration (register domaincfg) behaves as follows:
 As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not accessible and not used.
 
 The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
-Therefore, the registers setipnum, in_clrip[N], clripnum, setienum, clrie[N], clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
+Therefore, the registers setipnum, clripnum, setienum, clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
 
 The target registers are not fully implemented.
 The iprio portion of it can be accessed as described in the section on indirect access.
