@@ -247,8 +247,11 @@ A new delivery mode is defined:
 
 If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
 
-When interrupts are delivered from an ACLIC, the IMSIC registers {eithreshold}, {eipk} and {eiek}
-interact with the corresponding {ithreshold}, {setip}[_k_]/{in_clrip}[_k_], and {setie}[_k_]/{clrie}[_k_] of the connected APLIC domain.
+When interrupts are delivered from an ACLIC, the following behavior is valid:
+
+The IMSIC registers {eithreshold}, {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1.
+
+The `eip` array and `eie` array act as an alias of the pending and enable bits of the connected APLIC domain.
 
 The {eithreshold} CSR is an alias of the {ithreshold}.
 For the interrupt enable and interrupt pending bits {eipk} and {eiek},
@@ -261,12 +264,6 @@ For XLEN=64, {eipk} and {eiek} only exist for even numbered indeces of _k_. In t
 {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_] in the lower half of the CSR,
 and {setip}[_k+1_]/{in_clrip}[_k_] and {setie}[_k+1_]/{clrie}[_k_] in the upper half of the CSR, respectively.
 
-Likewise, the {xtopei} registers is an alias of the {xtopi} register of the connected APLIC domain.
-Specifically, {vstopei} is an alias of the {vstopi} register of the APLIC domain connected to the IMSIC guest interrupt file selected by VGEIN is selected.
-On write access, {xtopei} also clears the indicated interrupt pending bit if possible.
-At the APLIC, this behavior is achieved by reading from {claimi} instead.
-The side-effect on the write of {xtopei} is retained in this mode.
-
 NOTE: Mirroring these APLIC registers at a core level has several advantages.
   * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
   * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
@@ -274,6 +271,8 @@ NOTE: Mirroring these APLIC registers at a core level has several advantages.
   * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
   * It simplifies the register interface, as CSR instructions have single bit operations
 
+The {xtopei} registers work analogous to the IMSIC operation,
+but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
 In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
@@ -329,26 +328,60 @@ Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `so
 
 === APLIC configured for ACLIC operation
 
-All other APLIC registers not accessible via indirect CSRs are not needed in the ACLIC operation.
-Several registers are considered to perform in a fixed setting.
+The APLIC contains a per-domain configuration register,
+which, among other things, allows selecting the delivery mode.
+The `DM` field is extended to two bits,
+which allows encoding a new mode for ACLIC delivery.
 
-The domain configuration (register domaincfg) behaves as follows:
-- IE bit is not needed as it has the same function as the {xstatus}.xIE bits at the hart.
-- DM (Delivery Mode) is always 0 = direct delivery mode
-- BE: endianess setting is not not needed
+[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+|===
+|0 = |direct delivery mode 
+|1 =|MSI delivery mode
+|2 =|ACLIC delivery mode (new)
+|===
 
-As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not accessible and not used.
+If Smaclic and/or Ssaclic are implemented,
+the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
 
-The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
+The extended `domaincfg` register has this format:
+
+[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
+|===
+|bits 31:24 |read-only 0x80 
+|bit 8|IE 
+|bit 7|read-only 0
+|bits 3:2 |DM (*WARL*)
+|bit 0 |BE (*WARL*)
+|===
+
+All other register bits are reserved and read as zeros.
+
+When in ACLIC delivery mode, the following, additional restrictions are applied:
+
+[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
+|===
+|bits 31:24 |read-only 0x80 
+|bit 8|IE = 1 (read-only)
+|bit 7|read-only 0
+|bits 3:2 |DM = 2
+|bit 0 |BE (*WARL*)
+|===
+
+Specifically, = `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
+
+If Smaclic and/or Ssaclic are implemented,
+the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
+In ACLIC-only systems, access to this register is not needed, and therefore no indirect CSR access is provided.
+
+In the ACLIC delivery mode, there the following registers are not accessible and not used:
+
+* As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not required.
+* Interrupt delivery control (IDC) structure is only needed in direct delivery mode, and not applicable to ACLIC delivery.
+* The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
 Therefore, the registers setipnum, clripnum, setienum, clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
-
-The target registers are not fully implemented.
+* The target registers are not fully implemented.
 The iprio portion of it can be accessed as described in the section on indirect access.
-
-Disabling interrupt delivery in ACLIC is achieved through by setting the CSR {eidelivery} = 0.
-Therefore, the idelivery setting of the APLIC is not needed in ACLIC mode and thus, no access to it is provided.
-
-The interrupt force feature is not supported in ACLIC mode.
+The rest is not required.
 
 === State Enable
 
