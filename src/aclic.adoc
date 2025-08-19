@@ -868,7 +868,7 @@ Behavior::
 if (xsp != 0) and (xsp[2] == 0) and (xstatus.XPP == xsp[1:0])
     tmp = xsp                /* save xsp as temporary value */
     xsp = rs | 4             /* write current stack pointer to xsp and assert bit 2 */
-    rd = tmp & ~0xF          /* write original xsp value to stack pointer with low byte cleared */
+    rd = tmp & ~0xF          /* write original xsp value to stack pointer with low nibble cleared */
 ----
 
 Included in: <<smcsps>>
