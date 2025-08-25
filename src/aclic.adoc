@@ -543,11 +543,11 @@ This section describes the operation of interrupts.
 
 ==== Trap behavior
 
-The existing trap behavior for interrupts is modified as follows:
+The existing trap behavior is modified as follows:
 
 When a trap _i_ is taken into level `x`,
 the current value of {mintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
-If the trap is taken on an interrupt, {mintstatus}.{xnipprio} is updated to `iprio[__i__]`.
+If the trap is taken on an interrupt, {mintstatus}.{xnipprio} is updated to `nipprio[__i__]`.
 
 NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{xnipprio}.
 
@@ -736,7 +736,9 @@ The summarized behavior is the following:
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
+The Smcsps extension depends on the Smnnip extension.
 The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
+The Sscsps extension depends on the Ssnnip extension.
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
@@ -885,14 +887,16 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-To ensure that cspspush can differentiate the stack pointers,
-bit 2 is asserted when storing the stack pointer.
+A swap is performed, if the stored stack pointer is not 0, the `SWAP` field is not set,
+and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
+Additionally, it is checked if the previous nested interrupt preemption priority is the minimum value.
+This indicates that we are not in a nested handler.
 
 Behavior::
 
 [source]
 ----
-if (xsp != 0) and (xsp.SWAP == 0) and (xstatus.XPP == xsp.MODE)
+if (xsp != 0) and (xsp.SWAP == 0) and (xstatus.XPP == xsp.MODE) and (xpintstatus.xpnipprio == NIPPRIO_MAX)
     tmp = xsp.SP << 4        /* save xsp as temporary value */
     xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
     xsp.SWAP = 1             /* mark stack pointer as to be swapped */
