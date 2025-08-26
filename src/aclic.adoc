@@ -226,6 +226,11 @@ the interrupt filtering and virtual interrupts are not supported.
 Specifically, `xvip` and `xvien` are read-only 0.
 When XLEN=32, `xviph` and `xvienh` are also read-only 0.
 
+NOTE: While other features of AIA like IMSIC or programmable IPRIO
+might also not be needed resource constraint systems,
+These are already controlled by WARL registers,
+so implementations can already choose to not support these.
+
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
 The Smaclic and Ssaclic extensions depend on the Smaiae extension.
