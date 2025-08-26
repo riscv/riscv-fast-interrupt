@@ -574,6 +574,11 @@ NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
 then reading them back.
 
+NOTE: The resulting vector tables, especially for external interrupts,
+can consume non-negligible memory space.
+To limit the overall memory footprint,
+{xivt} or {xeivt} values at different privilege levels may be configured to the same values, respectively.
+
 ==== New {xtvec} CSR Mode
 
 Interrupt vector table mode is encoded as a new state in the
