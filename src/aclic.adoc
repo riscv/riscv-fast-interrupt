@@ -69,12 +69,14 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
 :pintstatus: pass:q[``**__x__**pintstatus``]
-:intstatus: pass:q[``**__x__**intstatus``]
 :xpintstatus: pass:q[``**__x__**xpintstatus``]
-:mintstatus: pass:q[``**__x__**mintstatus``]
-:xpnipprio: pass:q[``xpnipprio``]
-:xnipprio: pass:q[``xnipprio``]
-:intthresh: pass:q[``**__x__**intthresh``]
+:mintstatus: pass:q[``mintstatus``]
+:sintstatus: pass:q[``sintstatus``]
+:xintstatus: pass:q[``xintstatus``]
+:pithreshold: pass:q[``:pithreshold``]
+:mithreshold: pass:q[``:mithreshold``]
+:sithreshold: pass:q[``sithreshold``]
+:xithreshold: pass:q[``xithreshold``]
 
 :eidelivery: pass:q[``eidelivery``]
 :eithreshold: pass:q[``eithreshold``]
@@ -113,7 +115,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mclaimi: pass:q[``mclaimi``]
-:mithreshold: pass:q[``mithreshold``]
 
 :sstatus: pass:q[``sstatus``]
 :sideleg: pass:q[``sideleg``]
@@ -133,7 +134,6 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :sintthresh: pass:q[``sintthresh``]
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
-:sithreshold: pass:q[``sithreshold``]
 
 :hpintstatus: pass:q[``hpintstatus``]
 :vspintstatus: pass:q[``vspintstatus``]
@@ -141,16 +141,11 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :vssp: pass:q[``vssp``]
 
 :pp: pass:q[``**__x__**pp``]
+:xpp: pass:q[``xpp``]
 :pie: pass:q[``**__x__**pie``]
-:nipprio: pass:q[``**__x__**nipprio``]
 
 :mpp: pass:q[``mpp``]
 :mpie: pass:q[``mpie``]
-:mnipprio: pass:q[``mnipprio``]
-
-:pnipprio: pass:q[``**__x__**pnipprio``]
-
-:mpippro: pass:q[``mpippro``]
 
 :ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
@@ -432,7 +427,7 @@ It provides additional state to resume execution of the previous handler after a
 ----
        Number  Name         Description
  (NEW) 0x346   mpintstatus  Previous interrupt context
- (NEW) 0xFB1   mintstatus   Current interrupt context
+ (NEW) 0xFB1   mithreshold  Interrupt enable threshold
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
 
@@ -444,50 +439,25 @@ mipreemptcfg fields
  bits        description
  XLEN-1:4    (reserved)
  3:0         preemptmsk
-
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-Tests for preemption are based on a change in the upper bits of iprio.
-{mipreemptcfg}.{preemptmsk} configures the number of least significant bits of iprio treated as zero when constructing {nipprio}.
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
-The nested interrupt preemption priority {nipprio} is defined as follows:
+
+A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
 
 [source]
 ----
 NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
-nipprio[i]   = iprio[i] & NIPPRIO_MASK
 ----
 
-A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
-and the preemption priority of that interrupt nipprio[i] exceeds (i.e. is numerically smaller) than {mintstatus}.{mnipprio}.
+==== New Interrupt enable threshold ({mithreshold}) CSR
 
-Depending on the number of implemented priority bits, the maximum value of {nipprio} is
+A new WLRL M-mode CSR, {mithreshold},
+determines the minimum interrupt priority (maximum priority number)
+for an interrupt to be considered enabled at the hart.
 
-[source]
-----
-IPRIO_MAX  = 2^(IPRIOLEN) - 1
-NIPPRIO_MAX = IPRIO_MAX & NIPPRIO_MASK
-----
-
-In order to differentiate between regular and interrupt execution,
-interrupts shall not be configured in a way, that {nipprio} equals NIPPRIO_MAX.
-
-==== New Interrupt Status ({mintstatus}) CSR
-
-A new M-mode CSR, `mintstatus`, holds the active nested interrupt preemption priority for
-each supported privilege mode.  These fields are read-only.  The
-primary reason to expose these fields is to support debug.
-
-[source]
-----
-mintstatus fields
- bits    description
- 31:24   mnipprio
- 23:16   hnipprio if Ssnip and H are supported
- 15: 8   snipprio if Ssnip is supported
-  7: 0   (reserved)
-----
+Register {mithreshold} implements exactly IPRIOLEN bits.
 
 ==== New Interrupt Status ({mpintstatus}) CSR
 
@@ -496,14 +466,13 @@ A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
 [source]
 ----
 mpintstatus 
-Bits   Field           Description
- XLEN-1 Interrupt      Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
+Bits   Field             Description
+ XLEN-1 Interrupt        Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
  30     (reserved)
- 29:28  mpp[1:0]       Previous privilege mode, mirror of mstatus.mpp
- 27     mpie           Previous interrupt enable, mirror of mstatus.mpie
- 26:24  (reserved)
- 23:16  mpnipprio[7:0] Previous nested interrupt preemption priority
- 15:0   (reserved)
+ 29:28  mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
+ 27     mpie             Previous interrupt enable, mirror of mstatus.mpie
+ 26:8   (reserved)
+ 7:0    pithreshold[7:0] Previous interrupt enable threshold
 ----
 
 === Changed and new CSRs at Supervisor Level
@@ -512,6 +481,7 @@ Bits   Field           Description
 ----
        Number  Name         Description
  (NEW) 0x146   spintstatus  Previous interrupt context
+ (NEW) 0x1B1   sithreshold  Interrupt enable threshold
 ----
 
 ==== New Interrupt Status ({spintstatus}) CSR
@@ -519,18 +489,25 @@ Bits   Field           Description
 [source]
 ----
 spintstatus
- Bits    Field         Description
- XLEN-1 Interrupt      Interrupt=1, Exception=0, mirror of scause.Interrupt
+ Bits    Field           Description
+ XLEN-1 Interrupt        Interrupt=1, Exception=0, mirror of scause.Interrupt
  30:29  (reserved)
-    28  spp            Previous privilege mode, mirror of sstatus.spp
-    27  spie           Previous interrupt enable, mirror of sstatus.spie
- 26:24  (reserved)
- 23:16  spnipprio[7:0] Previous nested interrupt preemption priority
- 15:0   (reserved)
+    28  spp              Previous privilege mode, mirror of sstatus.spp
+    27  spie             Previous interrupt enable, mirror of sstatus.spie
+ 26:8   (reserved)
+ 7:0    pithreshold[7:0] Previous interrupt enable threshold
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
+
+==== New Interrupt enable threshold ({sithreshold}) CSR
+
+A new WLRL S-mode CSR, {sithreshold},
+determines the minimum interrupt priority (maximum priority number)
+for an interrupt to be considered enabled at the hart.
+
+Register {sithreshold} implements exactly IPRIOLEN bits.
 
 === Reset Behavior
 
@@ -540,9 +517,6 @@ requirements.  Since the general privileged architecture states that
 mstatus.mie is reset to zero, interrupts will not be enabled coming
 out of reset.
 
-Nested interrupt preemption priority NIPPRIO_MAX corresponds to regular
-execution outside of an interrupt handler.
-
 NOTE: For an S-mode execution environment, the EEI should specify
 that {sstatus}.`sie` is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
@@ -550,36 +524,48 @@ in S-mode.
 
 ==== Mandatory reset state
 
-{mintstatus}.{mnipprio} and {mpintstatus}.{mpnipprio} fields reset to the highest possible value NIPPRIO_MAX.
+{mithreshold} resets to zero.
 
 The reset behavior of other fields is platform-specific.
 
-=== Interrupt Operation
+=== Operation
 
-This section describes the operation of interrupts.
+When {xithreshold} is a nonzero value,
+an interrupt sources _i_ at with priority number `iprio[i]`
+is considered disabled irrespective of its interrupt-enable bit,
+when the following condition holds:
+
+[source]
+----
+iprio[i] & NIPPRIO_MASK >= xithreshold
+----
+
+When {xithreshold} is zero,
+all enabled interrupt sources can contribute to signaling interrupts to the hart.
 
 ==== Trap behavior
 
 The existing trap behavior is modified as follows:
 
-When a trap _i_ is taken into level `x`,
-the current value of {mintstatus}.{xnipprio} is written to {xpintstatus}.{xpnipprio}.
-If the trap is taken on an interrupt, {mintstatus}.{xnipprio} is updated to `nipprio[__i__]`.
+When a trap is taken on interrupt _i_ into level `x`,
+the current value of {xithreshold} is written to {xpintstatus}.{pithreshold}.
+Additionally, {xithreshold} is set to `iprio[i]`.
+This automatically raises the interrupt enable threashold.
 
-NOTE: Synchronous exceptions do not modify the value of {mintstatus}.{xnipprio}.
+NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
 ==== Returns from Handlers
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {mintstatus}.{xnipprio} to {xpintstatus}.{xpnipprio}.
+{xret} sets {xithreshold} to {xpintstatus}.{pithreshold}.
 
 === State Enable
 
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {spintstatus} by S-mode or a lower privilege mode
+then access to the new CSRs {spintstatus} and {sithreshold} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -898,14 +884,14 @@ Description::
 This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
 A swap is performed, if the stored stack pointer is not 0, the `SWAP` field is not set,
 and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
-Additionally, it is checked if the previous nested interrupt preemption priority is the minimum value.
-This indicates that we are not in a nested handler.
+Additionally, it is checked if the interrupt enable threshold was zero,
+indicating operation outside of a handler.
 
 Behavior::
 
 [source]
 ----
-if (xsp != 0) and (xsp.SWAP == 0) and (xstatus.XPP == xsp.MODE) and (xpintstatus.xpnipprio == NIPPRIO_MAX)
+if (xsp != 0) and (xsp.SWAP == 0) and (xstatus.XPP == xsp.MODE) and (xithreshold == 0)
     tmp = xsp.SP << 4        /* save xsp as temporary value */
     xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
     xsp.SWAP = 1             /* mark stack pointer as to be swapped */
@@ -1004,7 +990,7 @@ If such an interrupt exists, the hart may abort executing the tpopxret instructi
   - Perform the trap handler fetch.
   - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
 
-Explicitly, {xepc}, {xpnipprio}, and {xpp} remain unchanged.
+Explicitly, {xepc}, {xpintstatus} remain unchanged.
 
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
 
