@@ -68,11 +68,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :cause: pass:q[``**__x__**cause``]
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
-:pintstatus: pass:q[``**__x__**pintstatus``]
-:xpintstatus: pass:q[``**__x__**xpintstatus``]
-:mintstatus: pass:q[``mintstatus``]
-:sintstatus: pass:q[``sintstatus``]
-:xintstatus: pass:q[``xintstatus``]
+:pistatus: pass:q[``**__x__**pistatus``]
+:xpistatus: pass:q[``**__x__**xpistatus``]
 :pithreshold: pass:q[``:pithreshold``]
 :mithreshold: pass:q[``:mithreshold``]
 :sithreshold: pass:q[``sithreshold``]
@@ -107,9 +104,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mcause: pass:q[``mcause``]
 :mtval: pass:q[``mtval``]
 :mip: pass:q[``mip``]
-:mpintstatus: pass:q[``mpintstatus``]
+:mpistatus: pass:q[``mpistatus``]
 :mpnipprio: pass:q[``mpnipprio``]
-:mintstatus: pass:q[``mintstatus``]
+:mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
 :preemptmsk: pass:q[``preemptmsk``]
 :mintthresh: pass:q[``mintthresh``]
@@ -127,18 +124,12 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
 :sip: pass:q[``sip``]
-:spintstatus: pass:q[``spintstatus``]
+:spistatus: pass:q[``spistatus``]
 :spnipprio: pass:q[``spnipprio``]
-:sintstatus: pass:q[``sintstatus``]
 :snipprio: pass:q[``snipprio``]
 :sintthresh: pass:q[``sintthresh``]
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
-
-:hpintstatus: pass:q[``hpintstatus``]
-:vspintstatus: pass:q[``vspintstatus``]
-:vsivt: pass:q[``vsivt``]
-:vssp: pass:q[``vssp``]
 
 :pp: pass:q[``**__x__**pp``]
 :xpp: pass:q[``xpp``]
@@ -426,7 +417,7 @@ It provides additional state to resume execution of the previous handler after a
 [source]
 ----
        Number  Name         Description
- (NEW) 0x346   mpintstatus  Previous interrupt context
+ (NEW) 0x346   mpistatus  Previous interrupt context
  (NEW) 0xFB1   mithreshold  Interrupt enable threshold
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
@@ -459,13 +450,13 @@ for an interrupt to be considered enabled at the hart.
 
 Register {mithreshold} implements exactly IPRIOLEN bits.
 
-==== New Interrupt Status ({mpintstatus}) CSR
+==== New Previous Interrupt Status ({mpistatus}) CSR
 
-A new M-mode CSR, `mpintstatus`, holds consolidated state of preempted context.
+A new M-mode CSR, {mpistatus}, holds consolidated state of preempted context.
 
 [source]
 ----
-mpintstatus 
+mpistatus 
 Bits   Field             Description
  XLEN-1 Interrupt        Set to 1 for interrupts and 0 for exceptions.  Mirror of mcause.Interrupt
  30     (reserved)
@@ -480,15 +471,15 @@ Bits   Field             Description
 [source]
 ----
        Number  Name         Description
- (NEW) 0x146   spintstatus  Previous interrupt context
+ (NEW) 0x146   spistatus  Previous interrupt context
  (NEW) 0x1B1   sithreshold  Interrupt enable threshold
 ----
 
-==== New Interrupt Status ({spintstatus}) CSR
+==== New Previous Interrupt Status ({spistatus}) CSR
 
 [source]
 ----
-spintstatus
+spistatus
  Bits    Field           Description
  XLEN-1 Interrupt        Interrupt=1, Exception=0, mirror of scause.Interrupt
  30:29  (reserved)
@@ -548,7 +539,7 @@ all enabled interrupt sources can contribute to signaling interrupts to the hart
 The existing trap behavior is modified as follows:
 
 When a trap is taken on interrupt _i_ into level `x`,
-the current value of {xithreshold} is written to {xpintstatus}.{pithreshold}.
+the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
 Additionally, {xithreshold} is set to `iprio[i]`.
 This automatically raises the interrupt enable threashold.
 
@@ -558,14 +549,14 @@ NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {xithreshold} to {xpintstatus}.{pithreshold}.
+{xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
 
 === State Enable
 
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs {spintstatus} and {sithreshold} by S-mode or a lower privilege mode
+then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -949,7 +940,7 @@ As a consequence, the following prototype could serve for an interrupt handler a
 +
 [source,c]
 ----
-void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpintstatus")));
+void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpistatus")));
 ----
 
 It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
@@ -990,7 +981,7 @@ If such an interrupt exists, the hart may abort executing the tpopxret instructi
   - Perform the trap handler fetch.
   - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
 
-Explicitly, {xepc}, {xpintstatus} remain unchanged.
+Explicitly, {xepc}, {xpistatus} remain unchanged.
 
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
 
@@ -1036,14 +1027,14 @@ start of stackframe remains same. In addition:
 
 stack pointer adjustment: 32
 
-32: xpintstatus (XLEN)
+32: xpistatus (XLEN)
 28: xpepc (XLEN)
 
 ** XLEN = 32
 
 stack pointer adjustment: 64
 
-60: xpintstatus (XLEN)
+60: xpistatus (XLEN)
 56: xpepc (XLEN)
 ----
 
@@ -1092,7 +1083,7 @@ Behavior::
 
 The behavior in RISC-V asssembly when preempt is '1' is as follows.
 If preempt is '0', enabling interrupts shall be skipped.
-The behavior is assuming Smnip is present. Otherwise, mintstatus will not be saved.
+The behavior is assuming Smnip is present. Otherwise, xpistatus will not be saved.
 
 [source]
 ----
@@ -1108,9 +1099,9 @@ push:
   sr a6, OFFSET(sp)         # Save a6
   csrr a0, xcause           # Get xcause of interrupted context to determine if exception
   csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, xpintstatus      # Get xpintstatus of interrupt context
+  csrr a5, xpistatus      # Get xpistatus of interrupt context
   sr a4, OFFSET(sp)         # Save xepc
-  sr a5, OFFSET(sp)         # Save xpintstatus
+  sr a5, OFFSET(sp)         # Save xpistatus
   bgez a0, handle_exc       # Handle synchronous exception
   csrr a0, xtopi            # Read major interrupt number into a0
   li a1, xEI                # Write major identity of external interrupt to a1
@@ -1128,7 +1119,7 @@ handle_ei:
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
   csrr a2, xtval2           # Get xepc of interrupt context
-  csrr a3, xtinst           # Get xpintstatus of interrupt context
+  csrr a3, xtinst           # Get xpistatus of interrupt context
   j finish_push             # Jump back to rest of push sequence
 
 where
@@ -1173,16 +1164,16 @@ Restores an interrupted context at the end of a trap.
 Behavior::
 
 The behavior in RISC-V asssembly is as follows.
-The behavior is assuming Smnip is present. Otherwise, the mintstatus CSR will not be restored.
+The behavior is assuming Smnip is present. Otherwise, the xpistatus CSR will not be restored.
 
 [source]
 ----
 pop:
   csrrsi zero, xstatus, XIE # Disable interrupts
   lr a4, OFFSET(sp)         # Restore xepc
-  lr a5, OFFSET(sp)         # Restore xpintstatus
+  lr a5, OFFSET(sp)         # Restore xpistatus
   csrw xepc, a4             # Write xepc back to CSR
-  csrw xpintstatus, a5      # Write xpintstatus back to CSR
+  csrw xpistatus, a5      # Write xpistatus back to CSR
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
