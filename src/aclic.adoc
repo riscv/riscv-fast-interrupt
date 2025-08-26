@@ -194,6 +194,7 @@ The table below provides a summary of the ACLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
+| Smaiae       | Advanced Interrupt Architecture for Embedded Systems
 | Smaclic      | Advanced Core Local Interrupt Controller at Machine level
 | Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
@@ -211,10 +212,23 @@ Future specifications could extend the scope of these extension to also be appli
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of ACLIC.
 
+== Advanced Interrupt Architecture for Embedded Systems (Smaiae)
+
+The Smaia extension encompasses all added CSRs
+and all modifications to interrupt response behavior
+that the AIA specifies for a hart,
+over all privilege levels.
+
+The Smaiae extension is a subset of Smaia.
+To limit the implementation cost,
+the interrupt filtering and virtual interrupts are not supported.
+
+Specifically, `xvip` and `xvien` are read-only 0.
+When XLEN=32, `xviph` and `xvienh` are also read-only 0.
+
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic extension depends on the Smaia extension.
-The Ssaclic extension depends on the Ssaia extension.
+The Smaclic and Ssaclic extensions depend on the Smaiae extension.
 
 Of the main ACLIC goals, tese targets are addressed here:
   * Up to 1023 external interrupts
