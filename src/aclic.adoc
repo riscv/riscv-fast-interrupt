@@ -551,7 +551,7 @@ The behavior of an {xret} instruction is modified as follows:
 
 {xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
 
-This automatically restores the interrupt enable threshold to the level of the context.
+This automatically restores the interrupt enable threshold to the level of the previous context.
 
 
 === State Enable
