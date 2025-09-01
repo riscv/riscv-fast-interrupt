@@ -451,7 +451,7 @@ The CSR is defined as follows:
 (draw-box "1" {:span 5 :borders {}})
 ----
 
-In addition to the stack pointer, this register hold two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
+In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
 These indicate, if a stack pointer swap is excepted during a push or pop sequence, respectively.
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
@@ -473,7 +473,7 @@ If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 
 The trap behavior is modified as follows:
 
-When a trap is taken, {xsp}.`PPUSH` is set to {xsp}.`PUSH`.
+When a trap is taken into mode `x`, {xsp}.`PPUSH` is set to {xsp}.`PUSH`.
 
 === State Enable
 
