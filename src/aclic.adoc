@@ -404,6 +404,184 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
+== Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
+
+The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
+
+For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
+Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
+However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
+To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
+
+=== New stack pointer for conditional swap ({xsp}) CSR
+
+New CSRs are introduced to hold an alternative stack pointer.
+Conditionally, this stack pointer can be swapped with the currently active one.
+
+[source]
+----
+      Number  Name         Description
+(NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
+(NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
+----
+
+The CSR is defined as follows:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "3" "4" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
+
+(draw-box "SP[XLEN-1:4]" {:span 9 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "WPRI" {:span 3 :text-anchor "middle" :borders {:top :border-unrelated :bottom :border-unrelated :center :border-unrelated}})
+(draw-box "PUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "POP" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+
+(draw-box "XLEN-4" {:span 19 :borders {}})
+(draw-box "2" {:span 3 :borders {}})
+(draw-box "1" {:span 5 :borders {}})
+(draw-box "1" {:span 5 :borders {}})
+----
+
+In addition to the stack pointer, this register hold two additional fields, `PUSH` and `POP`.
+These indicate, if a stack pointer swap is excepted during a push or pop sequence, respectively.
+
+NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
+Therefore the four least significant bits of the stack pointer are zero.
+
+=== Instructions for conditional stack pointer swap
+
+To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
+To decide, if a stack pointer swap is required, these instructions evalute the two LSBs of the register.
+The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
+
+The `POP` bit indicates the the stack pointer shall be swapped back into {xsp}.
+It is automatically asserted when swapping a stack pointer with cspspush.
+This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
+
+If the value of {xsp} is zero, no conditional stack pointer swap is performed.
+
+=== Trap behavior
+
+The trap behavior is modified as follows:
+
+When a trap is taken, {xsp}.`POP` is cleared.
+
+=== State Enable
+
+If the Smstateen extension is implemented,
+then the bit 53 (ACLIC) in mstateen0 is implemented.
+If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then access to the new CSR {ssp} by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
+
+<<<
+
+=== Instructions
+
+==== cspspush
+
+Synopsis::
+Conditional stack pointer swap (push mode)
+
+Mnemonic::
+cspspush rd, rs
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
+  {bits: 5, name: 0x9, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
+The stack pointer swap is conditionally executed,
+if the privilege mode store with the stack pointer equals the current mode.
+After swapping the stack pointer, previous privilege mode is written to the low bits of {xsp},
+indicating that the correct stack pointer for the given mode is active.
+
+The behavior of the operations is:
+
+[source]
+----
+if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege mode x and shall be swapped */
+    tmp = rs                 /* save current sp for writing later */
+    rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
+    xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
+    xsp.PUSH = 0             /* Indicates the stack pointer has been swapped */
+    xsp.POP = 1              /* Indicates the stack pointer needs to be swapped in a pop sequence */
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+==== cspspop
+
+Synopsis::
+Pop trap context
+
+Mnemonic::
+tpop
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
+  {bits: 5, name: 0xC, attr: [''], type: 8},
+  {bits: 7, name: 0x8, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
+A swap is performed, if the stored stack pointer is not 0, the `SWAP` field is not set,
+and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
+Additionally, it is checked if the interrupt enable threshold was zero,
+indicating operation outside of a handler.
+
+Behavior::
+
+[source]
+----
+if (xsp.POP == 1) and (xsp != 0)
+    tmp = xsp.SP             /* save xsp.SP as temporary value */
+    xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
+    xsp.PUSH = 1             /* Mark stack pointer as to be swapped in a push sequence */
+    rd = tmp                 /* write original xsp value to stack pointer */
+----
+
+Included in: <<smcsps>>
+
+<<<
+
+[[smtp, Smtp]]
+
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
 The Smnip extension depends on the Smaiae extension and adds nested preemption support at machine level.
@@ -462,7 +640,8 @@ Bits   Field             Description
  30     (reserved)
  29:28  mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
  27     mpie             Previous interrupt enable, mirror of mstatus.mpie
- 26:8   (reserved)
+ 26:9   (reserved)
+ 8      psppush          Previous stack pointer push, mirror of msp.ppush, if Smcspsw is implemented
  7:0    pithreshold[7:0] Previous interrupt enable threshold
 ----
 
@@ -485,7 +664,8 @@ spistatus
  30:29  (reserved)
     28  spp              Previous privilege mode, mirror of sstatus.spp
     27  spie             Previous interrupt enable, mirror of sstatus.spie
- 26:8   (reserved)
+ 26:9   (reserved)
+ 8      psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
  7:0    pithreshold[7:0] Previous interrupt enable threshold
 ----
 
@@ -727,183 +907,6 @@ The summarized behavior is the following:
  10       Reserved
 ----
 
-== Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
-
-The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
-
-For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
-Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
-However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
-To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
-
-=== New stack pointer for conditional swap ({xsp}) CSR
-
-New CSRs are introduced to hold an alternative stack pointer.
-Conditionally, this stack pointer can be swapped with the currently active one.
-
-[source]
-----
-      Number  Name         Description
-(NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
-(NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
-----
-
-The CSR is defined as follows:
-
-[bytefield]
-----
-(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
-(def row-height 35 )
-(def row-header-fn nil)
-(def left-margin 100)
-(def right-margin 100)
-(def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "3" "4" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
-
-(draw-box "SP[XLEN-1:4]" {:span 9 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "WPRI" {:span 3 :text-anchor "middle" :borders {:top :border-unrelated :bottom :border-unrelated :center :border-unrelated}})
-(draw-box "PUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "POP" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-
-(draw-box "XLEN-4" {:span 19 :borders {}})
-(draw-box "2" {:span 3 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-----
-
-In addition to the stack pointer, this register hold two additional fields, `PUSH` and `POP`.
-These indicate, if a stack pointer swap is excepted during a push or pop sequence, respectively.
-
-NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
-Therefore the four least significant bits of the stack pointer are zero.
-
-=== Instructions for conditional stack pointer swap
-
-To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
-To decide, if a stack pointer swap is required, these instructions evalute the two LSBs of the register.
-The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
-
-The `POP` bit indicates the the stack pointer shall be swapped back into {xsp}.
-It is automatically asserted when swapping a stack pointer with cspspush.
-This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
-
-If the value of {xsp} is zero, no conditional stack pointer swap is performed.
-
-=== Trap behavior
-
-The trap behavior is modified as follows:
-
-When a trap is taken, {xsp}.`POP` is cleared.
-
-=== State Enable
-
-If the Smstateen extension is implemented,
-then the bit 53 (ACLIC) in mstateen0 is implemented.
-If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {ssp} by S-mode or a lower privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
-
-<<<
-
-=== Instructions
-
-==== cspspush
-
-Synopsis::
-Conditional stack pointer swap (push mode)
-
-Mnemonic::
-cspspush rd, rs
-
-Encoding::
-[wavedrom, ,svg]
-....
-{reg: [
-  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
-  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
-  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
-  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
-  {bits: 5, name: 0x9, attr: [''], type: 8},
-  {bits: 7, name: 0x8, attr: [''], type: 8},
-]}
-....
-
-Description::
-
-This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
-The stack pointer swap is conditionally executed,
-if the privilege mode store with the stack pointer equals the current mode.
-After swapping the stack pointer, previous privilege mode is written to the low bits of {xsp},
-indicating that the correct stack pointer for the given mode is active.
-
-The behavior of the operations is:
-
-[source]
-----
-if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege mode x and shall be swapped */
-    tmp = rs                 /* save current sp for writing later */
-    rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
-    xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
-    xsp.PUSH = 0             /* Indicates the stack pointer has been swapped */
-    xsp.POP = 1              /* Indicates the stack pointer needs to be swapped in a pop sequence */
-----
-
-Included in: <<smcsps>>
-
-<<<
-
-==== cspspop
-
-Synopsis::
-Pop trap context
-
-Mnemonic::
-tpop
-
-Encoding::
-[wavedrom, ,svg]
-....
-{reg: [
-  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
-  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
-  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
-  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
-  {bits: 5, name: 0xC, attr: [''], type: 8},
-  {bits: 7, name: 0x8, attr: [''], type: 8},
-]}
-....
-
-Description::
-
-This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-A swap is performed, if the stored stack pointer is not 0, the `SWAP` field is not set,
-and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
-Additionally, it is checked if the interrupt enable threshold was zero,
-indicating operation outside of a handler.
-
-Behavior::
-
-[source]
-----
-if (xsp.POP == 1) and (xsp != 0)
-    tmp = xsp.SP             /* save xsp.SP as temporary value */
-    xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
-    xsp.PUSH = 1             /* Mark stack pointer as to be swapped in a push sequence */
-    rd = tmp                 /* write original xsp value to stack pointer */
-----
-
-Included in: <<smcsps>>
-
-<<<
-
-[[smtp, Smtp]]
 == Trap handler push and pop extension (Smtp)
 
 The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
