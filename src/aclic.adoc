@@ -442,7 +442,7 @@ The CSR is defined as follows:
 (draw-box "WPRI" {:span 3 :text-anchor "middle" :borders {:top :border-unrelated :bottom :border-unrelated :center :border-unrelated}})
 (draw-box "PUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "POP" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box "PPUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 
 (draw-box "XLEN-4" {:span 19 :borders {}})
@@ -451,7 +451,7 @@ The CSR is defined as follows:
 (draw-box "1" {:span 5 :borders {}})
 ----
 
-In addition to the stack pointer, this register hold two additional fields, `PUSH` and `POP`.
+In addition to the stack pointer, this register hold two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
 These indicate, if a stack pointer swap is excepted during a push or pop sequence, respectively.
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
@@ -463,8 +463,8 @@ To simplify and accelerate the conditional stack pointer swap, two instructions 
 To decide, if a stack pointer swap is required, these instructions evalute the two LSBs of the register.
 The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
 
-The `POP` bit indicates the the stack pointer shall be swapped back into {xsp}.
-It is automatically asserted when swapping a stack pointer with cspspush.
+The `PPUSH` bit indicates the the stack pointer shall be swapped back into {xsp}.
+It corresponds to the value of the `PUSH` bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
 
 If the value of {xsp} is zero, no conditional stack pointer swap is performed.
@@ -473,7 +473,7 @@ If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 
 The trap behavior is modified as follows:
 
-When a trap is taken, {xsp}.`POP` is cleared.
+When a trap is taken, {xsp}.`PPUSH` is set to {xsp}.`PUSH`.
 
 === State Enable
 
@@ -529,7 +529,6 @@ if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege m
     rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
     xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
     xsp.PUSH = 0             /* Indicates the stack pointer has been swapped */
-    xsp.POP = 1              /* Indicates the stack pointer needs to be swapped in a pop sequence */
 ----
 
 Included in: <<smcsps>>
@@ -560,7 +559,7 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-A swap is performed, if the stored stack pointer is not 0, the `SWAP` field is not set,
+A swap is performed, if the stored stack pointer is not 0, the `PUSH` field is not set,
 and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
 Additionally, it is checked if the interrupt enable threshold was zero,
 indicating operation outside of a handler.
@@ -569,7 +568,7 @@ Behavior::
 
 [source]
 ----
-if (xsp.POP == 1) and (xsp != 0)
+if (xsp.PPUSH == 1) and (xsp != 0)
     tmp = xsp.SP             /* save xsp.SP as temporary value */
     xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
     xsp.PUSH = 1             /* Mark stack pointer as to be swapped in a push sequence */
