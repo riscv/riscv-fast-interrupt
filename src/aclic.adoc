@@ -69,9 +69,9 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
 :pistatus: pass:q[``**__x__**pistatus``]
-:xpistatus: pass:q[``**__x__**xpistatus``]
-:pithreshold: pass:q[``:pithreshold``]
-:mithreshold: pass:q[``:mithreshold``]
+:xpistatus: pass:q[``xpistatus``]
+:pithreshold: pass:q[``pithreshold``]
+:mithreshold: pass:q[``mithreshold``]
 :sithreshold: pass:q[``sithreshold``]
 :xithreshold: pass:q[``xithreshold``]
 
@@ -417,7 +417,7 @@ It provides additional state to resume execution of the previous handler after a
 [source]
 ----
        Number  Name         Description
- (NEW) 0x346   mpistatus  Previous interrupt context
+ (NEW) 0x346   mpistatus    Previous interrupt context
  (NEW) 0xFB1   mithreshold  Interrupt enable threshold
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
@@ -541,7 +541,7 @@ The existing trap behavior is modified as follows:
 When a trap is taken on interrupt _i_ into level `x`,
 the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
 Additionally, {xithreshold} is set to `iprio[i]`.
-This automatically raises the interrupt enable threashold.
+This automatically raises the interrupt enable threshold.
 
 NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
@@ -550,6 +550,9 @@ NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 The behavior of an {xret} instruction is modified as follows:
 
 {xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
+
+This automatically restores the interrupt enable threshold to the level of the context.
+
 
 === State Enable
 
