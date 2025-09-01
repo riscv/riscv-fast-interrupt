@@ -209,14 +209,15 @@ As this specification aims for single-hart systems, no support for the H extensi
 Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
-machanisms. Their behavior is unchanged by the extensions of ACLIC.
+mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
 The Smaclic extension depends on the Smaia extension.
 The Ssaclic extension depends on the Ssaia extension.
 
-Of the main ACLIC goals, tese targets are addressed here:
+Of the main ACLIC goals, these targets are addressed here:
+
   * Up to 1023 external interrupts
   * Low area overhead
   * Maximize compatibility with AIA
@@ -256,18 +257,18 @@ The `eip` array and `eie` array act as an alias of the pending and enable bits o
 The {eithreshold} CSR is an alias of the {ithreshold}.
 For the interrupt enable and interrupt pending bits {eipk} and {eiek},
 a write with the value 1 performs a write access with the value 1 to the corresponding {setip} or {setie} register,
-while a write with the value 0 performans a write access with value 1 to the corresponding {in_clrip} or {clrie} register.
+while a write with the value 0 performs a write access with value 1 to the corresponding {in_clrip} or {clrie} register.
 On read of {eipk} or {eiek}, these CSRs are an alias of {setip}[_k_] and {setie}[_k_], respectively.
 
 For XLEN=32, {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_], respectively.
-For XLEN=64, {eipk} and {eiek} only exist for even numbered indeces of _k_. In this case,
+For XLEN=64, {eipk} and {eiek} only exist for even numbered indices of _k_. In this case,
 {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_] in the lower half of the CSR,
 and {setip}[_k+1_]/{in_clrip}[_k_] and {setie}[_k+1_]/{clrie}[_k_] in the upper half of the CSR, respectively.
 
 NOTE: Mirroring these APLIC registers at a core level has several advantages.
   * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
   * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
-  * It simlifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
+  * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
   * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
   * It simplifies the register interface, as CSR instructions have single bit operations
 
@@ -434,10 +435,10 @@ Tests for preemption are based on a change in the upper bits of iprio.
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 The nested interrupt preemption priority {nipprio} is defined as follows:
 
-[source]
+[source,subs="attributes"]
 ----
-NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
-nipprio[i]   = iprio[i] & NIPPRIO_MASK
+XNIPPRIO_MASK = ~(2^({mipreemptcfg}.{preemptmsk}) - 1)
+{nipprio}[i]   = iprio[i] & NIPPRIO_MASK
 ----
 
 A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
@@ -714,7 +715,7 @@ The Smnipsehv extension depends upon the Smivt extension.
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
 Acceleration of this critical segment decreases the time during which interrupts are masked.
-Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ecalls, misaligned accesses, instruction page faults, or illegal instructions.
+Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ECALLs, misaligned accesses, instruction page faults, or illegal instructions.
 
 With this extension, synchronous exceptions are vectored using xtvec as an offset.
 The summarized behavior is the following:
@@ -730,9 +731,9 @@ The summarized behavior is the following:
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
-The Smcsps extension depends on the Smnnip extension.
-The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
-The Sscsps extension depends on the Ssnnip extension.
+The Smcsps extension depends on the Smnip extension.
+The Sscsps depends on the Smcsps extension and adds the ability for conditional stack pointer swap at supervisor level and below.
+The Sscsps extension depends on the Ssnip extension.
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
@@ -789,7 +790,7 @@ Therefore the four least significant bits of the stack pointer are zero.
 === Instructions for conditional stack pointer swap
 
 To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
-To decide, if a stack pointer swap is required, these instructions evalute the two LSBs of the register, indication the mode.
+To decide, if a stack pointer swap is required, these instructions evaluate the two LSBs of the register, indication the mode.
 
 If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 
@@ -953,7 +954,7 @@ It is explicitly allowed for the push instruction to clobber any of the saved GP
   * Disables interrupts
   * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
   * Restores registers x10-x15
-  * Restores the the hart's state to the point that the hart can return to the interrupted context
+  * Restores the hart's state to the point that the hart can return to the interrupted context
   * Adjust the stack pointer to destroy the stack frame
   * Conditionally performs a stack pointer swap by executing cspspop sp
   * Executes an xret according to the current level
@@ -968,7 +969,7 @@ As interrupts are disabled during the sequence as a side effect of the trap bein
 +
 If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
 +
-NOTE: In contrast to the Zcmp push/pop intructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
+NOTE: In contrast to the Zcmp push/pop instructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 +
 With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
 
@@ -983,7 +984,7 @@ While executing the tpopxret instruction, a hart may optionally check for any pe
 If such an interrupt exists, the hart may abort executing the tpopxret instruction and trigger the following actions:
   - Update the `xcause.Exception Code` to the corresponding interrupt id.
   - Perform the trap handler fetch.
-  - Start excuting the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
+  - Start executing the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
 
 Explicitly, {xepc}, {xpnipprio}, and {xpp} remain unchanged.
 
@@ -1044,14 +1045,14 @@ stack pointer adjustment: 64
 
 === Fault handling
 
-Unless it can be guaranteed by design that faults causing synchronous exceptions cannot occure during the critical section,
+Unless it can be guaranteed by design that faults causing synchronous exceptions cannot occur during the critical section,
 handling can only be resumed if the double trap extension is supported.
 The critical sections are defined as the time during execution of the tpush and tpopxret instruction, during which interrupts are disabled.
 
 === Debug
 
 As the execution of tpush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
-Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occured on the subsequent instruction.
+Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occurred on the subsequent instruction.
 
 <<<
 
@@ -1085,7 +1086,7 @@ If preempt is '1', interrupts will be enabled at the end of the sequence.
 
 Behavior::
 
-The behavior in RISC-V asssembly when preempt is '1' is as follows.
+The behavior in RISC-V assembly when preempt is '1' is as follows.
 If preempt is '0', enabling interrupts shall be skipped.
 The behavior is assuming Smnip is present. Otherwise, mintstatus will not be saved.
 
@@ -1167,7 +1168,7 @@ Restores an interrupted context at the end of a trap.
 
 Behavior::
 
-The behavior in RISC-V asssembly is as follows.
+The behavior in RISC-V assembly is as follows.
 The behavior is assuming Smnip is present. Otherwise, the mintstatus CSR will not be restored.
 
 [source]
