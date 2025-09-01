@@ -437,8 +437,8 @@ The nested interrupt preemption priority {nipprio} is defined as follows:
 
 [source,subs="attributes"]
 ----
-XNIPPRIO_MASK = ~(2^({mipreemptcfg}.{preemptmsk}) - 1)
-{nipprio}[i]   = iprio[i] & NIPPRIO_MASK
+XNIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
+xnipprio[i]   = iprio[i] & NIPPRIO_MASK
 ----
 
 A nested horizontal preemption will happen if and only if an interrupt i is pending and enabled,
