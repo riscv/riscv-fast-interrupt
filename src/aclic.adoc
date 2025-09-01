@@ -847,7 +847,7 @@ The behavior of the operations is:
 
 [source]
 ----
-if (xsp.PUSH == 1)           /* stack pointer in xsp belong to privilege mode x and shall be swapped */
+if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege mode x and shall be swapped */
     tmp = rs                 /* save current sp for writing later */
     rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
     xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
@@ -892,7 +892,7 @@ Behavior::
 
 [source]
 ----
-if (xsp.POP == 1) 
+if (xsp.POP == 1) and (xsp != 0)
     tmp = xsp.SP             /* save xsp.SP as temporary value */
     xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
     xsp.PUSH = 1             /* Mark stack pointer as to be swapped in a push sequence */
