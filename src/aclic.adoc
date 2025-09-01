@@ -471,7 +471,7 @@ Bits   Field             Description
 [source]
 ----
        Number  Name         Description
- (NEW) 0x146   spistatus  Previous interrupt context
+ (NEW) 0x146   spistatus    Previous interrupt context
  (NEW) 0x1B1   sithreshold  Interrupt enable threshold
 ----
 
