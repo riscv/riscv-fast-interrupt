@@ -474,7 +474,7 @@ An example sequence with one vertical and one horizontal trap will look like thi
 
 [source]
 ----
-Mode  Event            msp.PUSH  msp.PPUSH  sp-wap?
+Mode  Event            msp.PUSH  msp.PPUSH  sp-swap
 S     -                1         X          n
 M     trap             1         X          n
 M     cspspush         0         1          y
@@ -488,7 +488,7 @@ M     cspspop          1         0          y
 S     mret             1         0          n
 ----
 
-The stack pinter is swapped when changing from S-mode to M-mode,
+The stack pointer is swapped when changing from S-mode to M-mode,
 and is swapped back when returning to S-mode.
 No change of stack pointer occurs for the cspspush and cspspop instruction in the nested handler.
 
