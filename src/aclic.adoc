@@ -194,6 +194,7 @@ The table below provides a summary of the ACLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
+| Smaiae       | Advanced Interrupt Architecture for Embedded Systems
 | Smaclic      | Advanced Core Local Interrupt Controller at Machine level
 | Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
@@ -211,17 +212,35 @@ Future specifications could extend the scope of these extension to also be appli
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 machanisms. Their behavior is unchanged by the extensions of ACLIC.
 
+== Advanced Interrupt Architecture for Embedded Systems (Smaiae)
+
+The Smaia extension encompasses all added CSRs
+and all modifications to interrupt response behavior
+that the AIA specifies for a hart,
+over all privilege levels.
+
+The Smaiae extension is a subset of Smaia.
+To limit the implementation cost,
+the interrupt filtering and virtual interrupts are not supported.
+
+Specifically, `xvip` and `xvien` are read-only 0.
+When XLEN=32, `xviph` and `xvienh` are also read-only 0.
+
+NOTE: While other features of AIA like IMSIC or programmable IPRIO
+might also not be needed resource constraint systems,
+These are already controlled by WARL registers,
+so implementations can already choose to not support these.
+
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic extension depends on the Smaia extension.
-The Ssaclic extension depends on the Ssaia extension.
+The Smaclic and Ssaclic extensions depend on the Smaiae extension.
 
 Of the main ACLIC goals, tese targets are addressed here:
   * Up to 1023 external interrupts
   * Low area overhead
   * Maximize compatibility with AIA
 
-To achieve this, ACLIC builds upon the hart-level extensions of AIA (Smaia and Ssaia),
+To achieve this, ACLIC builds upon the hart-level extensions of AIA,
 and the Advanced Platform Level Interrupt Controller (APLIC).
 The ACLIC is a tailored APLIC, optimized for resource efficiency, directly integrated with one hart.
 
@@ -401,8 +420,8 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
-The Ssnip extension depends on the Ssmaia extension and adds nested preemption support at supervisor level.
+The Smnip extension depends on the Smaiae extension and adds nested preemption support at machine level.
+The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
