@@ -460,7 +460,7 @@ Therefore the four least significant bits of the stack pointer are zero.
 
 === Instructions for conditional stack pointer swap
 
-To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, cspspush and cspspop.
+To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, <<#insns-cspspush>> and <<#insns-cspspop>>.
 To decide, if a stack pointer swap is required, these instructions evalute the two LSBs of the register.
 The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
 
@@ -470,11 +470,27 @@ This bit is part of the context of an interrupt handler, and needs to be saved a
 
 If the value of {xsp} is zero, no conditional stack pointer swap is performed.
 
-=== Trap behavior
+An example sequence with one vertical and one horizontal trap will look like this:
 
-The trap behavior is modified as follows:
+[source]
+----
+Mode  Event            msp.PUSH  msp.PPUSH  sp-wap?
+S     -                1         X          n
+M     trap             1         X          n
+M     cspspush         0         1          y
+M     save context     0         1          n
+M     trap             0         1          n
+M     cspspush         0         0          n
+M     cspspop          0         0          n
+M     mret             0         0          n
+M     restore context  0         1          n
+M     cspspop          1         0          y
+S     mret             1         0          n
+----
 
-When a trap is taken into mode `x`, {xsp}.`PPUSH` is set to {xsp}.`PUSH`.
+The stack pinter is swapped when changing from S-mode to M-mode,
+and is swapped back when returning to S-mode.
+No change of stack pointer occurs for the cspspush and cspspop instruction in the nested handler.
 
 === State Enable
 
@@ -492,6 +508,7 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 === Instructions
 
+[#insns-cspspush,reftext="Conditional stack pointer swap (push mode)"]
 ==== cspspush
 
 Synopsis::
@@ -516,15 +533,11 @@ Encoding::
 Description::
 
 This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
-The stack pointer swap is conditionally executed,
-if the privilege mode store with the stack pointer equals the current mode.
-After swapping the stack pointer, previous privilege mode is written to the low bits of {xsp},
-indicating that the correct stack pointer for the given mode is active.
-
 The behavior of the operations is:
 
 [source]
 ----
+xsp.PPUSH = xsp.PUSH         /* Latch the push bit into the previous push bit */
 if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege mode x and shall be swapped */
     tmp = rs                 /* save current sp for writing later */
     rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
@@ -536,13 +549,14 @@ Included in: <<smcsps>>
 
 <<<
 
+[#insns-cspspop,reftext="Conditional stack pointer swap (pop mode)"]
 ==== cspspop
 
 Synopsis::
-Pop trap context
+Conditional stack pointer swap (pop mode)
 
 Mnemonic::
-tpop
+cspspop
 
 Encoding::
 [wavedrom, ,svg]
@@ -560,19 +574,17 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
-A swap is performed, if the stored stack pointer is not 0, the `PUSH` field is not set,
-and the previous mode that will be returned to is equal to the mode stored with the stack pointer.
-Additionally, it is checked if the interrupt enable threshold was zero,
-indicating operation outside of a handler.
+A swap is performed, if the stored stack pointer is not 0, the `PPUSH` field is set.
 
 Behavior::
 
 [source]
 ----
+xsp.PUSH = xsp.PPUSH         /* Restore PUSH bit from PPUSH */
 if (xsp.PPUSH == 1) and (xsp != 0)
     tmp = xsp.SP             /* save xsp.SP as temporary value */
     xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
-    xsp.PUSH = 1             /* Mark stack pointer as to be swapped in a push sequence */
+    xsp.PPUSH = 0            /* Clear previous push bit */
     rd = tmp                 /* write original xsp value to stack pointer */
 ----
 
