@@ -406,7 +406,7 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
-The Sscsps depends on the Smcsps extension and adds the abitility for conditional stack pointer swap at supervisor level and below.
+The Sscsps depends on the Smcsps extension and adds the ability for conditional stack pointer swap at supervisor level and below.
 
 For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
@@ -452,7 +452,8 @@ The CSR is defined as follows:
 ----
 
 In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
-These indicate, if a stack pointer swap is excepted during a push or pop sequence, respectively.
+These indicate, if a stack pointer swap is expected during a push or pop sequence, respectively.
+
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
 Therefore the four least significant bits of the stack pointer are zero.
