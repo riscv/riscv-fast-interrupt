@@ -674,8 +674,8 @@ spistatus
  Bits    Field           Description
  XLEN-1 Interrupt        Interrupt=1, Exception=0, mirror of scause.Interrupt
  30:29  (reserved)
-    28  spp              Previous privilege mode, mirror of sstatus.spp
-    27  spie             Previous interrupt enable, mirror of sstatus.spie
+ 28     spp              Previous privilege mode, mirror of sstatus.spp
+ 27     spie             Previous interrupt enable, mirror of sstatus.spie
  26:9   (reserved)
  8      psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
  7:0    pithreshold[7:0] Previous interrupt enable threshold
@@ -1124,7 +1124,7 @@ push:
   sr a6, OFFSET(sp)         # Save a6
   csrr a0, xcause           # Get xcause of interrupted context to determine if exception
   csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, xpistatus      # Get xpistatus of interrupt context
+  csrr a5, xpistatus        # Get xpistatus of interrupt context
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xpistatus
   bgez a0, handle_exc       # Handle synchronous exception
@@ -1198,7 +1198,7 @@ pop:
   lr a4, OFFSET(sp)         # Restore xepc
   lr a5, OFFSET(sp)         # Restore xpistatus
   csrw xepc, a4             # Write xepc back to CSR
-  csrw xpistatus, a5      # Write xpistatus back to CSR
+  csrw xpistatus, a5        # Write xpistatus back to CSR
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
