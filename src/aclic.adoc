@@ -183,17 +183,41 @@ The table below provides a summary of the ACLIC extensions.
 | Smaiae       | Advanced Interrupt Architecture for Embedded Systems
 | Smaclic      | Advanced Core Local Interrupt Controller at Machine level
 | Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
-| Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
-| Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smivt        | Support for interrupt vector table
+| Smivt        | Support for interrupt vector table at Machine level
+| Ssivt        | Support for interrupt vector table at Supervisor level
 | Smehv        | Synchronous exceptions hardware vectoring
-| Smtp         | Support for trap handler push/pop
 | Smcsps       | Conditional stack pointer swap at Machine level
 | Sscsps       | Conditional stack pointer swap at Supervisor level
+| Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
+| Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
+| Smtp         | Support for trap handler push/pop
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
 Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
+
+Some extension depend upon other extensions.
+This table summarizes all dependencies.
+Each row contains the dependencies of the extension named in the first column.
+
+[%autowidth]
+|===
+| Extension Name | Sm | Ss | Smcsrind | Sscsrind | Smaiae | Smnip
+| Smivt          | x  |    |          |          |        |  
+| Ssivt          |    | x  |          |          |        |  
+| Smcsps         | x  |    |          |          |        |  
+| Sscsps         |    | x  |          |          |        |  
+| Smtp           | (x)| (x)|          |          |        |  
+| Smaiae         | x  | (x)| x        | (x)      |        |  
+| Smaclic        |    |    |          |          | x      |  
+| Ssaclic        |    |    |          |          | x      |  
+| Smnip          |    |    |          |          | x      |  
+| Ssnip          |    |    |          |          |        | x
+| Smehv          |    |    |          |          |        | x
+|===
+
+In this table (x) denotes a dependency that is valid,
+if the corresponding privilege mode is implemented in the hart.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
@@ -899,9 +923,9 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
-== Synchronous exceptions hardware vectoring- Smnipsehv
+== Synchronous exceptions hardware vectoring- Smehv
 
-The Smnipsehv extension depends upon the Smivt extension.
+The Smehv extension depends upon the Smivt extension.
 
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
