@@ -239,7 +239,7 @@ but ACLIC uses the same structure for configuration as the APLIC.
 
 === New Interrupt Delivery Mode
 
-The Incoming Message Signalled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
+The Incoming Message Signaled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
 which defines the interrupt delivery mode.
 A new delivery mode is defined:
 
