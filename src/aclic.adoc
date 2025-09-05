@@ -537,8 +537,8 @@ The behavior of the operations is:
 
 [source]
 ----
-xsp.PPUSH = xsp.PUSH         /* Latch the push bit into the previous push bit */
-if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer in xsp belong to privilege mode x and shall be swapped */
+xsp.PPUSH = xsp.PUSH         /* Latch push bit into the previous push bit */
+if (xsp.PUSH == 1) and (xsp != 0)  /* stack pointer shall be swapped */
     tmp = rs                 /* save current sp for writing later */
     rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
     xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
