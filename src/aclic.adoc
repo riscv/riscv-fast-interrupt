@@ -979,13 +979,16 @@ The following table summarizes the written trap information:
 |===
 | Register | Synchronous Exception | Major Interrupt | External Interrupt (Interrupt Vector Table Mode)
 | a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Minor Identity
-| a1 | `xtval` | No Write | No Write
-| a2 | `xtval2` | No Write | No Write
-| a3 | `xtinst` | No Write | No Write
+| a1 | 1 | 0 | 0
+| a2 | `xtval` | No Write | No Write
+| a3 | `xtval2` | No Write | No Write
+| a4 | `xtinst` | No Write | No Write
 |===
 +
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
 The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
++
+The value in a1 can be used to distinguish synchronous exceptions from interrupts in shared handlers.
 +
 As a consequence, the following prototype could serve for an interrupt handler at machine level.
 +
