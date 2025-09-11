@@ -969,7 +969,7 @@ The preempting trap is expected to fully save and restore the architectural stat
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
 +
-The tpush instruction writes the value of the xcause CSR into register a0.
+The tpush instruction writes the value of the xcause CSR or the interrupt identity into register a0.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
 For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
 +
@@ -979,23 +979,28 @@ The following table summarizes the written trap information:
 |===
 | Register | Synchronous Exception | Major Interrupt | External Interrupt (Interrupt Vector Table Mode)
 | a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Minor Identity
-| a1 | 1 | 0 | 0
-| a2 | `xtval` | No Write | No Write
-| a3 | `xtval2` | No Write | No Write
-| a4 | `xtinst` | No Write | No Write
+| a1 | `xepc` | No Write | No Write
+| a2 | `xcause.Interrupt` (0) | `xcause.Interrupt` (1) | `xcause.Interrupt` (1)
+| a3 | `xtval` | No Write | No Write
+| a4 | `xtval2` | No Write | No Write
+| a5 | `xtinst` | No Write | No Write
 |===
 +
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
-The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
+The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception caused a write to the respective CSR.
 +
-The value in a1 can be used to distinguish synchronous exceptions from interrupts in shared handlers.
+`xcause.Interrupt` can be used to distinguish synchronous exceptions from interrupts in shared handlers.
 +
-As a consequence, the following prototype could serve for an interrupt handler at machine level.
+As a consequence, the following prototypes could serve for an interrupt handler or an exception handler, respectively.
 +
 [source,c]
 ----
-void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpistatus")));
+void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x12-x15")));
+void exception_handler(uint16_t exception_code, uintptr_t epc, bool interrupt, uintptr_t tval, uintptr_t tval2, uintptr_t tinst) __attribute__((interrupt, prestacked("x15")));
 ----
+
+Usually, interrupt handler will not require epc as an argument.
+If the GPR holding epc is to be used, it will first be saved to the stack and restored later.
 
 It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
 
@@ -1081,15 +1086,13 @@ start of stackframe remains same. In addition:
 
 stack pointer adjustment: 32
 
-32: xpistatus (XLEN)
-28: xpepc (XLEN)
+28: xpistatus (XLEN)
 
 ** XLEN = 32
 
 stack pointer adjustment: 64
 
-60: xpistatus (XLEN)
-56: xpepc (XLEN)
+56: xpistatus (XLEN)
 ----
 
 === Fault handling
@@ -1152,28 +1155,28 @@ push:
   sr a5, OFFSET(sp)         # Save a5
   sr a6, OFFSET(sp)         # Save a6
   csrr a0, xcause           # Get xcause of interrupted context to determine if exception
-  csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, xpistatus        # Get xpistatus of interrupt context
-  sr a4, OFFSET(sp)         # Save xepc
-  sr a5, OFFSET(sp)         # Save xpistatus
+  csrr a1, xepc             # Get xepc of interrupt context
+  srli a2, a0, XLEN-1       # Isolate interrupt bit
+  csrr a3, xpistatus        # Get xpistatus of interrupt context
+  sr a3, OFFSET(sp)         # Save xpistatus
   bgez a0, handle_exc       # Handle synchronous exception
-  csrr a0, xtopi            # Read major interrupt number into a0
-  li a1, xEI                # Write major identity of external interrupt to a1
-  beq a0, a1, handle_ei     # Handle external interrupt
+  csrr a0, xtopi            # Read major interrupt number
+  li a4, xEI                # Write major identity of external interrupt
+  beq a0, a4, handle_ei     # Handle external interrupt
   # clear major interrupt pending bit - no single instruction equivalent
-shift_idenity:
+shift_identity:
   srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
   csrrsi zero, xstatus, XIE # Enable interrupts
 
 handle_ei:
   csrr a0, xtopei           # Read minor interrupt number into a0
-  j shift_identity           # Jump back to rest of push sequence
+  j shift_identity          # Jump back to rest of push sequence
 
 handle_exc:
-  csrr a1, xtval            # Get xcause of interrupted context
-  csrr a2, xtval2           # Get xepc of interrupt context
-  csrr a3, xtinst           # Get xpistatus of interrupt context
+  csrr a3, xtval            # Get xcause of interrupted context
+  csrr a4, xtval2           # Get xepc of interrupt context
+  csrr a5, xtinst           # Get xpistatus of interrupt context
   j finish_push             # Jump back to rest of push sequence
 
 where
@@ -1183,9 +1186,9 @@ where
 
 NOTE: Note that implementations do not need to execute these exact instructions, as long as the functional behavior is achieved.
 
-While this assembly sequence clobbers a4 and a5 to save CSRs,
+While this assembly sequence clobbers a3 to save xpistatus,
 this is not a requirement. 
-SW shall not make assumptions about value of registers, with the exception of the a0-a3 as described earlier.
+SW shall not make assumptions about value of registers, with the exception of the specified trap information.
 
 Included in: <<smtp>>
 
@@ -1219,15 +1222,15 @@ Behavior::
 
 The behavior in RISC-V assembly is as follows.
 The behavior is assuming Smnip is present. Otherwise, the xpistatus CSR will not be restored.
+This instruction requires {xepc} to be present in `a1`.
 
 [source]
 ----
 pop:
   csrrsi zero, xstatus, XIE # Disable interrupts
-  lr a4, OFFSET(sp)         # Restore xepc
-  lr a5, OFFSET(sp)         # Restore xpistatus
-  csrw xepc, a4             # Write xepc back to CSR
-  csrw xpistatus, a5        # Write xpistatus back to CSR
+  lr a0, OFFSET(sp)         # Restore xpistatus
+  csrw xepc, a1             # Write xepc back to CSR
+  csrw xpistatus, a0        # Write xpistatus back to CSR
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
