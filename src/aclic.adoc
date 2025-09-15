@@ -190,7 +190,7 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
 | Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smip         | Support for interrupt handler push/pop
+| Smihpp       | Support for interrupt handler push/pop
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
@@ -207,7 +207,7 @@ Each row contains the dependencies of the extension named in the first column.
 | Ssivt          |    | x  |          |          |        |  
 | Smcsps         | x  |    |          |          |        |  
 | Sscsps         |    | x  |          |          |        |  
-| Smip           | (x)| (x)|          |          |        |  
+| Smihpp         | (x)| (x)|          |          |        |  
 | Smaiae         | x  | (x)| x        | (x)      |        |  
 | Smaclic        |    |    |          |          | x      |  
 | Ssaclic        |    |    |          |          | x      |  
@@ -429,6 +429,7 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
+[[smcsps, Smcsps]]
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
 The Sscsps depends on the Smcsps extension and adds the ability for conditional stack pointer swap at supervisor level and below.
@@ -618,7 +619,7 @@ Included in: <<smcsps>>
 
 <<<
 
-[[smip, Smip]]
+[[smnip, Smnip]]
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
@@ -943,7 +944,8 @@ The summarized behavior is the following:
  10       Reserved
 ----
 
-== Interrupt handler push and pop extension (Smip)
+[[smihpp, Smihpp]]
+== Interrupt handler push and pop extension (Smihpp)
 
 The interrupt handler push and pop extension adds instructions to accelerate interrupt handling, which additionally reduce code size.
 Interrupt handler latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
@@ -1000,9 +1002,9 @@ Interrupts shall not be enabled before completing the context save/restore opera
 Interrupts must be disabled before starting to restore context in the ipopxret instruction.
 As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
 +
-If the Smip extension is implemented, the first and last instructions of a interrupt handler must be a ipush and the last a ipopxret instruction, respectively.
+If the Smihpp extension is implemented, the first and last instructions of a interrupt handler must be a ipush and the last a ipopxret instruction, respectively.
 +
-NOTE: In contrast to the Zcmp push/pop instructions, Smip instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
+NOTE: In contrast to the Zcmp push/pop instructions, Smihpp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 +
 With these requirements, implementations are allowed to speculatively start executing an ipush instruction in case of a taken interrupt.
 
@@ -1164,7 +1166,7 @@ While this assembly sequence clobbers a4 and a5 to save CSRs,
 this is not a requirement. 
 SW shall not make assumptions about value of registers, with the exception of the a0-a3 as described earlier.
 
-Included in: <<smip>>
+Included in: <<smihpp>>
 
 <<<
 
@@ -1221,4 +1223,4 @@ where
   lr is lr on RV32 and ld on RV64
 ----
 
-Included in: <<smip>>
+Included in: <<smihpp>>
