@@ -209,8 +209,8 @@ Each row contains the dependencies of the extension named in the first column.
 | Sscsps         |    | x  |          |          |        |  
 | Smtp           | (x)| (x)|          |          |        |  
 | Smaiae         | x  | (x)| x        | (x)      |        |  
-| Smaclic        |    |    |          |          | x      |  
-| Ssaclic        |    |    |          |          | x      |  
+| Smaclic        |    |    |          |          |        |
+| Ssaclic        |    |    |          |          |        |
 | Smnip          |    |    |          |          | x      |  
 | Ssnip          |    |    |          |          |        | x
 | Smehv          |    |    |          |          |        | x
@@ -243,186 +243,111 @@ so implementations can already choose to not support these.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic and Ssaclic extensions depend on the Smaiae extension.
-
 Of the main ACLIC goals, these targets are addressed here:
 
   * Up to 1023 external interrupts
   * Low area overhead
   * Maximize compatibility with AIA
 
-To achieve this, ACLIC builds upon the hart-level extensions of AIA,
-and the Advanced Platform Level Interrupt Controller (APLIC).
-The ACLIC is a tailored APLIC, optimized for resource efficiency, directly integrated with one hart.
+To achieve this, ACLIC builds upon the Advanced Platform-Level Interrupt Controller (APLIC).
+The ACLIC is a tailored APLIC, optimized for resource efficiency and tightly integrated with a single hart. It utilizes APLIC direct delivery mode.
 
-In terms of compatibility, the goal is that a hart with Smaclic/Ssaclic extensions
-can be used at with the same trap handlers as one developed for AIA.
+=== Interface
 
-At config-time, the interface differs,
-but ACLIC uses the same structure for configuration as the APLIC.
+ACLIC implements subset of AIA APLIC configuration and control interface defined by RISC-V AIA.
+ACLIC allows maximum of two domains for Machine and Supervisor modes respectively. Each domain may include:
 
-=== New Interrupt Delivery Mode
+- 1 domain configuration register.
+- Up to 1023 source configuration registers.
+- 4 interrupt pending and enable control registers.
+- 4 interrupt delivery control registers.
 
-The Incoming Message Signaled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
-which defines the interrupt delivery mode.
-A new delivery mode is defined:
+NOTE: Entire ACLIC interface is optimized for access by interrupt identity number (IID) to avoid unnecessary calculation of fields positions for the specific interrupt.
 
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|0 = | Interrupt delivery is disabled
-|1 = | Interrupt delivery from the interrupt file is enabled
-|0x20000000 = | Interrupt delivery from an ACLIC (new)
-|0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
-|===
-
-If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
-
-When interrupts are delivered from an ACLIC, the following behavior is valid:
-
-The IMSIC registers {eithreshold}, {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1.
-
-The `eip` array and `eie` array act as an alias of the pending and enable bits of the connected APLIC domain.
-
-The {eithreshold} CSR is an alias of the {ithreshold}.
-For the interrupt enable and interrupt pending bits {eipk} and {eiek},
-a write with the value 1 performs a write access with the value 1 to the corresponding {setip} or {setie} register,
-while a write with the value 0 performs a write access with value 1 to the corresponding {in_clrip} or {clrie} register.
-On read of {eipk} or {eiek}, these CSRs are an alias of {setip}[_k_] and {setie}[_k_], respectively.
-
-For XLEN=32, {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_], respectively.
-For XLEN=64, {eipk} and {eiek} only exist for even numbered indices of _k_. In this case,
-{eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_] in the lower half of the CSR,
-and {setip}[_k+1_]/{in_clrip}[_k_] and {setie}[_k+1_]/{clrie}[_k_] in the upper half of the CSR, respectively.
-
-NOTE: Mirroring these APLIC registers at a core level has several advantages.
-  * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
-  * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
-  * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
-  * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
-  * It simplifies the register interface, as CSR instructions have single bit operations
-
-The {xtopei} registers work analogous to the IMSIC operation,
-but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
-In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
-
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|bits 26:16| Interrupt identity
-|bits 10:0 | Interrupt priority (configured target[identity].iprio)
-|===
-
-=== Indirect CSR access to APLIC registers
-
-The APLIC registers used in the ACLIC configuration can all be accessed by indirect CSRs,
-eliminating the overheads associated with a memory mapped device,
-and presenting a consistent SW interface for any hart.
-
-To have full control over the necessary APLIC registers, the following indirect CSR access is added.
-
-==== Interrupt Priority (iprio)
-
-When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
+==== Interrupt Domain Configuration (domaincfg)
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `xacliciprio0`
-| ...        |   ...         | ...
-| 0x1100     |   4B          | `xacliciprio255`
+| Field |  Position |  Access |  Description
+| IE    |  8        |  RW     |  Domain wide interrupt-enable
+| DM    |  3:2      |  RW     |  Delivery Mode (fixed to `direct delivery`)
 |===
 
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+Rest of the optional bits are implemented as read-only zeros.
 
-When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+==== Interrupt Source Configuration (sourcecfgK)
 
-==== Source Configuration (sourcecfg)
+Each implemented ACLIC interrupt has dedicated source configuration register which integrates all parameters dedicated to this interrupt.
 
-When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
-as the rest of the register is reserved.
+The register layout depends on value of delegation flag `D`, which is accessible in M-domain configuration and is
+always read-only zero in S-domain configuration (assuming S-domain has no children).
 
-When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
+sourcecfgK format, when interrupt source is delegated to a child domain:
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
-| ...        |   ...            | ...                  | ...
-| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
+| Field           |  Position |  Access |  Description
+| D = 1           |  10       |  RW     |  M-domain interrupt source delegation is enabled
+| Child Index = 0 |  9:0      |  RO     |  Read-only zero (as M-domain has only one child)
 |===
 
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+sourcecfgK format, when interrupt source is not delegated to a child domain:
 
-When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
-
-=== APLIC configured for ACLIC operation
-
-The APLIC contains a per-domain configuration register,
-which, among other things, allows selecting the delivery mode.
-The `DM` field is extended to two bits,
-which allows encoding a new mode for ACLIC delivery.
-
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
+[%autowidth]
 |===
-|0 = |direct delivery mode 
-|1 =|MSI delivery mode
-|2 =|ACLIC delivery mode (new)
+| Field |  Position |  Access |  Description
+| IE    |  31       |  RO     |  Read-only interrupt-enable
+| IP    |  30       |  RO     |  Read-only (rectified) interrupt-pending
+| IPRIO |  23:16    |  RW     |  Interrupt priority
+| D = 0 |  10       |  RW     |  M-domain interrupt source delegation, read-only zero in S-domain
+| SM    |  2:0      |  RW     |  Source mode
 |===
 
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
+The IE and IP fields are specific to ACLIC (reserved in case of APLIC) and provide read-only view
+of the interrupt-pending and interrupt-enable bits replacing the pending and enable arrays used by APLIC.
 
-The extended `domaincfg` register has this format:
+To reduce registers addresses reservation the IPRIO field is moved from APLIC targetK[1..1023] registers.
 
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
+The effective value of the non-delegated source configuration in S-domain is read-only zero.
+
+==== Interrupt-Enable and Interrupt-Pending Control Registers
+
+ACLIC implements subset of interrupt-pending and interrupt-enable APLIC control interface. In addition to set / clear bit by number there are read-only interrupt-pending and interrupt-enable bits mirrored in the sourcecfgK register.
+
+[%autowidth]
 |===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE 
-|bit 7|read-only 0
-|bits 3:2 |DM (*WARL*)
-|bit 0 |BE (*WARL*)
-|===
-
-All other register bits are reserved and read as zeros.
-
-When in ACLIC delivery mode, the following, additional restrictions are applied:
-
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
-|===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE = 1 (read-only)
-|bit 7|read-only 0
-|bits 3:2 |DM = 2
-|bit 0 |BE (*WARL*)
+| Offset    |  Register name |  Access |  Description
+| 0x1000    |  setipnum      |  RW     |  Set interrupt-pending by number
+| 0x1001    |  clripnum      |  RW     |  Clear interrupt-pending by number
+| 0x1002    |  setienum      |  RW     |  Set interrupt-enable by number
+| 0x1003    |  clrienum      |  RW     |  Clear interrupt-enable by number
 |===
 
-Specifically, = `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
+NOTE: Interface is optimized for access by interrupt identity number (IID) to
+avoid unnecessary calculation of the bit positions. Hardware implementation is also
+simplified as there is no need to construct 32-bit pending/enable values based
+on per-interrupt delegation configuration.
 
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
-In ACLIC-only systems, access to this register is not needed, and therefore no indirect CSR access is provided.
+==== Interrupt Delivery Control Registers
 
-In the ACLIC delivery mode, there the following registers are not accessible and not used:
+Similar to the APLIC in direct delivery mode, ACLIC provides the interrupt delivery control (IDC)
+registers structure to control the interrupt handling.
 
-* As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not required.
-* Interrupt delivery control (IDC) structure is only needed in direct delivery mode, and not applicable to ACLIC delivery.
-* The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
-Therefore, the registers setipnum, clripnum, setienum, clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
-* The target registers are not fully implemented.
-The iprio portion of it can be accessed as described in the section on indirect access.
-The rest is not required.
+[%autowidth]
+|===
+| Offset    |  Register name |  Access |  Description
+| 0x1004    |  idelivery     |  RW     |  External interrupt delivery enable
+| 0x1006    |  ithreshold    |  RW     |  External interrupt threshold
+| 0x1007    |  topi          |  RO     |  Top priority external interrupt information
+| 0x1008    |  claimi        |  RW     |  Top priority external interrupt claim
+|===
 
 === State Enable
-
-Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
-
-Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
 
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the ACLIC CSRs by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
