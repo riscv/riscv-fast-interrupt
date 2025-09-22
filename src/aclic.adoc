@@ -965,6 +965,7 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
   * Clear the ip bit if writable
+  * Clear the xstatus.FS and xstatus.VS bits
   * Write trap information to argument registers
   * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 +
@@ -972,6 +973,12 @@ NOTE: If a trap occurs during the sequence, then any operations which were execu
 The preempting trap is expected to fully save and restore the architectural state that it overwrites.
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
++
+The {xstatus}.`FS` and {xstatus}.`VS` bits are cleared to indicate
+that the floating-point and vector register state is not valid for the preempting handler.
+This allows lazy context save/restore of the related state.
+As the original value of these fields is contained in {xpistatus},
+they will be restored through the pop instructions.
 +
 The tpush instruction writes the value of the xcause CSR into register a0.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
@@ -1168,6 +1175,8 @@ push:
   li a1, xEI                # Write major identity of external interrupt to a1
   beq a0, a1, handle_ei     # Handle external interrupt
   # clear major interrupt pending bit - no single instruction equivalent
+  li a4, ((3 << 13) | (3 << 9))  # Build mask for VS and FS
+  csrc xstatus, a4          # Clear VS and FS to off state
 shift_idenity:
   srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
