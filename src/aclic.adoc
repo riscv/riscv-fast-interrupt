@@ -1044,9 +1044,9 @@ Once the instruction retires, or the interrupts are disabled, no late preemption
 
 === Stack layout
 
-To ease debugging, a stack layout is recommended for the saved context.
-
-NOTE: This stack layout is not mandated to allow e.g. shadow register sets
+Trap handlers may need to access stacked context.
+E.g. an ECALL handler needs to increment the epc value by 4 to avoid re-executing the ECALL instruction.
+To simplify access to the stacked context, the stack layout is defined as follows.
 
 [source]
 ----
@@ -1060,8 +1060,8 @@ stack pointer adjustment: 32
 20: x14
 16: x13
 12: x12
-8: x11
-4: x10
+ 8: x11
+ 4: x10
 
 ** XLEN = 64:
 
@@ -1072,7 +1072,7 @@ stack pointer adjustment: 48
 32: x13
 24: x12
 16: x11
-8: x10
+ 8: x10
 
 * Smnip/Ssnip present:
 
