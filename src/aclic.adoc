@@ -1085,11 +1085,11 @@ stack pointer adjustment: 32
 32: xpistatus (XLEN)
 28: xpepc (XLEN)
 
-** XLEN = 32
+** XLEN = 64
 
 stack pointer adjustment: 64
 
-60: xpistatus (XLEN)
+64: xpistatus (XLEN)
 56: xpepc (XLEN)
 ----
 
