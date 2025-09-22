@@ -677,7 +677,10 @@ mpistatus
  XLEN-1:30  (reserved)
  29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
  27         mpie             Previous interrupt enable, mirror of mstatus.mpie
- 26:9       (reserved)
+ 26:20      (reserved)
+ 19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
+ 16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcspsw is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
@@ -700,7 +703,10 @@ spistatus
  XLEN-1:29  (reserved)
  28         spp              Previous privilege mode, mirror of sstatus.spp
  27         spie             Previous interrupt enable, mirror of sstatus.spie
- 26:9       (reserved)
+ 26:20      (reserved)
+ 19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
+ 16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
