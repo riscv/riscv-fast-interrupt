@@ -191,7 +191,6 @@ The table below provides a summary of the ACLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
-| Smaiae       | Advanced Interrupt Architecture for Embedded Systems
 | Smaclic      | Advanced Core Local Interrupt Controller at Machine level
 | Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
 | Smivt        | Support for interrupt vector table at Machine level
@@ -213,18 +212,17 @@ Each row contains the dependencies of the extension named in the first column.
 
 [%autowidth]
 |===
-| Extension Name | Sm | Ss | Smcsrind | Sscsrind | Smaiae | Smnip
-| Smivt          | x  |    |          |          |        |  
-| Ssivt          |    | x  |          |          |        |  
-| Smcsps         | x  |    |          |          |        |  
-| Sscsps         |    | x  |          |          |        |  
-| Smtp           | (x)| (x)|          |          |        |  
-| Smaiae         | x  | (x)| x        | (x)      |        |  
-| Smaclic        |    |    |          |          | x      |  
-| Ssaclic        |    |    |          |          | x      |  
-| Smnip          |    |    |          |          | x      |  
-| Ssnip          |    |    |          |          |        | x
-| Smehv          |    |    |          |          |        | x
+| Extension Name | Sm | Ss | Smcsrind | Sscsrind | Smaclic | Smnip
+| Smivt          | x  |    |          |          |         |  
+| Ssivt          |    | x  |          |          |         |  
+| Smcsps         | x  |    |          |          |         |  
+| Sscsps         |    | x  |          |          |         |  
+| Smtp           | (x)| (x)|          |          |         |  
+| Smaclic        | x  |    | x        |          |         |  
+| Ssaclic        |    |  x |          | x        | x       |  
+| Smnip          |    |    |          |          | x       |  
+| Ssnip          |    |    |          |          |         | x
+| Smehv          |    |    |          |          |         | x
 |===
 
 In this table (x) denotes a dependency that is valid,
@@ -232,25 +230,6 @@ if the corresponding privilege mode is implemented in the hart.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
-
-== Advanced Interrupt Architecture for Embedded Systems (Smaiae)
-
-The Smaia extension encompasses all added CSRs
-and all modifications to interrupt response behavior
-that the AIA specifies for a hart,
-over all privilege levels.
-
-The Smaiae extension is a subset of Smaia.
-To limit the implementation cost,
-the interrupt filtering and virtual interrupts are not supported.
-
-Specifically, `xvip` and `xvien` are read-only 0.
-When XLEN=32, `xviph` and `xvienh` are also read-only 0.
-
-NOTE: While other features of AIA like IMSIC or programmable IPRIO
-might also not be needed resource constraint systems,
-These are already controlled by WARL registers,
-so implementations can already choose to not support these.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
@@ -396,6 +375,17 @@ except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
+
+=== Area impact of AIA features
+
+Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+Since these are already controlled by WARL registers, implementations can already choose to not support them.
+
+A minimal implementation of the `mvip` CSR is suggested by the AIA specification:
+
+When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist.
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
