@@ -380,63 +380,6 @@ If the Ssaclic extension is present:
 
 NOTE: Interrupt ID 0 cannot be used, and implementations can choose to make its configuration bits WARL 0. 
 
-=== APLIC configured for ACLIC operation
-
-The APLIC contains a per-domain configuration register,
-which, among other things, allows selecting the delivery mode.
-The `DM` field is extended to two bits,
-which allows encoding a new mode for ACLIC delivery.
-
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|0 = |direct delivery mode 
-|1 =|MSI delivery mode
-|2 =|ACLIC delivery mode (new)
-|===
-
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
-
-The extended `domaincfg` register has this format:
-
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
-|===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE 
-|bit 7|read-only 0
-|bits 3:2 |DM (*WARL*)
-|bit 0 |BE (*WARL*)
-|===
-
-All other register bits are reserved and read as zeros.
-
-When in ACLIC delivery mode, the following, additional restrictions are applied:
-
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
-|===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE = 1 (read-only)
-|bit 7|read-only 0
-|bits 3:2 |DM = 2
-|bit 0 |BE (*WARL*)
-|===
-
-Specifically, = `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
-
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
-In ACLIC-only systems, access to this register is not needed, and therefore no indirect CSR access is provided.
-
-In the ACLIC delivery mode, there the following registers are not accessible and not used:
-
-* As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not required.
-* Interrupt delivery control (IDC) structure is only needed in direct delivery mode, and not applicable to ACLIC delivery.
-* The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
-Therefore, the registers setipnum, clripnum, setienum, clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
-* The target registers are not fully implemented.
-The iprio portion of it can be accessed as described in the section on indirect access.
-The rest is not required.
-
 === State Enable
 
 Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
