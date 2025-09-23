@@ -441,12 +441,13 @@ The rest is not required.
 
 Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
 
-Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
+Additional control is provided for the newly added registers `eiprio[k]` and `eisourcecfg[k]`.
 
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the source and priority configuration indirect CSRs (`eiprio[k]` and `eisourcecfg[k]`) 
+of either M-mode or S-mode interrupt files by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
