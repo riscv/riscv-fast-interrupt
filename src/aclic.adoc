@@ -310,13 +310,15 @@ In this delivery mode, the {xtopei} CSR reflects both the interrupt identity and
 |bits 10:0 | Interrupt priority (configured target[identity].iprio)
 |===
 
-=== Indirect CSR access to APLIC registers
+=== Indirect CSR access to ACLIC source and priority configuration registers
 
-The APLIC registers used in the ACLIC configuration can all be accessed by indirect CSRs,
+The ACLIC interrupt source and priority configuration registers can all be accessed by indirect CSRs,
 eliminating the overheads associated with a memory mapped device,
 and presenting a consistent SW interface for any hart.
 
-To have full control over the necessary APLIC registers, the following indirect CSR access is added.
+Smaclic provides a set of registers that are accessible in machine mode and associated with the
+ACLIC machine-mode interrupt file. Ssaclic adds a second set of registers associated with the supervisor-mode
+interrupt file.  
 
 ==== Interrupt Priority (iprio)
 
@@ -325,15 +327,21 @@ When XLEN = 32, each `xireg` register controls the ACLIC priority setting of fou
 [%autowidth]
 |===
 | `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `xacliciprio0`
+| 0x100      |   4B          | `eiprio0`
 | ...        |   ...         | ...
-| 0x1100     |   4B          | `xacliciprio255`
+| 0x1FF      |   4B          | `eiprio255`
 |===
 
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+Each `eiprio` register controls the priorities of four interrupts, with one 8-bit byte per interrupt. For a
+number k in the range 0–15, register `eipriok` controls the priorities of interrupts k × 4 through
+k × 4 + 3, formatted as follows:
+bits 7:0 Priority number for interrupt k × 4
+bits 15:8 Priority number for interrupt k × 4 + 1
+bits 23:16 Priority number for interrupt k × 4 + 2
+bits 31:24 Priority number for interrupt k × 4 + 3
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+Indirect access to `eipriok` provides access to the priorities of interrupts `k × 8` up to `(k x 8) + 7`.
 
 ==== Source Configuration (sourcecfg)
 
@@ -344,16 +352,33 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
-| ...        |   ...            | ...                  | ...
-| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
+| `xiselect` |  `xireg2/3` size |  `xireg2` state  |  `xireg3` state
+| 0x100      |   4B             | `eisourcecfg0`   | `eicsourcecfg1`
+| ...        |   ...            | ...              | ...
+| 0x1FF      |   4B             | `eisourcecfg510` | `eisourcecfg511`
 |===
 
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+Indirect access to `eisourcecfg[k]` provides access to the source configuration of interrupts `k x 2` and `(k x 2) + 1`. 
 
-When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control 
+the source configuration of eight interrupts.
+Indirect access to `eisourcecfg[k]` mirrors `provides access to the source configuration of interrupts `k x 4` up to 
+`(k x 4) + 3`.
+
+Each 11-bit source configuration is laid out as described in the AIA "Source configurations" section. 
+Since at most two interrupt files are supported by an ACLIC, delegation is greatly simplified. 
+ACLIC interrupt delegation simply controls whether interrupts are delegated from the machine-mode 
+interrupt file to the supervisor-mode interrupt file. 
+
+If the Ssaclic extension is not present, the D (delegate) bit of an interrupt's source configuration is WARL 0. 
+
+If the Ssaclic extension is present: 
+  * The D bit of the source configuration in the machine-mode of bit is writable.
+  * If the D bit is set in a machine-mode source configuration register, bits 9:0 must be set to zero.
+  * Setting the D bit in machine-mode source configuration delegates that interrupt to the supervisor-mode interrupt file.  
+  * The D bit of an interrupt's supervisor-mode source configuration is WARL 0. 
+
+NOTE: Interrupt ID 0 cannot be used, and implementations can choose to make its configuration bits WARL 0. 
 
 === APLIC configured for ACLIC operation
 
