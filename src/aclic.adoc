@@ -234,7 +234,7 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic and Ssaclic extensions depend on the Smaia extension.
+The Smaclic and Ssaclic extensions depend on the Smaia extension and Smcsrind or Sscsrind.
 
 NOTE: 
   * Many AIA features such as programmable IPRIO may not be needed in resource constrained systems. 
@@ -306,6 +306,9 @@ and presenting a consistent SW interface for any hart.
 Smaclic provides a set of registers that are accessible in machine mode and associated with the
 ACLIC machine-mode interrupt file. Ssaclic adds a second set of registers associated with the supervisor-mode
 interrupt file.  
+
+When `xiselect` has a value in the range 0x1000-0x10FF, 
+attempts to access alias CSRs `xireg4` through `xireg6` raise an illegal instruction exception.
 
 ==== Interrupt Priority (iprio)
 
