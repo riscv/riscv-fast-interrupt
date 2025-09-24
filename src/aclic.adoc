@@ -71,9 +71,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :pistatus: pass:q[``**__x__**pistatus``]
 :xpistatus: pass:q[``xpistatus``]
 :pithreshold: pass:q[``pithreshold``]
-:mithreshold: pass:q[``mithreshold``]
-:sithreshold: pass:q[``sithreshold``]
-:xithreshold: pass:q[``xithreshold``]
+:xithreshold: pass:q[``eithreshold``]
 
 :eidelivery: pass:q[``eidelivery``]
 :eithreshold: pass:q[``eithreshold``]
@@ -649,7 +647,6 @@ It provides additional state to resume execution of the previous handler after a
 ----
        Number  Name         Description
  (NEW) 0x346   mpistatus    Previous interrupt context
- (NEW) 0xFB1   mithreshold  Interrupt enable threshold
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
 
@@ -673,14 +670,6 @@ A mask for filtering out the bits of a priority number that will participate in 
 NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ----
 
-==== New Interrupt enable threshold ({mithreshold}) CSR
-
-A new WLRL M-mode CSR, {mithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
-
-Register {mithreshold} implements exactly IPRIOLEN bits.
-
 ==== New Previous Interrupt Status ({mpistatus}) CSR
 
 A new M-mode CSR, {mpistatus}, holds consolidated state of preempted context.
@@ -703,7 +692,6 @@ mpistatus
 ----
        Number  Name         Description
  (NEW) 0x146   spistatus    Previous interrupt context
- (NEW) 0x1B1   sithreshold  Interrupt enable threshold
 ----
 
 ==== New Previous Interrupt Status ({spistatus}) CSR
@@ -723,14 +711,6 @@ spistatus
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
 
-==== New Interrupt enable threshold ({sithreshold}) CSR
-
-A new WLRL S-mode CSR, {sithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
-
-Register {sithreshold} implements exactly IPRIOLEN bits.
-
 === Reset Behavior
 
 In general in RISC-V, mandatory reset state is minimized but platform
@@ -744,12 +724,6 @@ that {sstatus}.`sie` is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
-==== Mandatory reset state
-
-{mithreshold} resets to zero.
-
-The reset behavior of other fields is platform-specific.
-
 === Operation
 
 When {xithreshold} is a nonzero value,
@@ -759,7 +733,7 @@ when the following condition holds:
 
 [source]
 ----
-iprio[i] & NIPPRIO_MASK >= xithreshold
+iprio[i] & NIPPRIO_MASK >= eithreshold
 ----
 
 When {xithreshold} is zero,
@@ -790,7 +764,7 @@ This automatically restores the interrupt enable threshold to the level of the p
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower privilege mode
+then access to the new CSR {spistatus} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
