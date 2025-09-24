@@ -265,7 +265,8 @@ The Ssaclic extension adds a second interrupt file for supervisor mode interrupt
 The AIA-defined interrupt file configuration registers {eidelivery}, {eithreshold}, {eipk} and {eiek} work as
 described in AIA Chapter 3 "Incoming MSI Controller".  This includes their reset behaviour.
 
-The number of interrupt identities supported by an ACLIC interrupt file is one less that a multiple of 64,
+The number of interrupt identities supported by an ACLIC interrupt file is one less than a multiple of 64,
+
 unless the number of identities is less than 64. 
 Unlike the IMSIC for which the minimum number of supported identities is 63,
 an ACLIC can additionally support 7, 15, 31, or 63 interrupt identities. 
