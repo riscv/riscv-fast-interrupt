@@ -1099,18 +1099,10 @@ push:
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xpistatus
   bgez a0, handle_exc       # Handle synchronous exception
-  csrr a0, xtopi            # Read major interrupt number into a0
-  li a1, xEI                # Write major identity of external interrupt to a1
-  beq a0, a1, handle_ei     # Handle external interrupt
-  # clear major interrupt pending bit - no single instruction equivalent
-shift_idenity:
+  csrrw a0, xtopei, zero    # Read interrupt number into a0 and clear pending bit
   srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
   csrrsi zero, xstatus, XIE # Enable interrupts
-
-handle_ei:
-  csrr a0, xtopei           # Read minor interrupt number into a0
-  j shift_identity           # Jump back to rest of push sequence
 
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
