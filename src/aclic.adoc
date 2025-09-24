@@ -181,6 +181,7 @@ The Advanced Core Local Interrupt Controller (ACLIC) is a single hart external i
   * High throughput interrupt handling
   * Up to 1023 external interrupts
   * Low area overhead
+  * Maximize compatibility with AIA
 
 The ACLIC is closely coupled with a hart, and provides the same CSR and indirect-CSR interface as an IMSIC. 
 Since its interrupt inputs are wired rather than message-signaled, AIA source configuration and prioritization are required, as in the APLIC. 
@@ -233,7 +234,15 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic and Ssaclic extensions depend on the Smaiae extension.
+The Smaclic and Ssaclic extensions depend on the Smaia extension.
+
+NOTE: 
+  * Many AIA features such as programmable IPRIO may not be needed in resource constrained systems. 
+    Since these are already controlled by WARL registers, implementations can already choose to not support them.
+  * A minimal implementation of the `mvip` CSR is suggested by the AIA specification:
+    When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+    read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+    writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist.
 
 Of the main ACLIC goals, these targets are addressed here:
 
@@ -242,8 +251,8 @@ Of the main ACLIC goals, these targets are addressed here:
   * Maximize compatibility with AIA
 
 To achieve this, ACLIC builds upon the hart-level extensions of AIA,
-and the interrupt source configuration and prioritization mechanisms of the 
-Advanced Platform Level Interrupt Controller (APLIC).
+adding equivalents to the interrupt source configuration and prioritization 
+mechanisms of the Advanced Platform Level Interrupt Controller (APLIC).
 
 In terms of compatibility, the goal is that a hart with Smaclic/Ssaclic extensions
 can be used at with the same trap handlers as one developed for AIA.
@@ -253,30 +262,29 @@ indirect CSR access mechanism, interrupt source and priority configuration is pe
 using new indirect CSRs instead of the memory-mapped registers of an external APLIC. 
 The source and priority configuration data follow the same definitions as the equivalent APLIC fields. 
 
-Note: 
-  * A hart cannot have more than one closely coupled external interrupt controller; 
-  * in particular a hart cannot have both an ACLIC and an IMSIC. 
+NOTE: 
+  * A hart can have only one closely coupled external interrupt controller, since there is no provision for CSRind space to be shared.
   * A system can contain an APLIC as well as a closely coupled ACLIC; in this case {eidelivery} is 
-    used to select which interrupt controller is connected to each of the CLINT external interrupt inputs.   
+    used to select which interrupt controller is connected to each of the hart's {xeip} interrupt inputs.   
 
 An ACLIC supports one interrupt file for machine mode interrupts.
 The Ssaclic extension adds a second interrupt file for supervisor mode interrupts. 
 
-The AIA-defined interrupt file configuration registers {eidelivery}, {eithreshold}, {eipk} and {eiek} work as
+The AIA-defined interrupt file configuration registers {eidelivery}, {eithreshold} and {eiek} work as
 described in AIA Chapter 3 "Incoming MSI Controller".  This includes their reset behaviour.
+{eipk} behaviour depends on the interrupt source configuration, and is detailed below. 
 
-The number of interrupt identities supported by an ACLIC interrupt file is one less that a multiple of 64,
-unless the number of identities is less than 64. 
-Unlike the IMSIC for which the minimum number of supported identities is 63,
-an ACLIC can additionally support 7, 15, 31, or 63 interrupt identities. 
+The number of interrupt identities supported by an ACLIC interrupt file is one less than a multiple of 64.
+An ACLIC implementation can implement fewer than 63 interrupt identities.
 In this case the {eip} and {eie} bits and source and priority configuration for the unimplemented
 identities are WARL 0. 
 
 NOTE: Implementing these APLIC-equivalent registers as core level indirect CSRs has several advantages.
   * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
-  * It simplifies the handling of level-sensitive interrupts, avoiding the need for a separate pending flag as in the APLIC.
   * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
-  * It simplifies the register interface, as CSR instructions have single bit operations
+  * It does not require the special considerations for level-sensitive interrupts that are needed when APLIC delivers interrupts to an IMSIC.
+  * It simplifies the register interface, as CSR instructions have single bit operations.
+  * It simplifies software, because CSR operations are atomic.
 
 The {xtopei} registers work analogous to the IMSIC operation. 
 When {eidelivery} specifies that interrupts are delivered from the ACLIC interrupt file, {xtopei} 
@@ -305,10 +313,10 @@ When XLEN = 32, each `xireg` register controls the ACLIC priority setting of fou
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg` size |  `xireg` state
-| 0x100      |   4B          | `eiprio0`
-| ...        |   ...         | ...
-| 0x1FF      |   4B          | `eiprio255`
+| `xiselect`  |  `xireg` size |  `xireg` state
+| 0x1000      |   4B          | `eiprio0`
+| ...         |   ...         | ...
+| 0x10FF      |   4B          | `eiprio255`
 |===
 
 Each `eiprio` register controls the priorities of four interrupts, with one 8-bit byte per interrupt. For a
@@ -332,9 +340,9 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 [%autowidth]
 |===
 | `xiselect` |  `xireg2/3` size |  `xireg2` state  |  `xireg3` state
-| 0x100      |   4B             | `eisourcecfg0`   | `eicsourcecfg1`
+| 0x1000     |   4B             | `eisourcecfg0`   | `eicsourcecfg1`
 | ...        |   ...            | ...              | ...
-| 0x1FF      |   4B             | `eisourcecfg510` | `eisourcecfg511`
+| 0x10FF     |   4B             | `eisourcecfg510` | `eisourcecfg511`
 |===
 
 Indirect access to `eisourcecfg[k]` provides access to the source configuration of interrupts `k x 2` and `(k x 2) + 1`. 
@@ -349,13 +357,15 @@ Since at most two interrupt files are supported by an ACLIC, delegation is great
 ACLIC interrupt delegation simply controls whether interrupts are delegated from the machine-mode 
 interrupt file to the supervisor-mode interrupt file. 
 
-If the Ssaclic extension is not present, the D (delegate) bit of an interrupt's source configuration is WARL 0. 
+If the Ssaclic extension is not present, writing '1' to the D (delegate) bit of an interrupt's source configuration 
+causes the interrupt's entire source configuration to be set to zero instead.  
 
 If the Ssaclic extension is present: 
   * The D bit of the source configuration in the machine-mode of bit is writable.
   * If the D bit is set in a machine-mode source configuration register, bits 9:0 must be set to zero.
   * Setting the D bit in machine-mode source configuration delegates that interrupt to the supervisor-mode interrupt file.  
-  * The D bit of an interrupt's supervisor-mode source configuration is WARL 0. 
+  * Writing '1' to the D (delegate) bit of an interrupt's supervisor-mode source configuration 
+    causes the interupt's entire source configuration to be set to zero instead. 
 
 NOTE: Interrupt ID 0 cannot be used, and implementations can choose to make its configuration bits WARL 0. 
 
@@ -376,16 +386,40 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
-=== Area impact of AIA features
+=== Precise effects on interrupt-pending bits
 
-Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
-Since these are already controlled by WARL registers, implementations can already choose to not support them.
+This section is to be read in conjunction with the AIA "Source configurations" section. 
 
-A minimal implementation of the `mvip` CSR is suggested by the AIA specification:
+NOTE:
+  * The behaviour of interrupt-pending bits is a simplified form of the APLIC interrupt-pending bit behaviour.
+  * These simplifications are possible because ACLIC is closely coupled to the hart and does not generate message-signaled interrupts.
 
-When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
-read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
-writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist.
+An attempt to set or clear an interrupt source’s pending bit by writing to an {eip} register in the interrupt
+file may or may not be successful, depending on the corresponding source mode  
+and the state of the source’s rectified input value (defined in the AIA "Source configurations" section). 
+
+The following enumerates all the circumstances when a pending bit is set or cleared for a given source mode. 
+
+If the source mode is Detached: 
+  * The pending bit is set to one only by writing '1' to the relevant {eip} indirect-CSR bit. 
+  * The pending bit is cleared when the interrupt is claimed by an {mtopei} write, or by writing 
+    '0' to the relevant {eip} indirect-CSR bit. 
+
+If the source mode is Edge1 or Edge0: 
+  * The pending bit is set to one by a low-to-high transition in the rectified input value, 
+    or by writing '1' to the relevant {eip} indirect-CSR bit. 
+  * The pending bit is cleared when the interrupt is claimed by an {mtopei} write, or by writing 
+    '0' to the relevant {eip} indirect-CSR bit.
+    
+If the source mode is Level1 or Level0
+ * The pending bit is always just a copy of the rectified input value.  
+   The pending bit cannot be set by a write to its {eip} indirect-CSR bit. 
+   The pending bit is not cleared when the interrupt is claimed by an {mtopei} write, 
+      nor can it be cleared by clearing the relevant {eip} indirect-CSR bit. 
+      
+In addition to the rules above, 
+a write to an {eisourcecfg} register can cause the source’s interrupt pending bit to be set to one, 
+as specified in the AIA "Source configurations" section. 
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
@@ -580,7 +614,7 @@ Included in: <<smcsps>>
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-The Smnip extension depends on the Smaiae extension and adds nested preemption support at machine level.
+The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
