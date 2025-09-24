@@ -411,7 +411,22 @@ The rest is not required.
 
 === Major interrupt redirection to ACLIC
 
-In ACLIC mode major interrupt sources are forwarded to ACLIC, according to their major identity numbers. In that mode CLINT is not used and ACLIC becomes the only source of interrupts for M/S-modes.
+In ACLIC mode, ACLIC becomes the hart's primary - and only - interrupt controller. The major interrupt sources (i.e, timer interrupt, software interrupt, ...) are forwarded to ACLIC, according to their major identity numbers.
+
+NOTE: all major interrupts keep their identity numbers.
+
+In this mode CLINT is not used and doesn't influence the interrupt handling.
+The M-mode ACLIC domain becomes the only source of interrupt traps for M-mode and S-mode ACLIC domain becomes the only source of interrupt traps for S-mode.
+
+Such unification of major and external interrupts under ACLIC control enables:
+
+* a unified interrupt identity space, simplifying interrupt vectoring
+* consistent handling and configuration across all interrupts
+* threshold control via the existing external interrupt threshold register
+* elimination of multiple top-priority interrupt registers in favor of a single one
+
+If the ACLIC mode is turned off (legacy mode), the system works as per the RISC-V privileged specification. In that case, the CLINT is a primary interrupt controller and the ACLIC an external (secondary) interrupt controller.
+In legacy mode, the major interrupts doesn't have configurable priority.
 
 === State Enable
 
