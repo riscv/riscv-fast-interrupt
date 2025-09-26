@@ -1056,23 +1056,23 @@ To simplify access to the stacked context, the stack layout is defined as follow
 
 stack pointer adjustment: 32
 
-24: x15
-20: x14
-16: x13
-12: x12
- 8: x11
- 4: x10
+-24: x15
+-20: x14
+-16: x13
+-12: x12
+ -8: x11
+ -4: x10
 
 ** XLEN = 64:
 
 stack pointer adjustment: 48
 
-48: x15
-40: x14
-32: x13
-24: x12
-16: x11
- 8: x10
+-48: x15
+-40: x14
+-32: x13
+-24: x12
+-16: x11
+ -8: x10
 
 * Smnip/Ssnip present:
 
@@ -1082,15 +1082,15 @@ start of stackframe remains same. In addition:
 
 stack pointer adjustment: 32
 
-32: xpistatus (XLEN)
-28: xpepc (XLEN)
+-32: xpistatus (XLEN)
+-28: xpepc (XLEN)
 
 ** XLEN = 64
 
 stack pointer adjustment: 64
 
-64: xpistatus (XLEN)
-56: xpepc (XLEN)
+-64: xpistatus (XLEN)
+-56: xpepc (XLEN)
 ----
 
 === Fault handling
