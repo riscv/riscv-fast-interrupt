@@ -967,17 +967,22 @@ The preempting trap is expected to fully save and restore the architectural stat
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
 +
-The tpush instruction writes the value of the xcause CSR into register a0.
+The tpush instruction writes the value of the xcause CSR into register a0 for synchronous exceptions.
++
+For vectored interrupts, the major interrupt identity is written to a0.
+If the interrupt is an external interrupt, the minor identity is written to a1 in addition.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
 For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
+For interrupts which share a common dispatch handler,
+the provided identities can be used to index into a software vector table.
 +
 The following table summarizes the written trap information:
 +
 [%autowidth]
 |===
-| Register | Synchronous Exception | Major Interrupt | External Interrupt (Interrupt Vector Table Mode)
-| a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Minor Identity
-| a1 | `xtval` | No Write | No Write
+| Register | Synchronous Exception | Major Interrupt | External Interrupt
+| a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Major Identity
+| a1 | `xtval` | No Write | Minor Identity
 | a2 | `xtval2` | No Write | No Write
 | a3 | `xtinst` | No Write | No Write
 |===
@@ -985,11 +990,11 @@ The following table summarizes the written trap information:
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
 The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 +
-As a consequence, the following prototype could serve for an interrupt handler at machine level.
+As a consequence, the following prototype could serve for an external interrupt handler at machine level.
 +
 [source,c]
 ----
-void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpistatus")));
+void interrupt_handler(uint8_t major_id, uint8_t minor_id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpistatus")));
 ----
 
 It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
@@ -1158,18 +1163,18 @@ push:
   sr a4, OFFSET(sp)         # Save xepc
   sr a5, OFFSET(sp)         # Save xpistatus
   bgez a0, handle_exc       # Handle synchronous exception
-  csrr a0, xtopi            # Read major interrupt number into a0
+  csrr a0, xtopi            # Read major interrupt identity into a0
+  srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
   li a1, xEI                # Write major identity of external interrupt to a1
   beq a0, a1, handle_ei     # Handle external interrupt
   # clear major interrupt pending bit - no single instruction equivalent
-shift_idenity:
-  srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
   csrrsi zero, xstatus, XIE # Enable interrupts
 
 handle_ei:
-  csrr a0, xtopei           # Read minor interrupt number into a0
-  j shift_identity           # Jump back to rest of push sequence
+  csrr a1, xtopei           # Read minor interrupt identity into a1
+  srli a1, a1, 16           # Right shift topi value to have idenity aligned with bit 0.
+  j finish_push             # Jump back to rest of push sequence
 
 handle_exc:
   csrr a1, xtval            # Get xcause of interrupted context
