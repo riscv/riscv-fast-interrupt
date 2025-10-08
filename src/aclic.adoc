@@ -66,6 +66,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
 :epc: pass:q[``**__x__**epc``]
 :cause: pass:q[``**__x__**cause``]
+:xcause: pass:q[``xcause``]
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
 :pistatus: pass:q[``**__x__**pistatus``]
@@ -804,13 +805,15 @@ and then jumps to the masked address.
 
 [source]
 ----
-       Number  Name         Description
-       0x305   mtvec        M-mode Trap-handler base address / interrupt mode
- (NEW) 0x307   mivt         M-mode Interrupt-handler vector table base address
- (NEW) 0x308   meivt        M-mode External Interrupt-handler vector table base address
-       0x105   stvec        S-mode Trap-handler base address / interrupt mode
- (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
- (NEW) 0x108   seivt        S-mode External Interrupt-handler vector table base address
+       Number  Name    Description
+       0x342   mcause  M-mode trap cause register
+       0x305   mtvec   M-mode Trap-handler base address / interrupt mode
+ (NEW) 0x307   mivt    M-mode Interrupt-handler vector table base address
+ (NEW) 0x308   meivt   M-mode External Interrupt-handler vector table base address
+       0x142   scause  M-mode trap cause register
+       0x105   stvec   S-mode Trap-handler base address / interrupt mode
+ (NEW) 0x107   sivt    S-mode Interrupt-handler vector table base address
+ (NEW) 0x108   seivt   S-mode External Interrupt-handler vector table base address
 ----
 
 ==== New {xivt} and {xeivt} CSR
@@ -839,7 +842,57 @@ Interrupt vector table mode is encoded as a new state in the
 existing {xtvec} WARL register, where {xtvec}.`mode` (the two
 least-significant bits) is `11`.
 
-==== Smivt Changes to {xtvec} CSR Mode
+==== Changes to {xcause} CSR Exception Code
+
+When taking a trap on an external interrupt,
+it is important to capture the identity of the interrupt.
+In interrupt vector table mode,
+the exception code field is changed as follows:
+
+The exception code field of {xcause} is changed to hold the Major and Minor Interrupt Identities.
+
+NOTE: While a HW-vectored handler will typically only make use of the minor identity,
+an OS may want to handle several interrupts with a common trampoline,
+and therefore needs to know the major identity as well.
+
+The major identity is held in bits 15:0 of the exception code field,
+while the minor identity is held in bits XLEN-1:16 of the exception code field.
+Together, the two identities form the full exception code, which is a WLRL field.
+
+The resulting format of {xcause} is as follows:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback" :font-size 24}])
+(def row-height 40)
+(def row-header-fn nil)
+(def left-margin 200)
+(def right-margin 200)
+(def boxes-per-row 32)
+
+;; ─────────────────────────────────────────
+;; Top row: Field boundaries (labels only)
+;; Boundaries at: XLEN-1 | 16 | 0
+(draw-box "XLEN-1" {:span 4 :borders {}})
+(draw-box "16"     {:span 14 :borders {} :text-anchor "end"})
+(draw-box "0"      {:span 14 :borders {} :text-anchor "end"})
+
+;; ─────────────────────────────────────────
+;; Middle row: Field names
+;; Fields: Interrupt | Minor Interrupt Identity (WLRL) | Major Interrupt Identity (WLRL)
+(draw-box "Interrupt" {:span 4})
+(draw-box "Minor Interrupt Identity (WLRL)" {:span 14 :text-anchor "middle"})
+(draw-box "Major Interrupt Identity (WLRL)" {:span 14 :text-anchor "middle"})
+
+;; ─────────────────────────────────────────
+;; Bottom row: Field widths
+;; Widths: 1 | XLEN-17 | 16
+(draw-box "1"         {:span 4 :borders {}})
+(draw-box "XLEN-17"   {:span 14 :borders {} :text-anchor "middle"})
+(draw-box "16"        {:span 14 :borders {} :text-anchor "middle"})
+----
+
+==== Changes to {xtvec} CSR Mode
 
 The PC upon interrupt is changed as follows:
 
