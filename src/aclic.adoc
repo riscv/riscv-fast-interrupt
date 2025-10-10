@@ -1024,7 +1024,9 @@ Interrupts shall not be enabled before completing the context save/restore opera
 Interrupts must be disabled before starting to restore context in the tpopxret instruction.
 As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
 +
-If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
+If the Smtp extension is implemented, tpush must be the first instruction of any interrupt handler, excluding NMIs.
++
+NOTE: The requirement to mandate tpush is necessary to allow implementations to speculatively start executing the tpush instruction before the interrupt handler is fully fetched.
 +
 NOTE: In contrast to the Zcmp push/pop instructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
 +
