@@ -408,16 +408,13 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
-=== Area impact of AIA features
-
-Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
-Since these are already controlled by WARL registers, implementations can already choose to not support them.
-
-A minimal implementation of the `mvip` CSR is suggested by the AIA specification:
-
-When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
+ +
+A minimal implementation of the `mvip` CSR is suggested by the AIA specification: +
+"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
 read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
-writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist.
+writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
