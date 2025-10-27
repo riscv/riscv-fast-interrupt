@@ -609,7 +609,8 @@ Included in: <<smcsps>>
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-The Smnip extension depends on the Smaclic extension and adds nested preemption support at machine level.
+The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
+
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
