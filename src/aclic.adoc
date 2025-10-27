@@ -222,7 +222,7 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic and Ssaclic extensions depend on the Smaiae extension.
+The Smaclic extension depends on the Smcsrind extension, and Ssaclic depends on Sscsrind.
 
 Of the main ACLIC goals, these targets are addressed here:
 
@@ -609,7 +609,7 @@ Included in: <<smcsps>>
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-The Smnip extension depends on the Smaiae extension and adds nested preemption support at machine level.
+The Smnip extension depends on the Smaclic extension and adds nested preemption support at machine level.
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
