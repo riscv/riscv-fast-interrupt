@@ -195,23 +195,23 @@ The table below provides a summary of the ACLIC extensions.
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
 Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
 
-Some extension depend upon other extensions.
+Some extensions depend upon other extensions.
 This table summarizes all dependencies.
 Each row contains the dependencies of the extension named in the first column.
 
 [%autowidth]
 |===
-| Extension Name | Sm | Ss | Smcsrind | Sscsrind | Smaclic | Smnip
-| Smivt          | x  |    |          |          |         |  
-| Ssivt          |    | x  |          |          |         |  
-| Smcsps         | x  |    |          |          |         |  
-| Sscsps         |    | x  |          |          |         |  
-| Smtp           | (x)| (x)|          |          |         |  
-| Smaclic        | x  |    | x        |          |         |  
-| Ssaclic        |    |  x |          | x        | x       |  
-| Smnip          |    |    |          |          | x       |  
-| Ssnip          |    |    |          |          |         | x
-| Smehv          |    |    |          |          |         | x
+| Extension Name | Sm | Ss | Smaia | Ssaia | Smcsrind | Sscsrind | Smaclic | Smnip
+| Smivt          | x  |    |       |       |          |          |         |  
+| Ssivt          |    | x  |       |       |          |          |         |  
+| Smcsps         | x  |    |       |       |          |          |         |  
+| Sscsps         |    | x  |       |       |          |          |         |  
+| Smtp           | (x)| (x)|       |       |          |          |         |  
+| Smaclic        | x  |    | x     |       | x        |          |         |  
+| Ssaclic        |    | x  |       | x     |          | x        | x       |  
+| Smnip          | x  |    | x     |       |          |          | x       |  
+| Ssnip          |    | x  |       | x     |          |          |         | x
+| Smehv          | x  |    |       |       |          |          |         | x
 |===
 
 In this table (x) denotes a dependency that is valid,
@@ -222,7 +222,7 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic extension depends on the Smcsrind extension, and Ssaclic depends on Sscsrind.
+The Smaclic extension depends on the Smaia and Smcsrind extensions, and Ssaclic depends on Ssaia and Sscsrind.
 
 Of the main ACLIC goals, these targets are addressed here:
 
@@ -239,6 +239,14 @@ can be used at with the same trap handlers as one developed for AIA.
 
 At config-time, the interface differs,
 but ACLIC uses the same structure for configuration as the APLIC.
+
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
+ +
+A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
+"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
 
 === New Interrupt Delivery Mode
 
@@ -407,14 +415,6 @@ except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
-
-NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
-Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
- +
-A minimal implementation of the `mvip` CSR is suggested by the AIA specification: +
-"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
-read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
-writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
@@ -666,7 +666,7 @@ mpistatus
  29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
  27         mpie             Previous interrupt enable, mirror of mstatus.mpie
  26:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcspsw is implemented
+ 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
 
@@ -971,7 +971,7 @@ The following table summarizes the written trap information:
 |===
 +
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
-The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
+The values of xtval, xtval2, and xtinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 +
 As a consequence, the following prototype could serve for an interrupt handler at machine level.
 +
