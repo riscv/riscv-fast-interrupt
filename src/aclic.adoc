@@ -738,7 +738,7 @@ when the following condition holds:
 
 [source]
 ----
-iprio[i] & NIPPRIO_MASK >= xithreshold
+iprio[i] >= xithreshold & NIPPRIO_MASK
 ----
 
 When {xithreshold} is zero,
