@@ -180,7 +180,6 @@ The table below provides a summary of the ACLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
-| Smaiae       | Advanced Interrupt Architecture for Embedded Systems
 | Smaclic      | Advanced Core Local Interrupt Controller at Machine level
 | Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
 | Smivt        | Support for interrupt vector table at Machine level
@@ -196,24 +195,23 @@ The table below provides a summary of the ACLIC extensions.
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
 Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
 
-Some extension depend upon other extensions.
+Some extensions depend upon other extensions.
 This table summarizes all dependencies.
 Each row contains the dependencies of the extension named in the first column.
 
 [%autowidth]
 |===
-| Extension Name | Sm | Ss | Smcsrind | Sscsrind | Smaiae | Smnip
-| Smivt          | x  |    |          |          |        |  
-| Ssivt          |    | x  |          |          |        |  
-| Smcsps         | x  |    |          |          |        |  
-| Sscsps         |    | x  |          |          |        |  
-| Smtp           | (x)| (x)|          |          |        |  
-| Smaiae         | x  | (x)| x        | (x)      |        |  
-| Smaclic        |    |    |          |          | x      |  
-| Ssaclic        |    |    |          |          | x      |  
-| Smnip          |    |    |          |          | x      |  
-| Ssnip          |    |    |          |          |        | x
-| Smehv          |    |    |          |          |        | x
+| Extension Name | Sm | Ss | Smaia | Ssaia | Smcsrind | Sscsrind | Smaclic | Smnip
+| Smivt          | x  |    |       |       |          |          |         |  
+| Ssivt          |    | x  |       |       |          |          |         |  
+| Smcsps         | x  |    |       |       |          |          |         |  
+| Sscsps         |    | x  |       |       |          |          |         |  
+| Smtp           | (x)| (x)|       |       |          |          |         |  
+| Smaclic        | x  |    | x     |       | x        |          |         |  
+| Ssaclic        |    | x  |       | x     |          | x        | x       |  
+| Smnip          | x  |    | x     |       |          |          | x       |  
+| Ssnip          |    | x  |       | x     |          |          |         | x
+| Smehv          | x  |    |       |       |          |          |         | x
 |===
 
 In this table (x) denotes a dependency that is valid,
@@ -222,28 +220,9 @@ if the corresponding privilege mode is implemented in the hart.
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
-== Advanced Interrupt Architecture for Embedded Systems (Smaiae)
-
-The Smaia extension encompasses all added CSRs
-and all modifications to interrupt response behavior
-that the AIA specifies for a hart,
-over all privilege levels.
-
-The Smaiae extension is a subset of Smaia.
-To limit the implementation cost,
-the interrupt filtering and virtual interrupts are not supported.
-
-Specifically, `xvip` and `xvien` are read-only 0.
-When XLEN=32, `xviph` and `xvienh` are also read-only 0.
-
-NOTE: While other features of AIA like IMSIC or programmable IPRIO
-might also not be needed resource constraint systems,
-These are already controlled by WARL registers,
-so implementations can already choose to not support these.
-
 == Advanced Core Local Interrupt Controller (Smaclic and Ssaclic)
 
-The Smaclic and Ssaclic extensions depend on the Smaiae extension.
+The Smaclic extension depends on the Smaia and Smcsrind extensions, and Ssaclic depends on Ssaia and Sscsrind.
 
 Of the main ACLIC goals, these targets are addressed here:
 
@@ -260,6 +239,14 @@ can be used at with the same trap handlers as one developed for AIA.
 
 At config-time, the interface differs,
 but ACLIC uses the same structure for configuration as the APLIC.
+
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
+ +
+A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
+"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
 
 === New Interrupt Delivery Mode
 
@@ -622,7 +609,8 @@ Included in: <<smcsps>>
 
 == Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
 
-The Smnip extension depends on the Smaiae extension and adds nested preemption support at machine level.
+The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
+
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
@@ -681,7 +669,7 @@ mpistatus
  19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcspsw is implemented
+ 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
 
@@ -996,7 +984,7 @@ The following table summarizes the written trap information:
 |===
 +
 Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
-The values of xtval, xtval2, and xinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
+The values of xtval, xtval2, and xtinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
 +
 As a consequence, the following prototype could serve for an interrupt handler at machine level.
 +
