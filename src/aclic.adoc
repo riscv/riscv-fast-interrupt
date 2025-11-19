@@ -665,7 +665,10 @@ mpistatus
  XLEN-1:30  (reserved)
  29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
  27         mpie             Previous interrupt enable, mirror of mstatus.mpie
- 26:9       (reserved)
+ 26:20      (reserved)
+ 19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
+ 16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
@@ -688,7 +691,10 @@ spistatus
  XLEN-1:29  (reserved)
  28         spp              Previous privilege mode, mirror of sstatus.spp
  27         spie             Previous interrupt enable, mirror of sstatus.spie
- 26:9       (reserved)
+ 26:20      (reserved)
+ 19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
+ 16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
@@ -947,6 +953,7 @@ The instructions are designed to be applicable to all RISC-V trap handling schem
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
   * Clear the ip bit if writable
+  * Clear the xstatus.FS and xstatus.VS bits
   * Write trap information to argument registers
   * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
 +
@@ -954,6 +961,12 @@ NOTE: If a trap occurs during the sequence, then any operations which were execu
 The preempting trap is expected to fully save and restore the architectural state that it overwrites.
 If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
 In this case, if the instruction is resumed, any store operations must be re-executed.
++
+The {xstatus}.`FS` and {xstatus}.`VS` bits are cleared to indicate
+that the floating-point and vector register state is not valid for the preempting handler.
+This allows lazy context save/restore of the related state.
+As the original value of these fields is contained in {xpistatus},
+they will be restored through the pop instructions.
 +
 The tpush instruction writes the value of the xcause CSR into register a0.
 This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
@@ -1150,6 +1163,8 @@ push:
   li a1, xEI                # Write major identity of external interrupt to a1
   beq a0, a1, handle_ei     # Handle external interrupt
   # clear major interrupt pending bit - no single instruction equivalent
+  li a4, ((3 << 13) | (3 << 9))  # Build mask for VS and FS
+  csrc xstatus, a4          # Clear VS and FS to off state
 shift_idenity:
   srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
 finish_push:
