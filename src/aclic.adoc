@@ -142,6 +142,7 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :mret: pass:q[``mret``]
 :sret: pass:q[``sret``]
 :xret: pass:q[``xret``]
+:ipopxret: pass:q[``ipopxret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -189,7 +190,7 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
 | Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smtp         | Support for trap handler push/pop
+| Smip         | Support for interrupt handler push/pop
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
@@ -206,7 +207,7 @@ Each row contains the dependencies of the extension named in the first column.
 | Ssivt          |    | x  |       |       |          |          |         |  
 | Smcsps         | x  |    |       |       |          |          |         |  
 | Sscsps         |    | x  |       |       |          |          |         |  
-| Smtp           | (x)| (x)|       |       |          |          |         |  
+| Smip           | (x)| (x)|       |       |          |          |         |  
 | Smaclic        | x  |    | x     |       | x        |          |         |  
 | Ssaclic        |    | x  |       | x     |          | x        | x       |  
 | Smnip          | x  |    | x     |       |          |          | x       |  
@@ -605,9 +606,7 @@ Included in: <<smcsps>>
 
 <<<
 
-[[smtp, Smtp]]
-
-== Horizontal Nested Interrupt Preemption Support (Smnip & Ssip)
+== Horizontal Nested Interrupt Preemption Support (Smnip & Ssnip)
 
 The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
 
@@ -937,271 +936,101 @@ The summarized behavior is the following:
  10       Reserved
 ----
 
-== Trap handler push and pop extension (Smtp)
+[[smip, Smip]]
+== Interrupt handler push and pop extension (Smip)
 
-The trap handler push and pop extension adds instructions to accelerate trap handling, which additionally reduce code size.
-Trap handler latency and jitter is reduced by allowing the context save to happen speculatively in parallel to the vector table and handler fetch.
-Additional latency reduction is achieved by allowing late-preemption of the push sequence in favor of a higher priority interrupt or synchronous exception.
-Trap handling throughput is increased by allowing tail-chaing of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
-The instructions are designed to be applicable to all RISC-V trap handling schemes.
+The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
+Interrupt handler latency and jitter are reduced by allowing the context save to happen speculatively in parallel with the vector table and handler fetch.
 
-=== Trap handler push and pop functional overview
+NOTE: In Harvard architectures, the data bus is idle while the vector table and handler fetch are happening.
+By starting the context save in parallel, the available data bus bandwidth can be utilized, reducing interrupt latency.
 
-. The tpush instruction
+Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
+Interrupt handling throughput is increased by allowing tail-chaning of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+
+This extension does not affect Non-Maskable Interrupts (NMIs).
+
+=== Interrupt trap behavior
+
+The existing trap behavior is modified.
+Before executing the first instruction of the trap handler,
+this extension ensures the interrupted context is partially saved.
+
+It performs the following operations:
+
   * Conditionally performs a stack pointer swap by executing cspspush sp
-  * Saves hart's state of the preempted context that can be overwritten in case of a nested preemption
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
-  * Clear the ip bit if writable
-  * Clear the xstatus.FS and xstatus.VS bits
-  * Write trap information to argument registers
-  * Optionally, enable interrupts and clear the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
-+
-NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state and/or memory contents.
-The preempting trap is expected to fully save and restore the architectural state that it overwrites.
-If the trap occurs before updating the stack pointer, it needs to be assumed that the stacked context was overwritten.
-In this case, if the instruction is resumed, any store operations must be re-executed.
-+
-The {xstatus}.`FS` and {xstatus}.`VS` bits are cleared to indicate
-that the floating-point and vector register state is not valid for the preempting handler.
-This allows lazy context save/restore of the related state.
-As the original value of these fields is contained in {xpistatus},
-they will be restored through the pop instructions.
-+
-The tpush instruction writes the value of the xcause CSR into register a0.
-This is beneficial also with vectored interrupts, as it allows sharing the same handler for similar interrupt sources.
-For example, if a peripheral exists multiple times in a system at different offsets, this can be handled with one handler.
-+
-The following table summarizes the written trap information:
-+
-[%autowidth]
-|===
-| Register | Synchronous Exception | Major Interrupt | External Interrupt (Interrupt Vector Table Mode)
-| a0 | `xcause` (equal to `xcause.Exception Code`) | Major Identity | Minor Identity
-| a1 | `xtval` | No Write | No Write
-| a2 | `xtval2` | No Write | No Write
-| a3 | `xtinst` | No Write | No Write
-|===
-+
-Software shall only use the information from the argument registers, as the corresponding CSRs may be overwritten by preempting traps.
-The values of xtval, xtval2, and xtinst only need to be written to an argument register if the corresponding exception cause a write to the respective CSR.
-+
-As a consequence, the following prototype could serve for an interrupt handler at machine level.
-+
-[source,c]
-----
-void interrupt_handler(uint16_t id) __attribute__((interrupt, prestacked("x10-x15,xepc,xpistatus")));
-----
 
-It is explicitly allowed for the push instruction to clobber any of the saved GPRs.
+NOTE: This extension does not require a normative stack layout.
+Interrupt handlers do not require access to the interrupted context.
 
-. Second The tpopxret instruction
-  * Disables interrupts
-  * Set the xstatus.XDT flag if the double trap extension is implemented at the current privilege level
+=== Returns from interrupt handlers
+
+When executing an {ipopxret} instruction the context save during the trap is restored and a return is executed.
+
+NOTE: An explicit interrupt return instruction is included, rather than modifying the xret behavior,
+so that the hart does not need to do bookkeeping whether it is in an interrupt or exception context.
+
+It performs the following actions in order:
+
   * Restores registers x10-x15
-  * Restores the hart's state to the point that the hart can return to the interrupted context
   * Adjust the stack pointer to destroy the stack frame
   * Conditionally performs a stack pointer swap by executing cspspop sp
   * Executes an xret according to the current level
-+
-NOTE: If a trap occurs during the sequence, then any operations which were executed before the trap may update architectural state.
-A trap may not occur after updating the stack pointer, if the context was not yet fully restored from the stack.
-+
-There is no specific order mandated for the context save/restore, and the individual parts may occur in parallel.
-Interrupts shall not be enabled before completing the context save/restore operations of the tpush instruction.
-Interrupts must be disabled before starting to restore context in the tpopxret instruction.
-As interrupts are disabled during the sequence as a side effect of the trap being taken, intermediate states during the execution of the instruction are not observable.
-+
-If the Smtp extension is implemented, the first and last instructions of a trap handler must be a tpush and the last a tpopxret instruction, respectively.
-+
-NOTE: In contrast to the Zcmp push/pop instructions, Smtp instructions do not encode an incremental stack pointer adjustment in order to ease late preemption and tail chaining.
-+
-With these requirements, implementations are allowed to speculatively start executing an tpush instruction in case of a taken interrupt.
+
+NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
+It is however an implementation choice to perform tail-chaining to the next highest priority pending-enabled interrupt upon this instruction.
+
+=== C interrupt handlers
+
+When this extension is implemented, a compiler may assume for any interrupt handler defined with the interrupt attribute like
+
+[source,c]
+----
+void interrupt_handler() __attribute__((interrupt));
+----
+
+that the registers x10-x15 have been saved.
+Additionally, the compiler does not need to restore these registers.
+Finally, it should generate an {ixpopret} instruction at the end of the function instead of an {xret}.
 
 === Late Preemption of the interrupt handler
 
-While executing the tpush instruction, a hart may optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this trap handler instead.
-If such an interrupt exists, the hart may abort executing the tpush instruction and trigger the following actions:
-  - Update the `xcause.Exception Code` to the corresponding interrupt id.
-  - Perform the trap handler fetch.
-  - Start executing the trap handler, potentially skipping portions of tpush that have been executed by the aborted tpush.
-
-There will be a point of no return during the tpush instruction.
-Specifically, once the interrupt pending bit is cleared, the tpush instruction must complete for the given interrupt source.
+While executing the trap side effects of an interrupt, it is allowed for an implementation to optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this interrupt handler instead.
 
 === Tail chaining of interrupts handlers
 
-While executing the tpopxret instruction, a hart may optionally check for any pending and enabled interrupts at the current privilege mode.
-If such an interrupt exists, the hart may abort executing the tpopxret instruction and trigger the following actions:
+While executing the ipopxret instruction,
+it is allowed for an implementation to of a hart
+to optionally check for any pending and enabled interrupts at the current privilege mode.
+
+If such an interrupt exists, the hart may abort executing the ipopxret instruction and trigger the following actions:
   - Update the `xcause.Exception Code` to the corresponding interrupt id.
-  - Perform the trap handler fetch.
-  - Start executing the trap handler, while skipping the portions of tpush that have not been reverted by the aborted tpopxret.
+  - Perform the interrupt handler fetch.
+  - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted ipopxret.
 
 Explicitly, {xepc}, {xpistatus} remain unchanged.
 
-NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is done after disabling interrupts at the start of the tpopxret instruction. In this case, only the conditional interrupt enablement of the tpush instruction would need to executed.
-
-Once the instruction retires, or the interrupts are disabled, no late preemption can occur.
-
-=== Stack layout
-
-To ease debugging, a stack layout is recommended for the saved context.
-
-NOTE: This stack layout is not mandated to allow e.g. shadow register sets
-
-[source]
-----
-* Smnip/Ssnip not present:
-
-** XLEN = 32:
-
-stack pointer adjustment: 32
-
-24: x15
-20: x14
-16: x13
-12: x12
-8: x11
-4: x10
-
-** XLEN = 64:
-
-stack pointer adjustment: 48
-
-48: x15
-40: x14
-32: x13
-24: x12
-16: x11
-8: x10
-
-* Smnip/Ssnip present:
-
-start of stackframe remains same. In addition:
-
-** XLEN = 32
-
-stack pointer adjustment: 32
-
-32: xpistatus (XLEN)
-28: xpepc (XLEN)
-
-** XLEN = 32
-
-stack pointer adjustment: 64
-
-60: xpistatus (XLEN)
-56: xpepc (XLEN)
-----
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the ipopxret instruction.
+In this case, the entire context save and restore sequence can be skipped.
 
 === Fault handling
 
-Unless it can be guaranteed by design that faults causing synchronous exceptions cannot occur during the critical section,
+If synchronous exceptions cannot occur during the context save/restore segments,
 handling can only be resumed if the double trap extension is supported.
-The critical sections are defined as the time during execution of the tpush and tpopxret instruction, during which interrupts are disabled.
-
-=== Debug
-
-As the execution of tpush may start before the instruction is fetched, breakpoint conditions met might observe an inconsistent state.
-Therefore, if a breakpoint is triggered because of an tpush instruction, the breakpoint shall be handled as if it occurred on the subsequent instruction.
 
 <<<
 
 === Instructions
 
-==== tpush
+==== ipopxret
 
 Synopsis::
-Push trap context
+Pop interrupt context and return
 
 Mnemonic::
-tpush preempt
-
-Encoding::
-[wavedrom, ,svg]
-....
-{reg: [
-  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
-  {bits: 5, name: 0x0, attr: [''], type: 2},
-  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
-  {bits: 5, name: 0x0, attr: [''], type: 4},
-  {bits: 4, name: 0x7, attr: [''], type: 8},
-  {bits: 1, name: 'imm1', attr: ['preempt'], type: 3},
-  {bits: 7, name: 0x8, attr: [''], type: 8},
-]}
-....
-
-Description::
-Saves the interrupted context at the beginning of a trap.
-If preempt is '1', interrupts will be enabled at the end of the sequence.
-
-Behavior::
-
-The behavior in RISC-V assembly when preempt is '1' is as follows.
-If preempt is '0', enabling interrupts shall be skipped.
-The behavior is assuming Smnip is present. Otherwise, xpistatus will not be saved.
-
-[source]
-----
-push:
-  cspspush sp, sp           # Conditionally swap stack pointer
-  addi sp, sp, -FRAMESIZE   # Adjust stack pointer
-  sr a0, OFFSET(sp)         # Save a0
-  sr a1, OFFSET(sp)         # Save a1
-  sr a2, OFFSET(sp)         # Save a2
-  sr a3, OFFSET(sp)         # Save a3
-  sr a4, OFFSET(sp)         # Save a4
-  sr a5, OFFSET(sp)         # Save a5
-  sr a6, OFFSET(sp)         # Save a6
-  csrr a0, xcause           # Get xcause of interrupted context to determine if exception
-  csrr a4, xepc             # Get xepc of interrupt context
-  csrr a5, xpistatus        # Get xpistatus of interrupt context
-  sr a4, OFFSET(sp)         # Save xepc
-  sr a5, OFFSET(sp)         # Save xpistatus
-  bgez a0, handle_exc       # Handle synchronous exception
-  csrr a0, xtopi            # Read major interrupt number into a0
-  li a1, xEI                # Write major identity of external interrupt to a1
-  beq a0, a1, handle_ei     # Handle external interrupt
-  # clear major interrupt pending bit - no single instruction equivalent
-  li a4, ((3 << 13) | (3 << 9))  # Build mask for VS and FS
-  csrc xstatus, a4          # Clear VS and FS to off state
-shift_idenity:
-  srli a0, a0, 16           # Right shift topi value to have idenity aligned with bit 0.
-finish_push:
-  csrrsi zero, xstatus, XIE # Enable interrupts
-
-handle_ei:
-  csrr a0, xtopei           # Read minor interrupt number into a0
-  j shift_identity           # Jump back to rest of push sequence
-
-handle_exc:
-  csrr a1, xtval            # Get xcause of interrupted context
-  csrr a2, xtval2           # Get xepc of interrupt context
-  csrr a3, xtinst           # Get xpistatus of interrupt context
-  j finish_push             # Jump back to rest of push sequence
-
-where
-  sr is sw on RV32 and sd on RV64
-  lr is lr on RV32 and ld on RV64
-----
-
-NOTE: Note that implementations do not need to execute these exact instructions, as long as the functional behavior is achieved.
-
-While this assembly sequence clobbers a4 and a5 to save CSRs,
-this is not a requirement. 
-SW shall not make assumptions about value of registers, with the exception of the a0-a3 as described earlier.
-
-Included in: <<smtp>>
-
-<<<
-
-==== tpopxret
-
-Synopsis::
-Pop trap context
-
-Mnemonic::
-tpopxret
+ipopxret
 
 Encoding::
 [wavedrom, ,svg]
@@ -1217,21 +1046,15 @@ Encoding::
 ....
 
 Description::
-Restores an interrupted context at the end of a trap.
+Restores an interrupted context at the end of an interrupt and returns to the previous context
 
 Behavior::
 
 The behavior in RISC-V assembly is as follows.
-The behavior is assuming Smnip is present. Otherwise, the xpistatus CSR will not be restored.
 
 [source]
 ----
-pop:
-  csrrsi zero, xstatus, XIE # Disable interrupts
-  lr a4, OFFSET(sp)         # Restore xepc
-  lr a5, OFFSET(sp)         # Restore xpistatus
-  csrw xepc, a4             # Write xepc back to CSR
-  csrw xpistatus, a5        # Write xpistatus back to CSR
+ipopxret:
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -1244,8 +1067,9 @@ pop:
   xret
 
 where
-  sr is sw on RV32 and sd on RV64
   lr is lr on RV32 and ld on RV64
 ----
 
-Included in: <<smtp>>
+The order and access size of the loads, as well as the OFFSETS, are implementation defined.
+
+Included in: <<smip>>
