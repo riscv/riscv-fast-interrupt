@@ -942,7 +942,7 @@ The summarized behavior is the following:
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency and jitter are reduced by allowing the context save to happen speculatively in parallel with the vector table and handler fetch.
 
-NOTE: In Harvard architectures, the data bus is idle while the vector table and handler fetch are happening.
+NOTE: In Harvard architectures, the data bus may be idle while the vector table and handler fetch are happening.
 By starting the context save in parallel, the available data bus bandwidth can be utilized, reducing interrupt latency.
 
 Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
