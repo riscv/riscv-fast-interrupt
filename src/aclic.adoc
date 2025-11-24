@@ -86,6 +86,8 @@ Graphics used are either explicitly available for free, are property of RISC-V I
 :ithreshold: pass:q[``ithreshold``]
 :xtopei: pass:q[``xtopei``]
 :topi: pass:q[``topi``]
+:mtopei: pass:q[``mtopei``]
+:stopei: pass:q[``stopei``]
 :vstopei: pass:q[``vstopei``]
 :xtopi: pass:q[``xtopi``]
 :xtopei: pass:q[``xtopei``]
@@ -231,16 +233,16 @@ Of the main ACLIC goals, these targets are addressed here:
   * Maximize compatibility with AIA
 
 To achieve this, ACLIC builds upon the hart-level extensions of AIA,
-and the Advanced Platform Level Interrupt Controller (APLIC).
-The ACLIC is a tailored APLIC, optimized for resource efficiency, directly integrated with one hart.
+and incorporates features of the Advanced Platform Level Interrupt Controller (APLIC).
+The ACLIC is a tailored IMSIC, extended to support a limited number of wired interrupts, and directly integrated with one hart.
 
 In terms of compatibility, the goal is that a hart with Smaclic/Ssaclic extensions
 can be used at with the same trap handlers as one developed for AIA.
 
 At config-time, the interface differs,
-but ACLIC uses the same structure for configuration as the APLIC.
+but ACLIC configuration structures are inherited from the IMSIC and APLIC. 
 
-NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+NOTE: Many AIA features not be needed in resource constrained systems. 
 Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
  +
 A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
@@ -248,157 +250,62 @@ A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specifica
 read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
 writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
 
-=== New Interrupt Delivery Mode
+=== Indirect-access CSRs shared with AIA IMSIC
 
-The Incoming Message Signaled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
-which defines the interrupt delivery mode.
-A new delivery mode is defined:
+The following indirect CSRs behave as specified in AIA IMSIC section 3.8, "Indirectly accessed interrupt-file registers".
 
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|0 = | Interrupt delivery is disabled
-|1 = | Interrupt delivery from the interrupt file is enabled
-|0x20000000 = | Interrupt delivery from an ACLIC (new)
-|0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
-|===
+* {eidelivery}
+* {eithreshold}
+* {eipk}
+* {eiek}
 
-If Smaclic or Ssaclic extensions are present, reset initializes {eidelivery} to 0x20000000.
+NOTE: when an interrupt is configured in edge-triggered mode, the associated {eipk} bit is latched by the triggering edge and
+cleared when the interrupt is taken by a trap handler. Need to go into details about this mechanism...
 
-When interrupts are delivered from an ACLIC, the following behavior is valid:
+=== Direct-access CSRs shared with AIA IMSIC
 
-The IMSIC registers {eithreshold}, {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1.
+The following CSRs behave as specified in AIA IMSIC section 3.9, "Top external interrupt CSRs". 
 
-The `eip` array and `eie` array act as an alias of the pending and enable bits of the connected APLIC domain.
+* {mtopei}, {stopei}, {vstopei}
 
-The {eithreshold} CSR is an alias of the {ithreshold}.
-For the interrupt enable and interrupt pending bits {eipk} and {eiek},
-a write with the value 1 performs a write access with the value 1 to the corresponding {setip} or {setie} register,
-while a write with the value 0 performs a write access with value 1 to the corresponding {in_clrip} or {clrie} register.
-On read of {eipk} or {eiek}, these CSRs are an alias of {setip}[_k_] and {setie}[_k_], respectively.
+=== Source Configuration Indirect CSRs
 
-For XLEN=32, {eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_], respectively.
-For XLEN=64, {eipk} and {eiek} only exist for even numbered indices of _k_. In this case,
-{eipk} and {eiek} access {setip}[_k_]/{in_clrip}[_k_] and {setie}[_k_]/{clrie}[_k_] in the lower half of the CSR,
-and {setip}[_k+1_]/{in_clrip}[_k_] and {setie}[_k+1_]/{clrie}[_k_] in the upper half of the CSR, respectively.
+ACLIC adds the ability for low-numbered minor interrupt identities to be associated with wired interrupts.
+This association is made using Source Configuration indirect CSRs.  
 
-NOTE: Mirroring these APLIC registers at a core level has several advantages.
-  * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
-  * It simplifies the address decoding logic within the interrupt controller by using CSR access over memory mapped ones.
-  * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
-  * It provides a unified interface for all harts from a SW point of view, without the need to know a platform defined start address.
-  * It simplifies the register interface, as CSR instructions have single bit operations
+The `sourcecfg` register has this format:
 
-The {xtopei} registers work analogous to the IMSIC operation,
-but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
-In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
+[source]
+----
+sourcecfg
+ Bits   Field        Description
+ 15:11  (reserved)   read-only 0
+ 10     (reserved)   read-only 0, corresponds to the D bit of APLIC sourcecfg
+ 9:3    sid[6:0]     ID of the source that drives this interrupt identity when Source Mode is Edge 
+                     or Level triggered (*WARL*)
+ 2:0    sm[2:0]      Source Mode; see description in AIA section 4.5.2 
 
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|bits 26:16| Interrupt identity
-|bits 10:0 | Interrupt priority (configured target[identity].iprio)
-|===
+----
 
-=== Indirect CSR access to APLIC registers
-
-The APLIC registers used in the ACLIC configuration can all be accessed by indirect CSRs,
-eliminating the overheads associated with a memory mapped device,
-and presenting a consistent SW interface for any hart.
-
-To have full control over the necessary APLIC registers, the following indirect CSR access is added.
-
-==== Interrupt Priority (iprio)
-
-When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
+When XLEN = 32, the `xireg` and `xireg` registers combined control the source configuration of four interrupts.
 
 [%autowidth]
 |===
-| `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `xacliciprio0`
-| ...        |   ...         | ...
-| 0x1100     |   4B          | `xacliciprio255`
+| `xiselect` |  `xireg/xireg1` size |  `xireg` state       |  `xireg1` state
+| 0x1000     |   4B                 | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
+| ...        |   ...                | ...                  | ...
+| 0x1100     |   4B                 | `xaclicsourcecfg510` | `xaclicsourcecfg511`
 |===
 
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+When XLEN = 64, only the even-numbered registers exist and the `xireg` and `xireg1` registers combined control the source configuration of eight interrupts.
 
-When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+NOTE: APLIC source configuration provides a register per interrupt source, indicating whether the source is delegated to a child domain. ACLIC source configuration has a register per interrupt _identity_, which refers back to the source IDs and does not provide for delegation.
 
-==== Source Configuration (sourcecfg)
+NOTE: IDs in `sourcecfg` need to fully specify a source ID, and thus need more bits than configuring a priority for each interrupt ID. The tradeoff is a simpler filter tree that does not need to propagate and compare priorities.    
 
-When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
-as the rest of the register is reserved.
+=== Optional Memory Mapped interrupt signalling
 
-When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
-
-[%autowidth]
-|===
-| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
-| ...        |   ...            | ...                  | ...
-| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
-|===
-
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
-
-When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
-
-=== APLIC configured for ACLIC operation
-
-The APLIC contains a per-domain configuration register,
-which, among other things, allows selecting the delivery mode.
-The `DM` field is extended to two bits,
-which allows encoding a new mode for ACLIC delivery.
-
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|0 = |direct delivery mode 
-|1 =|MSI delivery mode
-|2 =|ACLIC delivery mode (new)
-|===
-
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
-
-The extended `domaincfg` register has this format:
-
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
-|===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE 
-|bit 7|read-only 0
-|bits 3:2 |DM (*WARL*)
-|bit 0 |BE (*WARL*)
-|===
-
-All other register bits are reserved and read as zeros.
-
-When in ACLIC delivery mode, the following, additional restrictions are applied:
-
-[%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
-|===
-|bits 31:24 |read-only 0x80 
-|bit 8|IE = 1 (read-only)
-|bit 7|read-only 0
-|bits 3:2 |DM = 2
-|bit 0 |BE (*WARL*)
-|===
-
-Specifically, = `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
-
-If Smaclic and/or Ssaclic are implemented,
-the reset value of the delivery mode for the respective domains shall be 'ACLIC delivery mode'.
-In ACLIC-only systems, access to this register is not needed, and therefore no indirect CSR access is provided.
-
-In the ACLIC delivery mode, there the following registers are not accessible and not used:
-
-* As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not required.
-* Interrupt delivery control (IDC) structure is only needed in direct delivery mode, and not applicable to ACLIC delivery.
-* The indirect CSR access simplifies setting and clearing of individual bits in the pending and enable arrays.
-Therefore, the registers setipnum, clripnum, setienum, clrienum, setipnum_be, and setipnum_le are not used in the ACLIC configuration.
-* The target registers are not fully implemented.
-The iprio portion of it can be accessed as described in the section on indirect access.
-The rest is not required.
+The ACLIC can be implemented with or without a memory mapped interface for incoming message-signalled interrupts.  
 
 === State Enable
 
@@ -409,7 +316,7 @@ Additional control is provided for the newly added registers `xacliciprio[k]` an
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the new CSRs (`maclicsourcecfg[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -622,7 +529,6 @@ It provides additional state to resume execution of the previous handler after a
 ----
        Number  Name         Description
  (NEW) 0x346   mpistatus    Previous interrupt context
- (NEW) 0xFB1   mithreshold  Interrupt enable threshold
  (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
 ----
 
@@ -646,14 +552,6 @@ A mask for filtering out the bits of a priority number that will participate in 
 NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ----
 
-==== New Interrupt enable threshold ({mithreshold}) CSR
-
-A new WLRL M-mode CSR, {mithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
-
-Register {mithreshold} implements exactly IPRIOLEN bits.
-
 ==== New Previous Interrupt Status ({mpistatus}) CSR
 
 A new M-mode CSR, {mpistatus}, holds consolidated state of preempted context.
@@ -661,13 +559,13 @@ A new M-mode CSR, {mpistatus}, holds consolidated state of preempted context.
 [source]
 ----
 mpistatus 
- Bits       Field            Description
+ Bits       Field             Description
  XLEN-1:30  (reserved)
- 29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
- 27         mpie             Previous interrupt enable, mirror of mstatus.mpie
- 26:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt enable threshold
+ 29:28      mpp[1:0]          Previous privilege mode, mirror of mstatus.mpp
+ 27         mpie              Previous interrupt enable, mirror of mstatus.mpie
+ 26:12      (reserved)
+ 11         psppush           Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
+ 10:0       pithreshold[10:0] Previous interrupt enable threshold (eithreshold of the M-mode interrupt file)
 ----
 
 === Changed and new CSRs at Supervisor Level
@@ -676,7 +574,6 @@ mpistatus
 ----
        Number  Name         Description
  (NEW) 0x146   spistatus    Previous interrupt context
- (NEW) 0x1B1   sithreshold  Interrupt enable threshold
 ----
 
 ==== New Previous Interrupt Status ({spistatus}) CSR
@@ -684,25 +581,17 @@ mpistatus
 [source]
 ----
 spistatus
- Bits       Field            Description
+ Bits       Field             Description
  XLEN-1:29  (reserved)
- 28         spp              Previous privilege mode, mirror of sstatus.spp
- 27         spie             Previous interrupt enable, mirror of sstatus.spie
- 26:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
- 7:0        pithreshold[7:0] Previous interrupt enable threshold
+ 28         spp               Previous privilege mode, mirror of sstatus.spp
+ 27         spie              Previous interrupt enable, mirror of sstatus.spie
+ 26:12      (reserved)
+ 11         psppush           Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
+ 10:0       pithreshold[10:0] Previous interrupt enable threshold (eithreshold of the S-mode interrupt file)
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
-
-==== New Interrupt enable threshold ({sithreshold}) CSR
-
-A new WLRL S-mode CSR, {sithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
-
-Register {sithreshold} implements exactly IPRIOLEN bits.
 
 === Reset Behavior
 
@@ -717,53 +606,31 @@ that {sstatus}.`sie` is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
-==== Mandatory reset state
-
-{mithreshold} resets to zero.
-
-The reset behavior of other fields is platform-specific.
-
-=== Operation
-
-When {xithreshold} is a nonzero value,
-an interrupt sources _i_ at with priority number `iprio[i]`
-is considered disabled irrespective of its interrupt-enable bit,
-when the following condition holds:
-
-[source]
-----
-iprio[i] & NIPPRIO_MASK >= xithreshold
-----
-
-When {xithreshold} is zero,
-all enabled interrupt sources can contribute to signaling interrupts to the hart.
-
 ==== Trap behavior
 
 The existing trap behavior is modified as follows:
 
 When a trap is taken on interrupt _i_ into level `x`,
-the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
-Additionally, {xithreshold} is set to `iprio[i]`.
+the current value of {eithreshold} in the `x`-mode interrupt file is written to {xpistatus}.{pithreshold}.
+Additionally, that {eithreshold} is set to _i_ & NIPPRIO_MASK. 
 This automatically raises the interrupt enable threshold.
 
-NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
+NOTE: Synchronous exceptions do not modify the value of {eithreshold}.
 
 ==== Returns from Handlers
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
+{xret} sets the interrupt file {eithreshold} to {xpistatus}.{pithreshold}.
 
 This automatically restores the interrupt enable threshold to the level of the previous context.
-
 
 === State Enable
 
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower privilege mode
+then access to the new CSR {spistatus} by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
