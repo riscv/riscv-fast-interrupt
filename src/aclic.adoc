@@ -855,10 +855,13 @@ NOTE: While a HW-vectored handler will typically only make use of the minor iden
 an OS may want to handle several interrupts with a common trampoline,
 and therefore needs to know the major identity as well.
 
-The major identity is held in bits 15:0 of the exception code field,
-while the minor identity is held in bits XLEN-1:16 of the exception code field.
-Together, the two identities form the full exception code, which is a WLRL field.
+When operating in interrupt vector table mode ({xtvec}.`mode = 11`),
+external interrupts encode their exception cause as follows:
 
+- The major identity is held in bits 15:0 of the exception code field.
+- The minor identity is held in bits XLEN-2:16 of the exception code field.
+
+Together, the two identities form the full exception code, which is a WLRL field.
 The resulting format of {xcause} is as follows:
 
 [bytefield]
@@ -891,6 +894,8 @@ The resulting format of {xcause} is as follows:
 (draw-box "XLEN-17"   {:span 14 :borders {} :text-anchor "middle"})
 (draw-box "16"        {:span 14 :borders {} :text-anchor "middle"})
 ----
+
+For interrupts that are not external, the original layout of {xcause} is retained.
 
 ==== Changes to {xtvec} CSR Mode
 
