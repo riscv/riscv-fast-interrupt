@@ -940,7 +940,8 @@ The summarized behavior is the following:
 == Interrupt handler push and pop extension (Smip)
 
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
-Interrupt handler latency is reduced by allowing the context save to happen in parallel with the vector table and handler fetch.
+Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
+which may include the fetch of the vector table entry.
 
 NOTE: In Harvard architectures, the data bus may be idle while the vector table and handler fetch are happening.
 By starting the context save in parallel, the available data bus bandwidth can be utilized, reducing interrupt latency.
