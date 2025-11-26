@@ -945,6 +945,10 @@ Interrupt handler latency is reduced by allowing the context save to happen in p
 NOTE: In Harvard architectures, the data bus may be idle while the vector table and handler fetch are happening.
 By starting the context save in parallel, the available data bus bandwidth can be utilized, reducing interrupt latency.
 
+NOTE: In some implementations, executing the context save in parallel to the fetches of the vector table entry and the first instruction
+may contribute to reducing the jitter in interrupt latency,
+by masking variable delays e.g. caused by cache misses on handler fetch.
+
 Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
 Interrupt handling throughput is increased by allowing tail-chaning of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
 
