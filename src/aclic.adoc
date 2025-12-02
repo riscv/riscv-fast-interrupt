@@ -200,28 +200,6 @@ The table below provides a summary of the ACLIC extensions.
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
 Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
 
-Some extensions depend upon other extensions.
-This table summarizes all dependencies.
-Each row contains the dependencies of the extension named in the first column.
-
-[%autowidth]
-|===
-| Extension Name | Sm | Ss | Smaia | Ssaia | Smcsrind | Sscsrind | Smaclic | Smnip
-| Smivt          | x  |    |       |       |          |          |         |  
-| Ssivt          |    | x  |       |       |          |          |         |  
-| Smcsps         | x  |    |       |       |          |          |         |  
-| Sscsps         |    | x  |       |       |          |          |         |  
-| Smip           | (x)| (x)|       |       |          |          |         |  
-| Smaclic        | x  |    | x     |       | x        |          |         |  
-| Ssaclic        |    | x  |       | x     |          | x        | x       |  
-| Smnip          | x  |    | x     |       |          |          | x       |  
-| Ssnip          |    | x  |       | x     |          |          |         | x
-| Smehv          | x  |    |       |       |          |          |         | x
-|===
-
-In this table (x) denotes a dependency that is valid,
-if the corresponding privilege mode is implemented in the hart.
-
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
