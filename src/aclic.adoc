@@ -407,10 +407,14 @@ The `eip` and `eie` arrays act as an alias of the pending and enable bits of the
 
 The {eithreshold} CSR subsumes the functionality of the {ithreshold} register in the APLIC.
 
-NOTE: Providing access to APLIC pending and enable bits at the hart-level has several advantages over using using an IMSIC with interrupt delivery from an APLIC
+[NOTE]
+====
+Providing access to APLIC pending and enable bits at the hart-level has several advantages over using using an IMSIC with interrupt delivery from an APLIC
+
   * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
   * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
   * It simplifies the register interface, as CSR instructions have single bit operations
+====
 
 The {xtopei} registers work analogous to the IMSIC operation,
 but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
