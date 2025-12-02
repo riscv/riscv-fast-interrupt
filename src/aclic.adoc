@@ -259,8 +259,6 @@ which is the only child domain (Child Index '1') of the root domain.
 
 The APLIC contains a per-domain configuration register,
 which, among other things, allows selecting the delivery mode.
-The `DM` field is extended to two bits,
-which allows encoding a new mode for ACLIC delivery.
 
 In an ACLIC system, `DM` is fixed to 0 (direct delivery mode).
 
