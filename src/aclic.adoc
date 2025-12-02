@@ -222,9 +222,10 @@ At config-time, the interface differs from AIA,
 but the same structures for configuration as the APLIC are used.
 
 An ACLIC is made up of three components:
-  #. A hart-local APLIC (Non-ISA)
-  #. Indirect CSR access to APLIC registers (Smaplicind, Ssaplicind)
-  #. Interrupt control interface based on IMSIC (Smictrl, Ssictrl)
+
+. A hart-local APLIC (Non-ISA)
+. Indirect CSR access to APLIC registers (Smaplicind, Ssaplicind)
+. Interrupt control interface based on IMSIC (Smictrl, Ssictrl)
 
 ACLIC at machine level is enabled by Smaclic,
 which is a group of extensions composed of Smaplicind and Smictrl,
@@ -349,7 +350,7 @@ Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `so
 When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
 Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
 
-=== State Enable
+==== State Enable
 
 Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
 
