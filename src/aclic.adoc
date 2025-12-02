@@ -351,8 +351,6 @@ Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `so
 
 ==== State Enable
 
-Access to existing and repurposed AIA CSRs is already controlled by the state enables defined in Smaia/Ssaia.
-
 Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
 
 If the Smstateen extension is implemented,
