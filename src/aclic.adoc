@@ -365,7 +365,7 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 === Interrupt control interface based on IMSIC (Smictrl, Ssictrl)
 
-The Smictrl and Ssictrl depend on Smaia and Ssaia, respectively.
+The Smictrl and Ssictrl extensions depend on Smaia and Ssaia, respectively.
 
 NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
 Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
