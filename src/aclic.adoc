@@ -231,15 +231,15 @@ Of the main ACLIC goals, these targets are addressed here:
   * Low area overhead
   * Maximize compatibility with AIA
 
-To achieve this, ACLIC builds upon the hart-level extensions of AIA,
-and the Advanced Platform Level Interrupt Controller (APLIC).
-The ACLIC is a tailored APLIC, optimized for resource efficiency, directly integrated with one hart.
+ACLIC is a hart-local interrupt controller, optimized for resource efficiency.
+It uses the AIA defined CSR and indirect-CSR interfaces for hart-local interrupt controllers, which are also implemented by the AIA IMSIC.
+In addition, this extension builds upon register definitions and the associated behavior from APLIC.
+The configuration of interrupt delegation, source mode, and interrupt priority work the same way as in APLIC,
+but use the indirect-CSR interface introduced by AIA for hart-local controllers.
+ACLIC adds indirect CSRs that enable wired interrupts to be configured using APLIC concepts that are relevant to directly integrated interrupt controllers.
 
 In terms of compatibility, the goal is that a hart with Smaclic/Ssaclic extensions
 can be used at with the same trap handlers as one developed for AIA.
-
-At config-time, the interface differs,
-but ACLIC uses the same structure for configuration as the APLIC.
 
 NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
 Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
