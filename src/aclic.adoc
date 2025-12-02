@@ -274,7 +274,7 @@ The following, additional restrictions are applied:
 
 The `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
 The `BE` bit is now reserved.
-Endianess is controlled exclusively by the setting configured in the {xstatus} register at the hart.
+Endianess is controlled exclusively by the setting in the {xstatus} register at the hart.
 
 Further simplifications are:
 
@@ -293,6 +293,7 @@ Indirect CSR access to APLIC registers is provided to subsume
 the memory-mapped register interface in a hart-local configuration.
 
 This approach has several advantages:
+
 - Built-in privilege level protection: CSRs are clearly mapped to a privilege level.
   Therefore, no additional protection e.g. through PMP is required.
   Especially in systems without memory translation,
