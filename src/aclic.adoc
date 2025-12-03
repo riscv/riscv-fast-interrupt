@@ -181,12 +181,8 @@ The table below provides a summary of the ACLIC extensions.
 [%autowidth]
 |===
 | Extension Name | Description
-| Smaclic      | Advanced Core Local Interrupt Controller at Machine level
-| Ssaclic      | Advanced Core Local Interrupt Controller at Supervisor level
-| Smaplicind   | Indirect CSR access to APLIC registers at Machine level
-| Ssaplicind   | Indirect CSR access to APLIC registers at Supervisor level
-| Smictrl      | Interrupt control interface based on IMSIC at Machine level
-| Ssictrl      | Interrupt control interface based on IMSIC at Supervisor level
+| Smidctrl     | Interrupt domain control interface at Machine level
+| Ssidctrl     | Interrupt domain control interface at Supervisor level
 | Smivt        | Support for interrupt vector table at Machine level
 | Ssivt        | Support for interrupt vector table at Supervisor level
 | Smehv        | Synchronous exceptions hardware vectoring
@@ -203,7 +199,7 @@ Future specifications could extend the scope of these extension to also be appli
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
-== Fundamental components of ACLIC (Smaclic, Ssaclic)
+== Fundamental components of ACLIC
 
 This section lays the foundation for fast interrupt handling,
 by providing a simple interrupt controller addressing the following goals:
@@ -213,7 +209,7 @@ by providing a simple interrupt controller addressing the following goals:
   * Maximize compatibility with AIA
 
 To achieve this, it builds upon the hart-level extensions of AIA,
-and the Advanced Platform Level Interrupt Controller (APLIC).
+and integrates the subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
 
 In terms of compatibility, the goal is that a hart
 can be used at with the same trap handlers as one developed for AIA.
@@ -221,41 +217,37 @@ can be used at with the same trap handlers as one developed for AIA.
 At config-time, the interface differs from AIA,
 but the same structures for configuration as the APLIC are used.
 
-An ACLIC is made up of three components:
+An ACLIC is made up of two major components:
 
-. A hart-local APLIC (Non-ISA)
-. Indirect CSR access to APLIC registers (Smaplicind, Ssaplicind)
-. Interrupt control interface based on IMSIC (Smictrl, Ssictrl)
+. Hart-local APLIC domains including direct delivery of interrupts to the hart (Non-ISA)
+. Indirect CSR physical control interface to hart-local APLIC domain registers (Smidctrl, Ssidctrl)
 
-ACLIC at machine level is enabled by Smaclic,
-which is a group of extensions composed of Smaplicind and Smictrl,
-and implies the implementation of a hart-local APLIC.
+The latter is additionally made up of
 
-ACLIC at supervisor level is enabled by Ssaclic,
-which depends on Smaclic,
-and is a grop of extensions composed of Ssaplicind and Ssictrl.
+. Interrupt control interface for pending and enable bits based on IMSIC
+. New indirect CSRs for accessing the remaining state of the hart-local APLIC domains
 
-=== Hart-local APLIC (Non-ISA)
+=== Hart-local APLIC domains (Non-ISA)
 
 The APLIC was designed as a multi-hart interrupt controller.
-Here, the APLIC is used tightly coupled with a single hart.
-This leads to a set of simplifications of the APLIC which is described here.
+Here, APLIC domains are used tightly coupled with a single hart.
+The domains used here are a simplified subset of the full domain definition of the APLIC.
 
-==== Interrupt domains
+==== Interrupt domain mapping
 
 An APLIC has one or more interrupt domains,
 each associated with a subset of RISC-V harts at one privilege level.
 
-As the hart-local APLIC only serves one hart,
-it only requires one domain if M-mode but not S-mode has been implemented,
+An ACLIC system requires at most two domains.
+It only requires one domain if M-mode but not S-mode has been implemented,
 and two domains if M- and S-mode are implemented.
 
-In an APLIC, the root domain is always at machine level.
+The root domain is always at machine level.
 If supervisor level is implemented,
 interrupts can be delegated to a supervisor-level domain,
 which is the only child domain (Child Index '1') of the root domain.
 
-==== Simplifications to memory-mapped registers
+==== Simplifications to domain state
 
 The APLIC contains a per-domain configuration register,
 which, among other things, allows selecting the delivery mode.
@@ -279,17 +271,36 @@ Endianess is controlled exclusively by the setting in the {xstatus} register at 
 Further simplifications are:
 
 * The Child Index field in the sourcecfg[i] register is always '1' when D=1 (i.e. delegation to child domain). This is only possible in Machine mode. In Supervisor mode, D=0, as there is no child domain.
-* As the ACLIC is not MSI capable, xmsiaddrcfg[h] and genmsi registers are not required.
-* Interrupt delivery control (IDC) structure is not needed, as its functionality is taken over by hart-local CSRs.
+* As the ACLIC operation is based on direct interrupt delivery, xmsiaddrcfg[h] and genmsi registers are not required.
+* Interrupt delivery control (IDC) structures are not needed, as the domain has a fixed relationship with one hart, and IDC functionality is already provided by hart-local CSRs.
 * The hart index inside the target registers is read-only zero, as only one hart is supported.
 
 APLIC registers or fields not required here shall and are read-only zero.
 
-=== Indirect CSR access to APLIC registers (Smaplicind, Ssaplicind)
+==== Interrupt delivery
 
-Smaplicind depends on the Smcsrind extension, and Ssaplicind depends on Sscsrind.
+The APLIC rules of direct interrupt delivery apply.
+External interrupt signals are supplied to the hart from the respective domain.
+The interrupts from the root domain appear as MEIP (Machine External Interrupt-Pending),
+and interrupts from the child domain appear as SEIP (Supervisor External Interrupt-Pending).
 
-Indirect CSR access to APLIC registers is provided to subsume
+=== Interrupt domain control interface (Smidctrl, Ssidctrl)
+
+Smidctrl depends on the Smcsrind and Smaia extensions.
+Ssidctrl depends on the Sscsrind and Ssaia extensions.
+
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
+ +
+A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
+"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
+read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
+
+The interrupt control interface contains the hart-level interface to operate a hart-local APLIC,
+by building on the hart-level features of AIA.
+
+Indirect CSR access to APLIC domains is provided to subsume
 the memory-mapped register interface in a hart-local configuration.
 
 This approach has several advantages:
@@ -305,82 +316,12 @@ This approach has several advantages:
   This places an additional configuration burden in the hands of a user.
   CSR-based interfaces always use the same CSR register numbers
 
-No dedicated access to interrupt pending or enable bits is provided in this extension.
-Access to these bits is expected to be provided in other extensions.
+This is achieved by reusing the allocated indirect CSR space for the interrupt pending and enable bits in an IMSIC.
+Additional indirect CSR access is provided to the remaining state.
 
-To have full control over the necessary APLIC registers, the following indirect CSR access is added.
-The Smaplicind extension gives machine-level access to the root domain (x=m),
-and Ssaplicind gives supervisor-level access to the child domain (x=s)
+==== Interrupt control interface based on IMSIC
 
-==== Interrupt Priority (iprio)
-
-When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
-
-[%autowidth]
-|===
-| `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `xacliciprio0`
-| ...        |   ...         | ...
-| 0x1100     |   4B          | `xacliciprio255`
-|===
-
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
-
-When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
-
-==== Source Configuration (sourcecfg)
-
-When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
-as the rest of the register is reserved.
-
-When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
-
-[%autowidth]
-|===
-| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
-| ...        |   ...            | ...                  | ...
-| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
-|===
-
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
-
-When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
-
-==== State Enable
-
-Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
-
-If the Smstateen extension is implemented,
-then the bit ?? in mstateen0 is implemented.
-If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
-
-=== Interrupt control interface based on IMSIC (Smictrl, Ssictrl)
-
-The Smictrl and Ssictrl extensions depend on Smaia and Ssaia, respectively.
-
-NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
-Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
- +
-A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
-"When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
-read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
-writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
-
-The interrupt control interface contains the hart-level interface to operate a hart-local APLIC,
-by building on the hart-level features of AIA.
-This does include the IMSIC register file,
-which is repurposed to access the interrupt pending and enable bits of the hart-local APLIC.
-
-=== New Interrupt Delivery Mode
+ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using these same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
 The Incoming Message Signaled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
 which defines the interrupt delivery mode.
@@ -394,7 +335,7 @@ A new delivery mode is defined:
 |0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
 |===
 
-If Smictrl or Ssictrl extensions are present, {eidelivery} is fixed to 0x20000000.
+If Smidctrl or Ssidctrl extensions are present, {eidelivery} is fixed to 0x20000000.
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
@@ -425,6 +366,61 @@ In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and 
 |bits 26:16| Interrupt identity
 |bits 10:0 | Interrupt priority (configured target[identity].iprio)
 |===
+
+==== Indirect CSR access to hart-local APLIC domain configuration
+
+To have full control over the necessary APLIC registers, the following indirect CSR access is added.
+
+===== Interrupt Priority (iprio)
+
+When XLEN = 32, each `xireg` register controls the ACLIC priority setting of four interrupts.
+
+[%autowidth]
+|===
+| `xiselect` |  `xireg` size |  `xireg` state
+| 0x1000     |   4B          | `xacliciprio0`
+| ...        |   ...         | ...
+| 0x1100     |   4B          | `xacliciprio255`
+|===
+
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+
+When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
+Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+
+===== Source Configuration (sourcecfg)
+
+When accessing the source configuration via indirect CSR, only the lower 16b are accessible,
+as the rest of the register is reserved.
+
+When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source configuration of four interrupts.
+
+[%autowidth]
+|===
+| `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
+| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
+| ...        |   ...            | ...                  | ...
+| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
+|===
+
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+
+When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
+Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+
+===== State Enable
+
+Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
+
+If the Smstateen extension is implemented,
+then the bit ?? in mstateen0 is implemented.
+If bit ?? of a controlling mstateen0 CSR is zero,
+then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
+results in an illegal instruction exception,
+except if the hypervisor extension is implemented,
+and the conditions for a virtual instruction exception apply,
+in which case a virtual instruction exception is raised
+when in VS or VU mode instead of an illegal instruction exception.
 
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
