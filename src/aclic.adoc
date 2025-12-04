@@ -998,7 +998,7 @@ void interrupt_handler() __attribute__((interrupt));
 
 that the registers x10-x15 have been saved.
 Additionally, the compiler does not need to restore these registers.
-Finally, it should generate an {ixpopret} instruction at the end of the function instead of an {xret}.
+Finally, it should generate an {ipopxret} instruction at the end of the function instead of an {xret}.
 
 === Late Preemption of the interrupt handler
 
