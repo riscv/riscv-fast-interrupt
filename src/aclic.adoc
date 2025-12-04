@@ -209,7 +209,7 @@ by providing a simple interrupt controller addressing the following goals:
   * Maximize compatibility with AIA
 
 To achieve this, it builds upon the hart-level extensions of AIA,
-and integrates the subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
+and integrates a subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
 
 In terms of compatibility, the goal is that a hart
 can be used at with the same trap handlers as one developed for AIA.
@@ -219,7 +219,7 @@ but the same structures for configuration as the APLIC are used.
 
 An ACLIC is made up of two major components:
 
-. Hart-local APLIC domains including direct delivery of interrupts to the hart (Non-ISA)
+. Hart-local APLIC domains providing direct delivery of interrupts to the hart (Non-ISA)
 . Indirect CSR physical control interface to hart-local APLIC domain registers (Smidctrl, Ssidctrl)
 
 The latter is additionally made up of
@@ -284,6 +284,10 @@ External interrupt signals are supplied to the hart from the respective domain.
 The interrupts from the root domain appear as MEIP (Machine External Interrupt-Pending),
 and interrupts from the child domain appear as SEIP (Supervisor External Interrupt-Pending).
 
+In addition to signalling a pending interrupt,
+a hart-local APLIC domain singals the priority and identity of the highest priority pending-enabled interrupt to the hart.
+This information is accessible at the hart through the {xtopei} CSR.
+
 === Interrupt domain control interface (Smidctrl, Ssidctrl)
 
 Smidctrl depends on the Smcsrind and Smaia extensions.
@@ -323,9 +327,7 @@ Additional indirect CSR access is provided to the remaining state.
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using these same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The Incoming Message Signaled Interrupt Controller (IMSIC) contains the {eidelivery} CSR,
-which defines the interrupt delivery mode.
-A new delivery mode is defined:
+The AIA {eidelivery} CSR defined for the Incoming Message Signaled Interrupt Controller (IMSIC) is extended to provide for an ACLIC delivery mode.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
 |===
