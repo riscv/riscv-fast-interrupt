@@ -284,8 +284,8 @@ External interrupt signals are supplied to the hart from the respective domain.
 The interrupts from the root domain appear as MEIP (Machine External Interrupt-Pending),
 and interrupts from the child domain appear as SEIP (Supervisor External Interrupt-Pending).
 
-In addition to signalling a pending interrupt,
-a hart-local APLIC domain singals the priority and identity of the highest priority pending-enabled interrupt to the hart.
+In addition to signaling a pending interrupt,
+a hart-local APLIC domain signals the priority and identity of the highest priority pending-enabled interrupt to the hart.
 This information is accessible at the hart through the {xtopei} CSR.
 
 === Interrupt domain control interface (Smidctrl, Ssidctrl)
