@@ -734,7 +734,7 @@ The reset behavior of other fields is platform-specific.
 === Operation
 
 When {xithreshold} is a nonzero value,
-an interrupt sources _i_ at with priority number `iprio[i]`
+an interrupt sources _i_ with priority number `iprio[i]`
 is considered disabled irrespective of its interrupt-enable bit,
 when the following condition holds:
 
