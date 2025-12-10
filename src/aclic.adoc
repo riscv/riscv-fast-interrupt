@@ -323,32 +323,19 @@ This approach has several advantages:
 This is achieved by reusing the allocated indirect CSR space for the interrupt pending and enable bits in an IMSIC.
 Additional indirect CSR access is provided to the remaining state.
 
-==== Interrupt control interface based on IMSIC
+==== Interrupt control interface based on IMSIC interface
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using these same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The AIA {eidelivery} CSR defined for the Incoming Message Signaled Interrupt Controller (IMSIC) is extended to provide for an ACLIC delivery mode.
-
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|0 = | Interrupt delivery is disabled
-|1 = | Interrupt delivery from the interrupt file is enabled
-|0x20000000 = | Interrupt delivery from an ACLIC (new)
-|0x40000000 = | Interrupt delivery from a PLIC or APLIC is enabled
-|===
-
-If Smidctrl or Ssidctrl extensions are present, {eidelivery} is fixed to 0x20000000.
+The AIA {eidelivery} and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
+Therefore, no dynamic selection of ACLIC operation via eidelivery is provided.
 
-When interrupts are delivered from an ACLIC, the following behavior is valid:
-
-The IMSIC registers {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1,
+In an ACLIC, registers {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1 in an IMSIC,
 i.e. they are the pending and enable bits for an interrupt source `k`.
 The `eip` and `eie` arrays act as an alias of the pending and enable bits of the connected APLIC domain.
-
-The {eithreshold} CSR subsumes the functionality of the {ithreshold} register in the APLIC.
 
 [NOTE]
 ====
@@ -361,7 +348,7 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
 
 The {xtopei} registers work analogous to the IMSIC operation,
 but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
-In this delivery mode, the {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
+The {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
 |===
@@ -659,6 +646,15 @@ determines the minimum interrupt priority (maximum priority number)
 for an interrupt to be considered enabled at the hart.
 
 Register {mithreshold} implements exactly IPRIOLEN bits.
+
+[NOTE]
+====
+In contrast to existing threshold mechanisms in AIA,
+this CSR applies to major and minor interrupt identities.
+
+It is needed in an efficient implementation of synchronization protocols like
+Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
+====
 
 ==== New Previous Interrupt Status ({mpistatus}) CSR
 
