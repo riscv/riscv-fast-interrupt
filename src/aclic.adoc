@@ -647,11 +647,14 @@ for an interrupt to be considered enabled at the hart.
 
 Register {mithreshold} implements exactly IPRIOLEN bits.
 
+[NOTE]
+====
 In contrast to existing threshold mechanisms in AIA,
 this CSR applies to major and minor interrupt identities.
 
 It is needed in an efficient implementation of synchronization protocols like
 Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
+====
 
 ==== New Previous Interrupt Status ({mpistatus}) CSR
 
