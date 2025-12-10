@@ -331,10 +331,9 @@ The AIA {eidelivery} and {eithreshold} CSRs defined for the Incoming Message Sig
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
+Therefore, no dynamic selection of ACLIC operation via eidelivery is provided.
 
-When interrupts are delivered from an ACLIC, the following behavior is valid:
-
-The IMSIC registers {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1,
+In an ACLIC, registers {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1 in an IMSIC,
 i.e. they are the pending and enable bits for an interrupt source `k`.
 The `eip` and `eie` arrays act as an alias of the pending and enable bits of the connected APLIC domain.
 
@@ -647,6 +646,12 @@ determines the minimum interrupt priority (maximum priority number)
 for an interrupt to be considered enabled at the hart.
 
 Register {mithreshold} implements exactly IPRIOLEN bits.
+
+In contrast to existing threshold mechanisms in AIA,
+this CSR applies to major and minor interrupt identities.
+
+It is needed in an efficient implementation of synchronization protocols like
+Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
 
 ==== New Previous Interrupt Status ({mpistatus}) CSR
 
