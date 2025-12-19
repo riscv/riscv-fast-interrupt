@@ -48,7 +48,7 @@ endif::[]
 :xrefstyle: short
 
 
-Graphics used are either explicitly available for free, are property of RISC-V International, or were created using Wavedrom.
+Graphics used are either explicitly available for free, are the property of RISC-V International, or were created using Wavedrom.
 
 :xstatus: pass:q[``xstatus``]
 :status: pass:q[``**__x__**status``]
@@ -194,7 +194,7 @@ The table below provides a summary of the ACLIC extensions.
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
-Future specifications could extend the scope of these extension to also be applicable in systems with H extension.
+Future specifications could extend the scope of these extensions to also be applicable to systems with the H extension.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
@@ -212,10 +212,10 @@ To achieve this, it builds upon the hart-level extensions of AIA,
 and integrates a subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
 
 In terms of compatibility, the goal is that a hart
-can be used at with the same trap handlers as one developed for AIA.
+can be used with the same trap handlers as one developed for AIA.
 
 At config-time, the interface differs from AIA,
-but the same structures for configuration as the APLIC are used.
+but the same structures for configuration as in the APLIC are used.
 
 An ACLIC is made up of two major components:
 
@@ -266,7 +266,7 @@ The following, additional restrictions are applied:
 
 The `IE` bit is fixed to 1, as its functionality is subsumed by the {xstatus}.`xIE` bits at the hart.
 The `BE` bit is now reserved.
-Endianess is controlled exclusively by the setting in the {xstatus} register at the hart.
+Endianness is controlled exclusively by the setting in the {xstatus} register at the hart.
 
 Further simplifications are:
 
@@ -275,7 +275,7 @@ Further simplifications are:
 * Interrupt delivery control (IDC) structures are not needed, as the domain has a fixed relationship with one hart, and IDC functionality is already provided by hart-local CSRs.
 * The hart index inside the target registers is read-only zero, as only one hart is supported.
 
-APLIC registers or fields not required here shall and are read-only zero.
+APLIC registers or fields not required here shall be read-only zero.
 
 ==== Interrupt delivery
 
@@ -293,7 +293,7 @@ This information is accessible at the hart through the {xtopei} CSR.
 Smidctrl depends on the Smcsrind and Smaia extensions.
 Ssidctrl depends on the Sscsrind and Ssaia extensions.
 
-NOTE: Many AIA features like programmable IPRIO may not be needed in resource constrained systems. 
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource-constrained systems. 
 Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
  +
 A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
@@ -325,7 +325,7 @@ Additional indirect CSR access is provided to the remaining state.
 
 ==== Interrupt control interface based on IMSIC interface
 
-ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using these same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
+ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using the same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
 The AIA {eidelivery} and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
@@ -339,7 +339,7 @@ The `eip` and `eie` arrays act as an alias of the pending and enable bits of the
 
 [NOTE]
 ====
-Providing access to APLIC pending and enable bits at the hart-level has several advantages over using using an IMSIC with interrupt delivery from an APLIC
+Providing access to APLIC pending and enable bits at the hart-level has several advantages over using an IMSIC with interrupt delivery from an APLIC
 
   * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
   * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
@@ -348,7 +348,7 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
 
 The {xtopei} registers work analogous to the IMSIC operation,
 but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
-The {xtopei} CSR reflect both the interrupt identity and the interrupt priority.
+The {xtopei} CSR reflects both the interrupt identity and the interrupt priority.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
 |===
@@ -459,7 +459,7 @@ The CSR is defined as follows:
 ----
 
 In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
-These indicate, if a stack pointer swap is expected during a push or pop sequence, respectively.
+These indicate if a stack pointer swap is expected during a push or pop sequence, respectively.
 
 
 NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
@@ -468,7 +468,7 @@ Therefore the four least significant bits of the stack pointer are zero.
 === Instructions for conditional stack pointer swap
 
 To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, <<#insns-cspspush>> and <<#insns-cspspop>>.
-To decide, if a stack pointer swap is required, these instructions evaluate the two LSBs of the register.
+To decide if a stack pointer swap is required, these instructions evaluate the two LSBs of the register.
 The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
 
 The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xsp}.
@@ -498,7 +498,7 @@ S     mret             1         0          n
 
 The stack pointer is swapped when changing from S-mode to M-mode,
 and is swapped back when returning to S-mode.
-No change of stack pointer occurs for the cspspush and cspspop instruction in the nested handler.
+No change of stack pointer occurs for the cspspush and cspspop instructions in the nested handler.
 
 === State Enable
 
@@ -697,7 +697,7 @@ spistatus
  19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscspsw is implemented
+ 8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscsps is implemented
  7:0        pithreshold[7:0] Previous interrupt enable threshold
 ----
 
@@ -714,7 +714,7 @@ Register {sithreshold} implements exactly IPRIOLEN bits.
 
 === Reset Behavior
 
-In general in RISC-V, mandatory reset state is minimized but platform
+In general, in RISC-V, mandatory reset state is minimized but platform
 specifications or company policy might add additional reset
 requirements.  Since the general privileged architecture states that
 mstatus.mie is reset to zero, interrupts will not be enabled coming
@@ -788,14 +788,14 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 == Support for interrupt vector table (Smivt, Ssivt)
 
-These extensions adds a new mode for taking interrupts via a dedicated interrupt vector table.
+These extensions add a new mode for taking interrupts via a dedicated interrupt vector table.
 
 This increases the range of reachable addresses to the entire address space.
 This is useful when handlers are more than 2 MiB away from the vector table entry.
 
 In this new mode, when an interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to new {xivt} or {xeivt} CSR),
-masks off the least-significant bit (for IALIGN=16) or masks of the 2 least-significant bits (for IALIGN=32),
+table entry for the associated interrupt (table pointed to the new {xivt} or {xeivt} CSR),
+masks off the least-significant bit (for IALIGN=16) or masks off the two least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
 
 === Changed and new CSRs
@@ -820,7 +820,7 @@ and one for external interrupts.
 Both {xivt} and {xeivt} are WARL XLEN-bit CSRs,
 which hold the base address of the interrupt vector table.
 The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boundary.
-Values other than 0 in the low 6 bits are reserved of {xeivt} are reserved.
+Values other than 0 in the low 6 bits of {xeivt} are reserved.
 
 NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
@@ -910,7 +910,7 @@ NOTE: After returning from handling the synchronous exception, another trap will
 In case a higher priority interrupt became pending and enabled, this will trap first.
 
 As long as synchronous exceptions can occur during the interrupt vector table fetch,
-side-affects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
 NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
 
@@ -962,7 +962,7 @@ may contribute to reducing the jitter in interrupt latency,
 by masking variable delays e.g. caused by cache misses on handler fetch.
 
 Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
-Interrupt handling throughput is increased by allowing tail-chaning of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+Interrupt handling throughput is increased by allowing tail-chaining of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
 
 This extension does not affect Non-Maskable Interrupts (NMIs).
 
@@ -1086,6 +1086,6 @@ where
   lr is lr on RV32 and ld on RV64
 ----
 
-The order and access size of the loads, as well as the OFFSETS, are implementation defined.
+The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
 
 Included in: <<smip>>
