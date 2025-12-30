@@ -286,7 +286,7 @@ and interrupts from the child domain appear as SEIP (Supervisor External Interru
 
 In addition to signaling a pending interrupt,
 a hart-local APLIC domain signals the priority and identity of the highest priority pending-enabled interrupt to the hart.
-This information is accessible at the hart through the {xtopei} CSR.
+This information is accessible at the hart through the {xtopei} CSRs, and influences the arbitration between major and minor interrupts that is ultimately reflected in the {xtopi} CSRs.
 
 === Interrupt domain control interface (Smidctrl, Ssidctrl)
 
