@@ -983,7 +983,7 @@ Interrupt handlers do not require access to the interrupted context.
 
 === Returns from interrupt handlers
 
-When executing an {ipopxret} instruction the context save during the trap is restored and a return is executed.
+When executing an {ipopxret} instruction the context saved during the trap is restored and a return is executed.
 
 NOTE: An explicit interrupt return instruction is included, rather than modifying the xret behavior,
 so that the hart does not need to do bookkeeping whether it is in an interrupt or exception context.
@@ -1015,7 +1015,7 @@ Finally, it should generate an {ipopxret} instruction at the end of the function
 
 While executing the trap side effects of an interrupt, it is allowed for an implementation to optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this interrupt handler instead.
 
-=== Tail chaining of interrupts handlers
+=== Tail chaining of interrupt handlers
 
 While executing the ipopxret instruction,
 it is allowed for an implementation to of a hart
