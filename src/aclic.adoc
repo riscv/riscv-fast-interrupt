@@ -1083,7 +1083,7 @@ ipopxret:
   xret
 
 where
-  lr is lr on RV32 and ld on RV64
+  lr is lw on RV32 and ld on RV64
 ----
 
 The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
