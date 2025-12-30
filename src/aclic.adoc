@@ -1033,7 +1033,7 @@ In this case, the entire context save and restore sequence can be skipped.
 
 === Fault handling
 
-If synchronous exceptions cannot occur during the context save/restore segments,
+If synchronous exceptions can occur during the context save/restore segments,
 handling can only be resumed if the double trap extension is supported.
 
 <<<
