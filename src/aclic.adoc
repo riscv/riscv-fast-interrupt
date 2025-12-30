@@ -428,8 +428,8 @@ Conditionally, this stack pointer can be swapped with the currently active one.
 [source]
 ----
       Number  Name         Description
-(NEW) 0x348   msp          M-mode stack pointer for conditional swap (WARL)
-(NEW) 0x148   ssp          S-mode stack pointer for conditional swap (WARL)
+(NEW) 0x349   msp          M-mode stack pointer for conditional swap (WARL)
+(NEW) 0x149   ssp          S-mode stack pointer for conditional swap (WARL)
 ----
 
 The CSR is defined as follows:
@@ -615,8 +615,8 @@ It provides additional state to resume execution of the previous handler after a
 ----
        Number  Name         Description
  (NEW) 0x346   mpistatus    Previous interrupt context
- (NEW) 0xFB1   mithreshold  Interrupt enable threshold
- (NEW) 0x347   mipreemptcfg Interrupt preemption configuration
+ (NEW) 0x347   mithreshold  Interrupt enable threshold
+ (NEW) 0x348   mipreemptcfg Interrupt preemption configuration
 ----
 
 ==== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
@@ -681,7 +681,7 @@ mpistatus
 ----
        Number  Name         Description
  (NEW) 0x146   spistatus    Previous interrupt context
- (NEW) 0x1B1   sithreshold  Interrupt enable threshold
+ (NEW) 0x147   sithreshold  Interrupt enable threshold
 ----
 
 ==== New Previous Interrupt Status ({spistatus}) CSR
