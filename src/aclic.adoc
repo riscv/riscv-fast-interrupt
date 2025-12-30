@@ -734,22 +734,23 @@ The reset behavior of other fields is platform-specific.
 === Operation
 
 When {xithreshold} is a nonzero value,
-an interrupt source _i_ with priority number `iprio[i]`
-is considered disabled irrespective of its interrupt-enable bit,
+an interrupt source is considered disabled
+irrespective of its interrupt-enable bit,
 when the following condition holds:
 
 [source]
 ----
 IPRIO >= xithreshold & NIPPRIO_MASK
-
-where IPRIO is equivalent to the value reported in xtopi CSR, i.e.
-
-1 < iprio[i] <= 255: IPRIO = iprio[i]
-255 < iprio[i]: IPRIO = 255
-iprio[i] = 0:
-  default priority higher than a machine external interrupt: IPRIO = 0
-  default priority lower than a machine external interrupt: IPRIO = 255
 ----
+
+where `IPRIO` is equivalent to the value reported in {xtopi} CSR,
+if the interrupt source is the highest priority pending-enabled one.
+
+[NOTE]
+====
+IPRIO is derived from the configured priority or default priority values
+according to the rules defined in AIA.
+====
 
 When {xithreshold} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
