@@ -245,7 +245,7 @@ and two domains if M- and S-mode are implemented.
 The root domain is always at machine level.
 If supervisor level is implemented,
 interrupts can be delegated to a supervisor-level domain,
-which is the only child domain (Child Index '1') of the root domain.
+which is the only child domain (Child Index '0') of the root domain.
 
 ==== Simplifications to domain state
 
@@ -270,7 +270,7 @@ Endianness is controlled exclusively by the setting in the {xstatus} register at
 
 Further simplifications are:
 
-* The Child Index field in the sourcecfg[i] register is always '1' when D=1 (i.e. delegation to child domain). This is only possible in Machine mode. In Supervisor mode, D=0, as there is no child domain.
+* The Child Index field in the sourcecfg[i] register is always '0' when D=1 (i.e. delegation to child domain). This is only possible in Machine mode. In Supervisor mode, D=0, as there is no child domain.
 * As the ACLIC operation is based on direct interrupt delivery, xmsiaddrcfg[h] and genmsi registers are not required.
 * Interrupt delivery control (IDC) structures are not needed, as the domain has a fixed relationship with one hart, and IDC functionality is already provided by hart-local CSRs.
 * The hart index inside the target registers is read-only zero, as only one hart is supported.
