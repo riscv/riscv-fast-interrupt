@@ -974,9 +974,11 @@ this extension ensures the interrupted context is partially saved.
 
 It performs the following operations:
 
-  * Conditionally performs a stack pointer swap by executing cspspush sp
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
+
+NOTE: Intentionally, the context is saved on the stack owned by the interrupted context.
+This is done to simplify and accelerate OS thread switching.
 
 NOTE: This extension does not require a normative stack layout.
 Interrupt handlers do not require access to the interrupted context.
@@ -992,7 +994,6 @@ It performs the following actions in order:
 
   * Restores registers x10-x15
   * Adjust the stack pointer to destroy the stack frame
-  * Conditionally performs a stack pointer swap by executing cspspop sp
   * Executes an xret according to the current level
 
 NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
@@ -1079,7 +1080,6 @@ ipopxret:
   lr a5, OFFSET(sp)         # Restore a5
   lr a6, OFFSET(sp)         # Restore a6
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
-  cspspop sp, sp            # Swap stack pointer with xsp
   xret
 
 where
