@@ -367,15 +367,15 @@ When XLEN = 32, each `xireg` register controls the ACLIC priority setting of fou
 [%autowidth]
 |===
 | `xiselect` |  `xireg` size |  `xireg` state
-| 0x1000     |   4B          | `xacliciprio0`
+| 0x1000     |   4B          | `acliciprio0`
 | ...        |   ...         | ...
-| 0x1100     |   4B          | `xacliciprio255`
+| 0x1100     |   4B          | `acliciprio255`
 |===
 
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
+Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+3].iprio`.
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `xacliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
 
 ===== Source Configuration (sourcecfg)
 
@@ -387,24 +387,24 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 [%autowidth]
 |===
 | `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `xaclicsourcecfg0`   | `xaclicsourcecfg1`
+| 0x1000     |   4B             | `aclicsourcecfg0`    | `aclicsourcecfg1`
 | ...        |   ...            | ...                  | ...
-| 0x1100     |   4B             | `xaclicsourcecfg510` | `xaclicsourcecfg511`
+| 0x1100     |   4B             | `aclicsourcecfg510`  | `aclicsourcecfg511`
 |===
 
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
 
 When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
-Indirect access to `xaclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
 
 ===== State Enable
 
-Additional control is provided for the newly added registers `xacliciprio[k]` and `xaclicsourcecfg[k]`.
+Additional control is provided for the newly added registers `acliciprio[k]` and `aclicsourcecfg[k]`.
 
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`macliciprio[k]`, `maclicsourcecfg[k]`, `sacliciprio[k]`, `saclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
