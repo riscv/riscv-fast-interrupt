@@ -743,7 +743,7 @@ when the following condition holds:
 IPRIO >= xithreshold & NIPPRIO_MASK
 ----
 
-where `IPRIO` is equivalent to the value reported in {xtopi} CSR,
+where `IPRIO` is the value reported in the {xtopi} CSR,
 if the interrupt source is the highest priority pending-enabled one.
 
 [NOTE]
