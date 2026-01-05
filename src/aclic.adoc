@@ -748,7 +748,7 @@ if the interrupt source is the highest priority pending-enabled one.
 
 [NOTE]
 ====
-IPRIO is derived from the configured priority or default priority values
+IPRIO is derived from the configured priority or default priority order
 according to the rules defined in AIA.
 ====
 
