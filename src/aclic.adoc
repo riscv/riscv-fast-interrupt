@@ -57,6 +57,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :tvec: pass:q[``**__x__**tvec``]
 :ivt: pass:q[``**__x__**ivt``]
 :xivt: pass:q[``xivt``]
+:EHV: pass:q[``EHV``]
 :xeivt: pass:q[``xeivt``]
 :xtvec: pass:q[``xtvec``]
 :xepc: pass:q[``xepc``]
@@ -185,7 +186,8 @@ The table below provides a summary of the ACLIC extensions.
 | Ssidctrl     | Interrupt domain control interface at Supervisor level
 | Smivt        | Support for interrupt vector table at Machine level
 | Ssivt        | Support for interrupt vector table at Supervisor level
-| Smehv        | Synchronous exceptions hardware vectoring
+| Smehv        | Synchronous exception hardware vectoring at Machine level
+| Ssehv        | Synchronous exception hardware vectoring at Supervisor level
 | Smcsps       | Conditional stack pointer swap at Machine level
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
@@ -814,13 +816,13 @@ and then jumps to the masked address.
 ==== New {xivt} and {xeivt} CSR
 
 Two new base addresses for vector tables are introduced.
-One for internal interrupt (major and local interrupts),
+One for internal interrupts (major and local interrupts),
 and one for external interrupts.
 
 Both {xivt} and {xeivt} are WARL XLEN-bit CSRs,
 which hold the base address of the interrupt vector table.
 The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boundary.
-Values other than 0 in the low 6 bits of {xeivt} are reserved.
+The low 6 bits of {xeivt} WPRI.
 
 NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
@@ -926,7 +928,7 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
-== Synchronous exceptions hardware vectoring- Smehv
+== Synchronous exception hardware vectoring (Smehv, Ssehv)
 
 The Smehv extension depends upon the Smivt extension.
 
@@ -935,8 +937,49 @@ During synchronous exceptions, interrupts are disabled.
 Acceleration of this critical segment decreases the time during which interrupts are masked.
 Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ECALLs, misaligned accesses, instruction page faults, or illegal instructions.
 
-With this extension, synchronous exceptions are vectored using xtvec as an offset.
-The summarized behavior is the following:
+With this extension, synchronous exceptions can be vectored using xtvec as an offset.
+
+=== Changed CSRs
+
+[source]
+----
+       Number  Name         Description
+       0x307   mivt         M-mode Interrupt-handler vector table base address
+       0x107   sivt         S-mode Interrupt-handler vector table base address
+----
+
+==== Changes to the {xivt} CSR
+
+The CSR is changed by adding a bit to control
+if synchronous exception hardware vectoring is active.
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "1" "" "" "" "" "" "" "6" "7" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
+
+(draw-box "BASE" {:span 9 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "reserved" {:span 4 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 4 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "EHV" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+
+(draw-box "XLEN-6" {:span 19 :borders {}})
+(draw-box "5" {:span 8 :borders {}})
+(draw-box "1" {:span 5 :borders {}})
+----
+
+=== Operation
+
+When {xivt}.{EHV} is clear, the exception trap behavior is unchanged.
+
+When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry point:
 
 [source]
 ----
