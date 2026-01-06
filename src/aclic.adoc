@@ -557,6 +557,9 @@ if (msp.PUSH == 1)           /* stack pointer shall be swapped */
     msp.PUSH = 0             /* Indicates the stack pointer has been swapped */
 ----
 
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+
 Included in: <<smcsps>>
 
 <<<
@@ -600,6 +603,9 @@ if (msp.PPUSH == 1)
     rd = tmp                 /* write original msp value to stack pointer */
 ----
 
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+
 Included in: <<smcsps>>
 
 <<<
@@ -640,6 +646,9 @@ if (ssp.PUSH == 1)           /* stack pointer shall be swapped */
     ssp.SP = tmp[XLEN-1:4]   /* save original value of sp into ssp */
     ssp.PUSH = 0             /* Indicates the stack pointer has been swapped */
 ----
+
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
 
 Included in: <<smcsps,Sscsps>>
 
@@ -683,6 +692,9 @@ if (ssp.PPUSH == 1)
     ssp.PPUSH = 0            /* Clear previous push bit */
     rd = tmp                 /* write original ssp value to stack pointer */
 ----
+
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
 
 Included in: <<smcsps,Sscsps>>
 
