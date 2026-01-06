@@ -143,7 +143,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mret: pass:q[``mret``]
 :sret: pass:q[``sret``]
 :xret: pass:q[``xret``]
-:ipopxret: pass:q[``ipopxret``]
+:xipopret: pass:q[``xipopret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -1119,7 +1119,7 @@ When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry
 ----
 
 [[smip, Smip]]
-== Interrupt handler push and pop extension (Smip)
+== Interrupt handler push and pop extension (Smip & Ssip)
 
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
@@ -1157,14 +1157,14 @@ Interrupt handlers do not require access to the interrupted context.
 
 === Returns from interrupt handlers
 
-When executing an {ipopxret} instruction the context saved during the trap is restored and a return is executed.
+When executing an {xipopret} instruction the context saved during the trap is restored and a return is executed.
 
 NOTE: An explicit interrupt return instruction is included, rather than modifying the xret behavior,
 so that the hart does not need to do bookkeeping whether it is in an interrupt or exception context.
 
 It performs the following actions in order:
 
-  * Conditionally performs a stack pointer swap by executing cspspop sp
+  * Conditionally performs a stack pointer swap by executing xcspspop sp
   * Restores registers x10-x15
   * Adjust the stack pointer to destroy the stack frame
   * Executes an xret according to the current level
@@ -1183,7 +1183,7 @@ void interrupt_handler() __attribute__((interrupt));
 
 that the registers x10-x15 have been saved.
 Additionally, the compiler does not need to restore these registers.
-Finally, it should generate an {ipopxret} instruction at the end of the function instead of an {xret}.
+Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
 
 === Late Preemption of the interrupt handler
 
@@ -1191,18 +1191,18 @@ While executing the trap side effects of an interrupt, it is allowed for an impl
 
 === Tail chaining of interrupt handlers
 
-While executing the ipopxret instruction,
+While executing the xipopret instruction,
 it is allowed for an implementation to of a hart
 to optionally check for any pending and enabled interrupts at the current privilege mode.
 
-If such an interrupt exists, the hart may abort executing the ipopxret instruction and trigger the following actions:
+If such an interrupt exists, the hart may abort executing the xipopret instruction and trigger the following actions:
   - Update the `xcause.Exception Code` to the corresponding interrupt id.
   - Perform the interrupt handler fetch.
-  - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted ipopxret.
+  - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted xipopret.
 
 Explicitly, {xepc}, {xpistatus} remain unchanged.
 
-NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the ipopxret instruction.
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the xipopret instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
 === Fault handling
@@ -1214,13 +1214,68 @@ handling can only be resumed if the double trap extension is supported.
 
 === Instructions
 
-==== ipopxret
+==== mipopret
 
 Synopsis::
 Pop interrupt context and return
 
 Mnemonic::
-ipopxret
+mipopret
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 5, name: 0x8, attr: [''], type: 8},
+  {bits: 7, name: 0x18, attr: [''], type: 8},
+]}
+....
+
+Description::
+Restores an interrupted context at the end of an interrupt and returns to the previous context
+
+Behavior::
+
+Can be executed at machine level.
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+The behavior in RISC-V assembly is as follows:
+
+[source]
+----
+mipopret:
+  mcspspop sp, sp           # Swap stack pointer with msp
+  lr a0, OFFSET(sp)         # Restore a0
+  lr a1, OFFSET(sp)         # Restore a1
+  lr a2, OFFSET(sp)         # Restore a2
+  lr a3, OFFSET(sp)         # Restore a3
+  lr a4, OFFSET(sp)         # Restore a4
+  lr a5, OFFSET(sp)         # Restore a5
+  lr a6, OFFSET(sp)         # Restore a6
+  addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  mret
+
+where
+  lr is lw on RV32 and ld on RV64
+----
+
+The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
+
+Included in: <<smip>>
+
+<<<
+
+==== sipopret
+
+Synopsis::
+Pop interrupt context and return
+
+Mnemonic::
+sipopret
 
 Encoding::
 [wavedrom, ,svg]
@@ -1240,12 +1295,15 @@ Restores an interrupted context at the end of an interrupt and returns to the pr
 
 Behavior::
 
-The behavior in RISC-V assembly is as follows.
+Can be executed at machine or supervisor level.
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
+The behavior in RISC-V assembly is as follows:
 
 [source]
 ----
-ipopxret:
-  cspspop sp, sp            # Swap stack pointer with xsp
+sipopret:
+  scspspop sp, sp           # Swap stack pointer with ssp
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -1254,7 +1312,7 @@ ipopxret:
   lr a5, OFFSET(sp)         # Restore a5
   lr a6, OFFSET(sp)         # Restore a6
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
-  xret
+  sret
 
 where
   lr is lw on RV32 and ld on RV64
@@ -1262,4 +1320,4 @@ where
 
 The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
 
-Included in: <<smip>>
+Included in: <<smip,Ssip>>
