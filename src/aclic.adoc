@@ -1066,6 +1066,11 @@ It performs the following operations in order:
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
 
+NOTE: As this extension modifies interrupt trap behavior but not keep synchronous exceptions traps,
+it should only be used in modes which have separate entry points on traps between
+interrupts and synchronous exceptions.
+Explicitly, mtvec.mode = 0 (direct) is incompatible.
+
 NOTE: This extension does not require a normative stack layout.
 Interrupt handlers do not require access to the interrupted context.
 
