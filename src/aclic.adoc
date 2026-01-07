@@ -361,6 +361,8 @@ The {xtopei} CSR reflects both the interrupt identity and the interrupt priority
 ==== Indirect CSR access to hart-local APLIC domain configuration
 
 To have full control over the necessary APLIC registers, the following indirect CSR access is added.
+The registers xireg4 through xireg6 are reserved as WPRI
+when xiselect is in the range 0x1000-0x1100.
 
 ===== Interrupt Priority (iprio)
 
@@ -378,6 +380,9 @@ Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
 Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+
+When XLEN = 64 and xiselect is an odd value in the range 0x1000-0x1100,
+attempting to access xireg raises an illegal instruction exception.
 
 ===== Source Configuration (sourcecfg)
 
