@@ -1155,6 +1155,20 @@ Interrupt handling throughput is increased by allowing tail-chaining of interrup
 
 This extension does not affect Non-Maskable Interrupts (NMIs).
 
+=== Controlling the extension behavior
+
+This extension adds additional control bits to enable/disable the extended behavior.
+
+If `MIPU`, is set, a trap taken at Machine level due to an interrupt causes automatic stacking.
+If `SIPU`, is set, a trap taken at Supervisor level due to an interrupt causes automatic stacking.
+
+If one of the bits is clear, the trap behavior at the respective level is unmodified.
+
+NOTE: These bits do not yet have an allocated encoding.
+The authors of this specification intend to ask for encoding of these bits in mstatus/sstatus.
+
+NOTE: The state of these bits does not influence the behavior of mipopret/sipopret.
+
 === Interrupt trap behavior
 
 The existing trap behavior is modified.
