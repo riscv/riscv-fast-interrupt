@@ -361,6 +361,8 @@ The {xtopei} CSR reflects both the interrupt identity and the interrupt priority
 ==== Indirect CSR access to hart-local APLIC domain configuration
 
 To have full control over the necessary APLIC registers, the following indirect CSR access is added.
+The registers xireg4 through xireg6 are reserved and raise an illegal instruction exception
+when xiselect is in the range 0x1000-0x1100.
 
 ===== Interrupt Priority (iprio)
 
@@ -378,6 +380,9 @@ Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
 Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
+
+When XLEN = 64 and xiselect is an odd value in the range 0x1000-0x1100,
+attempting to access xireg raises an illegal instruction exception.
 
 ===== Source Configuration (sourcecfg)
 
@@ -834,22 +839,23 @@ The reset behavior of other fields is platform-specific.
 === Operation
 
 When {xithreshold} is a nonzero value,
-an interrupt source _i_ with priority number `iprio[i]`
-is considered disabled irrespective of its interrupt-enable bit,
+an interrupt source is considered disabled
+irrespective of its interrupt-enable bit,
 when the following condition holds:
 
 [source]
 ----
 IPRIO >= xithreshold & NIPPRIO_MASK
-
-where IPRIO is equivalent to the value reported in xtopi CSR, i.e.
-
-1 < iprio[i] <= 255: IPRIO = iprio[i]
-255 < iprio[i]: IPRIO = 255
-iprio[i] = 0:
-  default priority higher than a machine external interrupt: IPRIO = 0
-  default priority lower than a machine external interrupt: IPRIO = 255
 ----
+
+where `IPRIO` is the value reported in the {xtopi} CSR,
+if the interrupt source is the highest priority pending-enabled one.
+
+[NOTE]
+====
+IPRIO is derived from the configured priority or default priority order
+according to the rules defined in AIA.
+====
 
 When {xithreshold} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
@@ -1163,6 +1169,11 @@ It performs the following operations in order:
 
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
+
+NOTE: As this extension modifies interrupt trap behavior but not keep synchronous exceptions traps,
+it should only be used in modes which have separate entry points on traps between
+interrupts and synchronous exceptions.
+Explicitly, mtvec.mode = 0 (direct) is incompatible.
 
 NOTE: This extension does not require a normative stack layout.
 Interrupt handlers do not require access to the interrupted context.
