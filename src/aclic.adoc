@@ -143,7 +143,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mret: pass:q[``mret``]
 :sret: pass:q[``sret``]
 :xret: pass:q[``xret``]
-:ipopxret: pass:q[``ipopxret``]
+:xipopret: pass:q[``xipopret``]
 
 :le: &#8804;
 :ge: &#8805;
@@ -192,7 +192,8 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
 | Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smip         | Support for interrupt handler push/pop
+| Smip         | Support for interrupt handler push/pop at Machine level
+| Ssip         | Support for interrupt handler push/pop at Supervisor level
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
@@ -418,6 +419,7 @@ and the conditions for a virtual instruction exception apply,
 in which case a virtual instruction exception is raised
 when in VS or VU mode instead of an illegal instruction exception.
 
+[[smcsps, Smcsps]]
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
 The Sscsps depends on the Smcsps extension and adds the ability for conditional stack pointer swap at supervisor level and below.
@@ -474,7 +476,8 @@ Therefore the four least significant bits of the stack pointer are zero.
 
 === Instructions for conditional stack pointer swap
 
-To simplify and accelerate the conditional stack pointer swap, two instructions are introduced, <<#insns-cspspush>> and <<#insns-cspspop>>.
+To simplify and accelerate the conditional stack pointer swap, two instructions per mode are introduced:
+<<#insns-mcspspush>>, <<#insns-mcspspop>>, <<#insns-scspspush>>, and <<#insns-scspspop>>.
 To decide if a stack pointer swap is required, these instructions evaluate the two LSBs of the register.
 The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
 
@@ -492,20 +495,22 @@ An example sequence with one vertical and one horizontal trap will look like thi
 Mode  Event            msp.PUSH  msp.PPUSH  sp-swap
 S     -                1         X          n
 M     trap             1         X          n
-M     cspspush         0         1          y
+M     mcspspush        0         1          y
 M     save context     0         1          n
 M     trap             0         1          n
-M     cspspush         0         0          n
-M     cspspop          0         0          n
+M     mcspspush        0         0          n
+M     mcspspop         0         0          n
 M     mret             0         0          n
 M     restore context  0         1          n
-M     cspspop          1         0          y
+M     mcspspop         1         0          y
 S     mret             1         0          n
 ----
 
-The stack pointer is swapped when changing from S-mode to M-mode,
-and is swapped back when returning to S-mode.
-No change of stack pointer occurs for the cspspush and cspspop instructions in the nested handler.
+In this example,
+the stack pointer is swapped when executing the mcspspush instruction
+after taking the trap from from S-mode into M-mode,
+and is swapped back through mcspspop before returning to S-mode.
+No change of stack pointer occurs for the mcspspush and mcspspop instructions in the nested handler.
 
 === State Enable
 
@@ -523,14 +528,104 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 === Instructions
 
-[#insns-cspspush,reftext="Conditional stack pointer swap (push mode)"]
-==== cspspush
+[#insns-mcspspush,reftext="Conditional stack pointer swap (push mode) at Machine level"]
+==== mcspspush
 
 Synopsis::
 Conditional stack pointer swap (push mode)
 
 Mnemonic::
-cspspush rd, rs
+mcspspush rd, rs
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
+  {bits: 5, name: 0x9, attr: [''], type: 8},
+  {bits: 7, name: 0x18, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction conditionally swaps out the stack pointer and is typically used while pushing existing context.
+The behavior of the operations is:
+
+[source]
+----
+msp.PPUSH = msp.PUSH         /* Latch push bit into the previous push bit */
+if (msp.PUSH == 1)           /* stack pointer shall be swapped */
+    tmp = rs                 /* save current sp for writing later */
+    rd = msp.SP              /* Write the stack pointer with the low bits cleared */
+    msp.SP = tmp[XLEN-1:4]   /* save original value of sp into msp */
+    msp.PUSH = 0             /* Indicates the stack pointer has been swapped */
+----
+
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+
+Included in: <<smcsps>>
+
+<<<
+
+[#insns-mcspspop,reftext="Conditional stack pointer swap (pop mode) at Machine level"]
+==== mcspspop
+
+Synopsis::
+Conditional stack pointer swap (pop mode)
+
+Mnemonic::
+mcspspop
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rd = x2'], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x2, attr: ['rs = x2'], type: 4},
+  {bits: 5, name: 0xC, attr: [''], type: 8},
+  {bits: 7, name: 0x18, attr: [''], type: 8},
+]}
+....
+
+Description::
+
+This instruction performs the opposite operation of mcspspush, and is used to pop the previous context.
+A swap is performed, if the `PPUSH` field is set.
+
+Behavior::
+
+[source]
+----
+msp.PUSH = msp.PPUSH         /* Restore PUSH bit from PPUSH */
+if (msp.PPUSH == 1)
+    tmp = msp.SP             /* save msp.SP as temporary value */
+    msp.SP = rs[XLEN-1:4]    /* write current stack pointer to msp */
+    msp.PPUSH = 0            /* Clear previous push bit */
+    rd = tmp                 /* write original msp value to stack pointer */
+----
+
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+
+Included in: <<smcsps>>
+
+<<<
+
+[#insns-scspspush,reftext="Conditional stack pointer swap (push mode) at Supervisor level"]
+==== scspspush
+
+Synopsis::
+Conditional stack pointer swap (push mode)
+
+Mnemonic::
+scspspush rd, rs
 
 Encoding::
 [wavedrom, ,svg]
@@ -552,26 +647,29 @@ The behavior of the operations is:
 
 [source]
 ----
-xsp.PPUSH = xsp.PUSH         /* Latch push bit into the previous push bit */
-if (xsp.PUSH == 1)           /* stack pointer shall be swapped */
+ssp.PPUSH = ssp.PUSH         /* Latch push bit into the previous push bit */
+if (ssp.PUSH == 1)           /* stack pointer shall be swapped */
     tmp = rs                 /* save current sp for writing later */
-    rd = xsp.SP              /* Write the stack pointer with the low bits cleared */
-    xsp.SP = tmp[XLEN-1:4]   /* save original value of sp into xsp */
-    xsp.PUSH = 0             /* Indicates the stack pointer has been swapped */
+    rd = ssp.SP              /* Write the stack pointer with the low bits cleared */
+    ssp.SP = tmp[XLEN-1:4]   /* save original value of sp into ssp */
+    ssp.PUSH = 0             /* Indicates the stack pointer has been swapped */
 ----
 
-Included in: <<smcsps>>
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
+
+Included in: <<smcsps,Sscsps>>
 
 <<<
 
-[#insns-cspspop,reftext="Conditional stack pointer swap (pop mode)"]
-==== cspspop
+[#insns-scspspop,reftext="Conditional stack pointer swap (pop mode) at Supervisor level"]
+==== scspspop
 
 Synopsis::
 Conditional stack pointer swap (pop mode)
 
 Mnemonic::
-cspspop
+scspspop
 
 Encoding::
 [wavedrom, ,svg]
@@ -588,22 +686,25 @@ Encoding::
 
 Description::
 
-This instruction performs the opposite operation of cspspush, and is used to pop the previous context.
+This instruction performs the opposite operation of scspspush, and is used to pop the previous context.
 A swap is performed, if the `PPUSH` field is set.
 
 Behavior::
 
 [source]
 ----
-xsp.PUSH = xsp.PPUSH         /* Restore PUSH bit from PPUSH */
-if (xsp.PPUSH == 1)
-    tmp = xsp.SP             /* save xsp.SP as temporary value */
-    xsp.SP = rs[XLEN-1:4]    /* write current stack pointer to xsp */
-    xsp.PPUSH = 0            /* Clear previous push bit */
-    rd = tmp                 /* write original xsp value to stack pointer */
+ssp.PUSH = ssp.PPUSH         /* Restore PUSH bit from PPUSH */
+if (ssp.PPUSH == 1)
+    tmp = ssp.SP             /* save ssp.SP as temporary value */
+    ssp.SP = rs[XLEN-1:4]    /* write current stack pointer to ssp */
+    ssp.PPUSH = 0            /* Clear previous push bit */
+    rd = tmp                 /* write original ssp value to stack pointer */
 ----
 
-Included in: <<smcsps>>
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
+
+Included in: <<smcsps,Sscsps>>
 
 <<<
 
@@ -1039,7 +1140,7 @@ When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry
 ----
 
 [[smip, Smip]]
-== Interrupt handler push and pop extension (Smip)
+== Interrupt handler push and pop extension (Smip & Ssip)
 
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
@@ -1082,14 +1183,14 @@ Interrupt handlers do not require access to the interrupted context.
 
 === Returns from interrupt handlers
 
-When executing an {ipopxret} instruction the context saved during the trap is restored and a return is executed.
+When executing an {xipopret} instruction the context saved during the trap is restored and a return is executed.
 
 NOTE: An explicit interrupt return instruction is included, rather than modifying the xret behavior,
 so that the hart does not need to do bookkeeping whether it is in an interrupt or exception context.
 
 It performs the following actions in order:
 
-  * Conditionally performs a stack pointer swap by executing cspspop sp
+  * Conditionally performs a stack pointer swap by executing xcspspop sp
   * Restores registers x10-x15
   * Adjust the stack pointer to destroy the stack frame
   * Executes an xret according to the current level
@@ -1108,7 +1209,7 @@ void interrupt_handler() __attribute__((interrupt));
 
 that the registers x10-x15 have been saved.
 Additionally, the compiler does not need to restore these registers.
-Finally, it should generate an {ipopxret} instruction at the end of the function instead of an {xret}.
+Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
 
 === Late Preemption of the interrupt handler
 
@@ -1116,18 +1217,18 @@ While executing the trap side effects of an interrupt, it is allowed for an impl
 
 === Tail chaining of interrupt handlers
 
-While executing the ipopxret instruction,
+While executing the xipopret instruction,
 it is allowed for an implementation to of a hart
 to optionally check for any pending and enabled interrupts at the current privilege mode.
 
-If such an interrupt exists, the hart may abort executing the ipopxret instruction and trigger the following actions:
+If such an interrupt exists, the hart may abort executing the xipopret instruction and trigger the following actions:
   - Update the `xcause.Exception Code` to the corresponding interrupt id.
   - Perform the interrupt handler fetch.
-  - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted ipopxret.
+  - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted xipopret.
 
 Explicitly, {xepc}, {xpistatus} remain unchanged.
 
-NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the ipopxret instruction.
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the xipopret instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
 === Fault handling
@@ -1139,13 +1240,68 @@ handling can only be resumed if the double trap extension is supported.
 
 === Instructions
 
-==== ipopxret
+==== mipopret
 
 Synopsis::
 Pop interrupt context and return
 
 Mnemonic::
-ipopxret
+mipopret
+
+Encoding::
+[wavedrom, ,svg]
+....
+{reg: [
+  {bits: 7, name: 0x73, attr: ['SYSTEM'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 2},
+  {bits: 3, name: 0x0, attr: ['PRIV'], type: 8},
+  {bits: 5, name: 0x0, attr: [''], type: 4},
+  {bits: 5, name: 0x8, attr: [''], type: 8},
+  {bits: 7, name: 0x18, attr: [''], type: 8},
+]}
+....
+
+Description::
+Restores an interrupted context at the end of an interrupt and returns to the previous context
+
+Behavior::
+
+Can be executed at machine level.
+Attempting to execute in a mode less privileged than machine level
+will raise an illegal-instruction exception.
+The behavior in RISC-V assembly is as follows:
+
+[source]
+----
+mipopret:
+  mcspspop sp, sp           # Swap stack pointer with msp
+  lr a0, OFFSET(sp)         # Restore a0
+  lr a1, OFFSET(sp)         # Restore a1
+  lr a2, OFFSET(sp)         # Restore a2
+  lr a3, OFFSET(sp)         # Restore a3
+  lr a4, OFFSET(sp)         # Restore a4
+  lr a5, OFFSET(sp)         # Restore a5
+  lr a6, OFFSET(sp)         # Restore a6
+  addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  mret
+
+where
+  lr is lw on RV32 and ld on RV64
+----
+
+The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
+
+Included in: <<smip>>
+
+<<<
+
+==== sipopret
+
+Synopsis::
+Pop interrupt context and return
+
+Mnemonic::
+sipopret
 
 Encoding::
 [wavedrom, ,svg]
@@ -1165,12 +1321,15 @@ Restores an interrupted context at the end of an interrupt and returns to the pr
 
 Behavior::
 
-The behavior in RISC-V assembly is as follows.
+Can be executed at machine or supervisor level.
+Attempting to execute in a mode less privileged than supervisor level
+will raise an illegal-instruction exception.
+The behavior in RISC-V assembly is as follows:
 
 [source]
 ----
-ipopxret:
-  cspspop sp, sp            # Swap stack pointer with xsp
+sipopret:
+  scspspop sp, sp           # Swap stack pointer with ssp
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -1179,7 +1338,7 @@ ipopxret:
   lr a5, OFFSET(sp)         # Restore a5
   lr a6, OFFSET(sp)         # Restore a6
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
-  xret
+  sret
 
 where
   lr is lw on RV32 and ld on RV64
@@ -1187,4 +1346,4 @@ where
 
 The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
 
-Included in: <<smip>>
+Included in: <<smip,Ssip>>
