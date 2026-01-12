@@ -192,7 +192,8 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
 | Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smip         | Support for interrupt handler push/pop
+| Smip         | Support for interrupt handler push/pop at Machine level
+| Ssip         | Support for interrupt handler push/pop at Supervisor level
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
@@ -505,8 +506,10 @@ M     mcspspop         1         0          y
 S     mret             1         0          n
 ----
 
-The stack pointer is swapped when changing from S-mode to M-mode,
-and is swapped back when returning to S-mode.
+In this example,
+the stack pointer is swapped when executing the mcspspush instruction
+after taking the trap from from S-mode into M-mode,
+and is swapped back through mcspspop before returning to S-mode.
 No change of stack pointer occurs for the mcspspush and mcspspop instructions in the nested handler.
 
 === State Enable
@@ -1184,10 +1187,10 @@ It performs the following operations in order:
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
 
-NOTE: As this extension modifies interrupt trap behavior but not keep synchronous exceptions traps,
-it should only be used in modes which have separate entry points on traps between
-interrupts and synchronous exceptions.
-Explicitly, mtvec.mode = 0 (direct) is incompatible.
+NOTE: As this extension modifies interrupt trap behavior but not the behaviour of synchronous exception traps,
+it should only be used in interrupt handling modes that provide separate entry points for
+interrupt and synchronous exception traps.
+Specifically, mtvec.mode = 0 (direct) is incompatible.
 
 NOTE: This extension does not require a normative stack layout.
 Interrupt handlers do not require access to the interrupted context.
