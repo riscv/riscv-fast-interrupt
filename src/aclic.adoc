@@ -412,7 +412,7 @@ Additional control is provided for the newly added registers `acliciprio[k]` and
 If the Smstateen extension is implemented,
 then the bit ?? in mstateen0 is implemented.
 If bit ?? of a controlling mstateen0 CSR is zero,
-then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower privilege mode
+then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -508,7 +508,7 @@ S     mret             1         0          n
 
 In this example,
 the stack pointer is swapped when executing the mcspspush instruction
-after taking the trap from from S-mode into M-mode,
+after taking the trap from S-mode into M-mode,
 and is swapped back through mcspspop before returning to S-mode.
 No change of stack pointer occurs for the mcspspush and mcspspop instructions in the nested handler.
 
@@ -517,7 +517,7 @@ No change of stack pointer occurs for the mcspspush and mcspspop instructions in
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {ssp} by S-mode or a lower privilege mode
+then access to the new CSR {ssp} by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -780,7 +780,7 @@ mpistatus
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt enable threshold
+ 7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
 === Changed and new CSRs at Supervisor Level
@@ -806,7 +806,7 @@ spistatus
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt enable threshold
+ 7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
@@ -870,7 +870,7 @@ The existing trap behavior is modified as follows:
 When a trap is taken on interrupt _i_ into level `x`,
 the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
 Additionally, {xithreshold} is set to `iprio[i]`.
-This automatically raises the interrupt enable threshold.
+This automatically raises the interrupt-enable threshold.
 
 NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
@@ -880,7 +880,7 @@ The behavior of an {xret} instruction is modified as follows:
 
 {xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
 
-This automatically restores the interrupt enable threshold to the level of the previous context.
+This automatically restores the interrupt-enable threshold to the level of the previous context.
 
 
 === State Enable
@@ -888,7 +888,7 @@ This automatically restores the interrupt enable threshold to the level of the p
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower privilege mode
+then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -1070,7 +1070,7 @@ NOTE: Resuming after a fault on a vector table fetch is currently only seen as u
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {sivt} by S-mode or a lower privilege mode
+then access to the new CSR {sivt} by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
