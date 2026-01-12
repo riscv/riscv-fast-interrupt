@@ -505,8 +505,10 @@ M     mcspspop         1         0          y
 S     mret             1         0          n
 ----
 
-The stack pointer is swapped when changing from S-mode to M-mode,
-and is swapped back when returning to S-mode.
+In this example,
+the stack pointer is swapped when executing the mcspspush instruction
+after taking the trap from from S-mode into M-mode,
+and is swapped back through mcspspop before returning to S-mode.
 No change of stack pointer occurs for the mcspspush and mcspspop instructions in the nested handler.
 
 === State Enable
