@@ -192,7 +192,8 @@ The table below provides a summary of the ACLIC extensions.
 | Sscsps       | Conditional stack pointer swap at Supervisor level
 | Smnip        | Horizontal Nested Interrupt Preemption support at Machine level
 | Ssnip        | Horizontal Nested Interrupt Preemption support at Supervisor level
-| Smip         | Support for interrupt handler push/pop
+| Smip         | Support for interrupt handler push/pop at Machine level
+| Ssip         | Support for interrupt handler push/pop at Supervisor level
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
