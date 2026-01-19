@@ -1063,8 +1063,6 @@ In case a higher priority interrupt became pending and enabled, this will trap f
 As long as synchronous exceptions can occur during the interrupt vector table fetch,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
-NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
-
 ==== State Enable
 
 If the Smstateen extension is implemented,
