@@ -867,7 +867,7 @@ The existing trap behavior is modified as follows:
 
 When a trap is taken on interrupt _i_ into level `x`,
 the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
-Additionally, {xithreshold} is set to `iprio[i]`.
+Additionally, {xithreshold} is set to `IPRIO`.
 This automatically raises the interrupt-enable threshold.
 
 NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
