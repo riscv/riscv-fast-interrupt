@@ -1291,7 +1291,6 @@ mipopret:
   lr a3, OFFSET(sp)         # Restore a3
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
-  lr a6, OFFSET(sp)         # Restore a6
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
   mret
 
@@ -1346,7 +1345,6 @@ sipopret:
   lr a3, OFFSET(sp)         # Restore a3
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
-  lr a6, OFFSET(sp)         # Restore a6
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
   sret
 
