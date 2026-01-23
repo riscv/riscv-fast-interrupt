@@ -945,7 +945,7 @@ The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boun
 (draw-box "reserved" {:span 3 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 
-(draw-box "XLEN-6" {:span 26 :borders {}})
+(draw-box "XLEN-2" {:span 26 :borders {}})
 (draw-box "2" {:span 6 :borders {}})
 ----
 
