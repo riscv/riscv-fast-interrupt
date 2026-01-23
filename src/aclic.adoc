@@ -409,9 +409,7 @@ Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sou
 
 Additional control is provided for the newly added registers `acliciprio[k]` and `aclicsourcecfg[k]`.
 
-If the Smstateen extension is implemented,
-then the bit ?? in mstateen0 is implemented.
-If bit ?? of a controlling mstateen0 CSR is zero,
+If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
 then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
