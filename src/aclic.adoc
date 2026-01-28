@@ -1019,12 +1019,16 @@ the hart then fetches an XLEN-bit handler address with permissions corresponding
 from the in-memory table whose base address (VTBASE).
 The trap handler function address is fetched from `VTBASE+XLEN/8*exccode`.
 If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
+clears the corresponding interrupt-pending bit if possible,
 and sets the PC to this handler address.
 The masked vector table entry bit(s) are reserved and should be zero.
 
 NOTE: The original vectored mode simply jumps to an address in
 the trap vector table, while the interrupt vector table mode reads a
 handler function address from the table, and jumps to it in hardware.
+
+NOTE: In case of a level-sensitive interrupt,
+it might not be possible to clear the interurpt-pending bit.
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
