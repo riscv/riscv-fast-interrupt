@@ -1138,6 +1138,8 @@ When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry
 [[smip, Smip]]
 == Interrupt handler push and pop extension (Smip & Ssip)
 
+The Smip and Ssip extensions depend upon the Smcsps and Sscsps extensions, respectively.
+
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
 which may include the fetch of the vector table entry.
