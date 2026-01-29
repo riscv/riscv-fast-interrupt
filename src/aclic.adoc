@@ -865,10 +865,15 @@ all enabled interrupt sources can contribute to signaling interrupts to the hart
 
 The existing trap behavior is modified as follows:
 
-When a trap is taken on interrupt _i_ into level `x`,
+When a trap is taken into level `x`,
 the current value of {xithreshold} is written to {xpistatus}.{pithreshold}.
-Additionally, {xithreshold} is set to `IPRIO`.
+
+Additionally, if the trap was taken on an interrupt,
+{xithreshold} is set to `IPRIO`.
 This automatically raises the interrupt-enable threshold.
+
+If a double trap occurs while in M-mode,
+{xpistatus}.{pithreshold} is unchanged.
 
 NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
