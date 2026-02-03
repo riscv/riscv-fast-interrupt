@@ -197,7 +197,6 @@ The table below provides a summary of the ACLIC extensions.
 |===
 
 As this specification aims for single-hart systems, no support for the H extension is foreseen.
-Future specifications could extend the scope of these extensions to also be applicable to systems with the H extension.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
