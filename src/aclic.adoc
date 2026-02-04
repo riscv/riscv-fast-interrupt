@@ -1292,7 +1292,7 @@ The behavior in RISC-V assembly is as follows:
 ----
 mipopret:
   mcspspop sp, sp           # Swap stack pointer with msp
-  csrsi mstatus, 1<<17      # set bit 17 (MPRV)
+  set mstatus.MPRV          # No direct assembly equivalent
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -1300,7 +1300,7 @@ mipopret:
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
-  mret
+  mret                      # Clears mstatus.MPRV
 
 where
   lr is lw on RV32 and ld on RV64
@@ -1351,12 +1351,14 @@ The behavior in RISC-V assembly is as follows:
 ----
 sipopret:
   scspspop sp, sp           # Swap stack pointer with ssp
+  "set sstatus.SUM"         # No direct assembly equivalent
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
   lr a3, OFFSET(sp)         # Restore a3
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
+  "clear sstatus.SUM"       # No direct assembly equivalent
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
   sret
 
