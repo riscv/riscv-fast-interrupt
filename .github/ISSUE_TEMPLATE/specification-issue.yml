@@ -1,0 +1,45 @@
+name: Specification Issue
+description: Report an issue or propose a change to the specification
+title: "[Issue]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report an issue or propose a change.
+
+  - type: input
+    id: document-version
+    attributes:
+      label: Document Version
+      description: Which version of the specification does this issue apply to?
+      placeholder: e.g., v1.0.0, draft-20240101, commit hash
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-specification
+    attributes:
+      label: Current Specification
+      description: What does the specification currently say? Include the relevant section, page, or paragraph reference.
+      placeholder: "Section X.Y states that..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-definition
+    attributes:
+      label: Problem Definition
+      description: What is the problem with the current specification? Why is a change needed?
+      placeholder: Describe the issue, ambiguity, error, or gap in the current specification.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How should the specification be changed to address this problem?
+      placeholder: Describe your proposed change or improvement.
+    validations:
+      required: true
