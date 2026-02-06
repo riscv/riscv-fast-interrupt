@@ -1179,7 +1179,7 @@ It performs the following operations in order:
 
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
-  * Conditionally performs a stack pointer swap by executing cspspush sp
+  * Conditionally performs a stack pointer swap by executing xcspspush sp
 
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
