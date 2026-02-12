@@ -1016,7 +1016,7 @@ In interrupt vector table mode, when interrupts are taken, the interrupt behavio
 After executing the required side-effects as required with the existing behavior,
 the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (VTBASE).
-The trap handler function address is fetched from `VTBASE+XLEN/8*exccode`.
+The trap handler function address is fetched from `VTBASE+XLEN/8*vtoffset`.
 If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
 and sets the PC to this handler address.
 The masked vector table entry bit(s) are reserved and should be zero.
