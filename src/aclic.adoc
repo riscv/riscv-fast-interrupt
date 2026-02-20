@@ -381,6 +381,141 @@ Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
 Indirect access to `acliciprio[k]` mirror `target[k*4].iprio` up to `target[k*4+7].iprio`.
 
+The layout of `acliciprio[k]` for XLEN = 32 is as follows:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+
+;; ==============================================================
+;; Header row: byte start/end labels (MSB→LSB)
+;; pattern per byte: [start] + 6 empty + [end]
+;; ==============================================================
+
+;; [31:24]
+(draw-box "24" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "31" {:span 1 :text-anchor "end"   :borders {}})
+
+;; [23:16]
+(draw-box "16" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "23" {:span 1 :text-anchor "end"   :borders {}})
+
+;; [15:8]
+(draw-box "8"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "15" {:span 1 :text-anchor "end"   :borders {}})
+
+;; [7:0]
+(draw-box "0"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "7"  {:span 1 :text-anchor "end"   :borders {}})
+
+;; ==============================================================
+;; Data row (MSB→LSB)
+;; ==============================================================
+
+(draw-box "target[k*4+3].iprio" {:span 8})
+(draw-box "target[k*4+2].iprio" {:span 8})
+(draw-box "target[k*4+1].iprio" {:span 8})
+(draw-box "target[k*4+0].iprio" {:span 8})
+
+;; ==============================================================
+;; Widths row
+;; ==============================================================
+
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+----
+
+and for RV64 like:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+
+;; ==============================================================
+;; Upper half (bits [63:32]) — header row: byte-start/end labels
+;; pattern:  [start] + 6 empty + [end]  for each 8-bit byte
+;; ==============================================================
+
+(draw-box "32" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "39" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "40" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "47" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "48" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "55" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "56" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "63" {:span 1 :text-anchor "end"   :borders {}})
+
+;; Upper half — data row (MSB→LSB)
+(draw-box "target[k*4+7].iprio" {:span 8})
+(draw-box "target[k*4+6].iprio" {:span 8})
+(draw-box "target[k*4+5].iprio" {:span 8})
+(draw-box "target[k*4+4].iprio" {:span 8})
+
+;; Upper half — widths
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+
+;; ==============================================================
+;; Lower half (bits [31:0]) — header row aligned exactly the same
+;; ==============================================================
+
+(draw-box "0"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "7"  {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "8"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "15" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "16" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "23" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "24" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 6 :borders {}})
+(draw-box "31" {:span 1 :text-anchor "end"   :borders {}})
+
+;; Lower half — data row (MSB→LSB)
+(draw-box "target[k*4+3].iprio" {:span 8})
+(draw-box "target[k*4+2].iprio" {:span 8})
+(draw-box "target[k*4+1].iprio" {:span 8})
+(draw-box "target[k*4+0].iprio" {:span 8})
+
+;; Lower half — widths
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+(draw-box "8" {:span 8 :borders {}})
+----
+
+APLIC domains do not implement target[0].
+When accessing `acliciprio[0]`, the bits corresponding to target[0] are read-only zero.
+
 When XLEN = 64 and xiselect is an odd value in the range 0x1000-0x1100,
 attempting to access xireg raises an illegal instruction exception.
 
@@ -394,12 +529,13 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 [%autowidth]
 |===
 | `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | `aclicsourcecfg0`    | `aclicsourcecfg1`
+| 0x1000     |   4B             | read-only zero       | `aclicsourcecfg1`
 | ...        |   ...            | ...                  | ...
 | 0x10FF     |   4B             | `aclicsourcecfg510`  | `aclicsourcecfg511`
 |===
 
 Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
+Access to `aclicsourcecfg[0]` is read-only zero.
 
 When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
 Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
