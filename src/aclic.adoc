@@ -1214,7 +1214,7 @@ when in VS or VU mode instead of an illegal instruction exception.
 
 == Synchronous exception hardware vectoring (Smehv, Ssehv)
 
-The Smehv extension depends upon the Smivt extension.
+The Smehv and Ssehv extensions depend upon the Smivt and Ssivt extensions, respectively.
 
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
