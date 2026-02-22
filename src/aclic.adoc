@@ -398,24 +398,24 @@ The layout of `acliciprio[k]` for XLEN = 32 is as follows:
 ;; ==============================================================
 
 ;; [31:24]
-(draw-box "24" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "31" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "31" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "24" {:span 1 :text-anchor "end"   :borders {}})
 
 ;; [23:16]
-(draw-box "16" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "23" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "23" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "16" {:span 1 :text-anchor "end"   :borders {}})
 
 ;; [15:8]
-(draw-box "8"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box "15"  {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "15" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "8" {:span 1 :text-anchor "end"   :borders {}})
 
 ;; [7:0]
-(draw-box "0"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box "7"  {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "7"  {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "0"  {:span 1 :text-anchor "end"   :borders {}})
 
 ;; ==============================================================
 ;; Data row (MSB→LSB)
@@ -452,27 +452,27 @@ and for RV64 like:
 ;; pattern:  [start] + 6 empty + [end]  for each 8-bit byte
 ;; ==============================================================
 
-(draw-box "32" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "63" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "39" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "56" {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "40" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "55" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "47" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "48" {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "48" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "47" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "55" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "40" {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "56" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "39" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "63" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "32" {:span 1 :text-anchor "end"   :borders {}})
 
 ;; Upper half — data row (MSB→LSB)
-(draw-box "target[k*4+7].iprio" {:span 8})
-(draw-box "target[k*4+6].iprio" {:span 8})
-(draw-box "target[k*4+5].iprio" {:span 8})
-(draw-box "target[k*4+4].iprio" {:span 8})
+(draw-box "target[k*8+7].iprio" {:span 8})
+(draw-box "target[k*8+6].iprio" {:span 8})
+(draw-box "target[k*8+5].iprio" {:span 8})
+(draw-box "target[k*8+4].iprio" {:span 8})
 
 ;; Upper half — widths
 (draw-box "8" {:span 8 :borders {}})
@@ -484,27 +484,27 @@ and for RV64 like:
 ;; Lower half (bits [31:0]) — header row aligned exactly the same
 ;; ==============================================================
 
-(draw-box "0"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box "31"  {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "7"  {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "24"  {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "8"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box "23"  {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "15" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "16" {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "16" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "15" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "23" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "8" {:span 1 :text-anchor "end"   :borders {}})
 
-(draw-box "24" {:span 1 :text-anchor "start" :borders {}})
+(draw-box "7" {:span 1 :text-anchor "start" :borders {}})
 (draw-box nil  {:span 6 :borders {}})
-(draw-box "31" {:span 1 :text-anchor "end"   :borders {}})
+(draw-box "0" {:span 1 :text-anchor "end"   :borders {}})
 
 ;; Lower half — data row (MSB→LSB)
-(draw-box "target[k*4+3].iprio" {:span 8})
-(draw-box "target[k*4+2].iprio" {:span 8})
-(draw-box "target[k*4+1].iprio" {:span 8})
-(draw-box "target[k*4+0].iprio" {:span 8})
+(draw-box "target[k*8+3].iprio" {:span 8})
+(draw-box "target[k*8+2].iprio" {:span 8})
+(draw-box "target[k*8+1].iprio" {:span 8})
+(draw-box "target[k*8+0].iprio" {:span 8})
 
 ;; Lower half — widths
 (draw-box "8" {:span 8 :borders {}})
