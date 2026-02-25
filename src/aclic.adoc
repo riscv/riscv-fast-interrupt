@@ -603,9 +603,8 @@ The CSR is defined as follows:
 In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
 These indicate if a stack pointer swap is expected during a push or pop sequence, respectively.
 
-
-NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
-Therefore the four least significant bits of the stack pointer are zero.
+NOTE: Conventionally, stack pointers are 128b aligned.
+Therefore the four least significant bits of the stack pointer are assumed as zero.
 
 === Instructions for conditional stack pointer swap
 
@@ -617,6 +616,12 @@ The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during
 The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xsp}.
 It corresponds to the value of the `PUSH` bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
+
+As the stack pointer swapping mechanism relies upon the fact,
+that stack pointers are conventionally 128b aligned,
+an illegal instruction exception shall be raised
+if the execution of any instructions of this extension is attempted
+when the `x2` is not 128b aligned.
 
 Software can deactivate the stack pointer swap mechanism
 by writing zero to {xsp}.`PUSH`.
@@ -701,6 +706,8 @@ if (msp.PUSH == 1)           /* stack pointer shall be swapped */
 Attempting to execute in a mode less privileged than machine level
 will raise an illegal-instruction exception.
 
+Attempting to execute when rs[3:0] is unequal zero will raise an illegal-instruction exception.
+
 Included in: <<smcsps>>
 
 <<<
@@ -747,6 +754,8 @@ if (msp.PPUSH == 1)
 Attempting to execute in a mode less privileged than machine level
 will raise an illegal-instruction exception.
 
+Attempting to execute when rs[3:0] is unequal zero will raise an illegal-instruction exception.
+
 Included in: <<smcsps>>
 
 <<<
@@ -790,6 +799,8 @@ if (ssp.PUSH == 1)           /* stack pointer shall be swapped */
 
 Attempting to execute in a mode less privileged than supervisor level
 will raise an illegal-instruction exception.
+
+Attempting to execute when rs[3:0] is unequal zero will raise an illegal-instruction exception.
 
 Included in: <<smcsps,Sscsps>>
 
@@ -836,6 +847,8 @@ if (ssp.PPUSH == 1)
 
 Attempting to execute in a mode less privileged than supervisor level
 will raise an illegal-instruction exception.
+
+Attempting to execute when rs[3:0] is unequal zero will raise an illegal-instruction exception.
 
 Included in: <<smcsps,Sscsps>>
 
