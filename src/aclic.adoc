@@ -584,18 +584,16 @@ The CSR is defined as follows:
 (def left-margin 100)
 (def right-margin 100)
 (def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "3" "4" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
 
-(draw-box "SP[XLEN-1:4]" {:span 9 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box "SP[XLEN-1:2]" {:span 12 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "WPRI" {:span 3 :text-anchor "middle" :borders {:top :border-unrelated :bottom :border-unrelated :center :border-unrelated}})
 (draw-box "PUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 (draw-box "PPUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 
-(draw-box "XLEN-4" {:span 19 :borders {}})
-(draw-box "2" {:span 3 :borders {}})
+(draw-box "XLEN-2" {:span 22 :borders {}})
 (draw-box "1" {:span 5 :borders {}})
 (draw-box "1" {:span 5 :borders {}})
 ----
@@ -603,9 +601,8 @@ The CSR is defined as follows:
 In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
 These indicate if a stack pointer swap is expected during a push or pop sequence, respectively.
 
-
-NOTE: As per the RISC-V calling convention, stack pointers are 128b aligned.
-Therefore the four least significant bits of the stack pointer are zero.
+NOTE: As per the RISC-V psABI, stack pointers are at least 4 B aligned.
+Therefore, at least the two least significant bits of the stack pointer are zero in psABI compliant code.
 
 === Instructions for conditional stack pointer swap
 
