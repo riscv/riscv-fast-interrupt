@@ -61,7 +61,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xeivt: pass:q[``xeivt``]
 :xtvec: pass:q[``xtvec``]
 :xepc: pass:q[``xepc``]
-:xsp: pass:q[``xsp``]
+:xspcs: pass:q[``xspcs``]
 :scratch: pass:q[``**__x__**scratch``]
 :scratchcsw: pass:q[``**__x__**scratchcsw``]
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
@@ -99,7 +99,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mivt: pass:q[``mivt``]
 :meivt: pass:q[``meivt``]
 :mscratch: pass:q[``mscratch``]
-:msp: pass:q[``msp``]
+:mspcs: pass:q[``mspcs``]
 :mepc: pass:q[``mepc``]
 :mnepc: pass:q[``mnepc``]
 :mcause: pass:q[``mcause``]
@@ -120,7 +120,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :stvec: pass:q[``stvec``]
 :sivt: pass:q[``sivt``]
 :sscratch: pass:q[``sscratch``]
-:ssp: pass:q[``ssp``]
+:sspcs: pass:q[``sspcs``]
 :sepc: pass:q[``sepc``]
 :scause: pass:q[``scause``]
 :stval: pass:q[``stval``]
@@ -562,7 +562,7 @@ Performing stack pointer swapping in SW can be time consuming, as the conditions
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
 To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
 
-=== New stack pointer for conditional swap ({xsp}) CSR
+=== New stack pointer for conditional swap ({xspcs}) CSR
 
 New CSRs are introduced to hold an alternative stack pointer.
 Conditionally, this stack pointer can be swapped with the currently active one.
@@ -570,8 +570,8 @@ Conditionally, this stack pointer can be swapped with the currently active one.
 [source]
 ----
       Number  Name         Description
-(NEW) 0x349   msp          M-mode stack pointer for conditional swap (WARL)
-(NEW) 0x149   ssp          S-mode stack pointer for conditional swap (WARL)
+(NEW) 0x349   mspcs        M-mode stack pointer for conditional swap (WARL)
+(NEW) 0x149   sspcs        S-mode stack pointer for conditional swap (WARL)
 ----
 
 The CSR is defined as follows:
@@ -612,31 +612,31 @@ Therefore the four least significant bits of the stack pointer are zero.
 To simplify and accelerate the conditional stack pointer swap, two instructions per mode are introduced:
 <<#insns-mcspspush>>, <<#insns-mcspspop>>, <<#insns-scspspush>>, and <<#insns-scspspop>>.
 To decide if a stack pointer swap is required, these instructions evaluate the two LSBs of the register.
-The `PUSH` bit indicates that the stack pointer in {xsp} shall be swapped during the push sequence of the next handler.
+The `PUSH` bit indicates that the stack pointer in {xspcs} shall be swapped during the push sequence of the next handler.
 
-The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xsp}.
+The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xspcs}.
 It corresponds to the value of the `PUSH` bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
 
 Software can deactivate the stack pointer swap mechanism
-by writing zero to {xsp}.`PUSH`.
+by writing zero to {xspcs}.`PUSH`.
 
 An example sequence with one vertical and one horizontal trap will look like this:
 
 [source]
 ----
-Mode  Event            msp.PUSH  msp.PPUSH  sp-swap
-S     -                1         X          n
-M     trap             1         X          n
-M     mcspspush        0         1          y
-M     save context     0         1          n
-M     trap             0         1          n
-M     mcspspush        0         0          n
-M     mcspspop         0         0          n
-M     mret             0         0          n
-M     restore context  0         1          n
-M     mcspspop         1         0          y
-S     mret             1         0          n
+Mode  Event            mspcs.PUSH  mspcs.PPUSH  sp-swap
+S     -                1           X            n
+M     trap             1           X            n
+M     mcspspush        0           1            y
+M     save context     0           1            n
+M     trap             0           1            n
+M     mcspspush        0           0            n
+M     mcspspop         0           0            n
+M     mret             0           0            n
+M     restore context  0           1            n
+M     mcspspop         1           0            y
+S     mret             1           0            n
 ----
 
 In this example,
@@ -650,7 +650,7 @@ No change of stack pointer occurs for the mcspspush and mcspspop instructions in
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {ssp} by S-mode or a lower-privilege mode
+then access to the new CSR {sspcs} by S-mode or a lower-privilege mode
 results in an illegal instruction exception,
 except if the hypervisor extension is implemented,
 and the conditions for a virtual instruction exception apply,
@@ -690,12 +690,12 @@ The behavior of the operations is:
 
 [source]
 ----
-msp.PPUSH = msp.PUSH         /* Latch push bit into the previous push bit */
-if (msp.PUSH == 1)           /* stack pointer shall be swapped */
+mspcs.PPUSH = mspcs.PUSH     /* Latch push bit into the previous push bit */
+if (mspcs.PUSH == 1)         /* stack pointer shall be swapped */
     tmp = rs                 /* save current sp for writing later */
-    rd = msp.SP              /* Write the stack pointer with the low bits cleared */
-    msp.SP = tmp[XLEN-1:4]   /* save original value of sp into msp */
-    msp.PUSH = 0             /* Indicates the stack pointer has been swapped */
+    rd = mspcs.SP            /* Write the stack pointer with the low bits cleared */
+    mspcs.SP = tmp[XLEN-1:4] /* save original value of sp into mspcs */
+    mspcs.PUSH = 0           /* Indicates the stack pointer has been swapped */
 ----
 
 Attempting to execute in a mode less privileged than machine level
@@ -736,12 +736,12 @@ Behavior::
 
 [source]
 ----
-msp.PUSH = msp.PPUSH         /* Restore PUSH bit from PPUSH */
-if (msp.PPUSH == 1)
-    tmp = msp.SP             /* save msp.SP as temporary value */
-    msp.SP = rs[XLEN-1:4]    /* write current stack pointer to msp */
-    msp.PPUSH = 0            /* Clear previous push bit */
-    rd = tmp                 /* write original msp value to stack pointer */
+mspcs.PUSH = mspcs.PPUSH     /* Restore PUSH bit from PPUSH */
+if (mspcs.PPUSH == 1)
+    tmp = mspcs.SP           /* save mspcs.SP as temporary value */
+    mspcs.SP = rs[XLEN-1:4]  /* write current stack pointer to mspcs */
+    mspcs.PPUSH = 0          /* Clear previous push bit */
+    rd = tmp                 /* write original mspcs value to stack pointer */
 ----
 
 Attempting to execute in a mode less privileged than machine level
@@ -780,12 +780,12 @@ The behavior of the operations is:
 
 [source]
 ----
-ssp.PPUSH = ssp.PUSH         /* Latch push bit into the previous push bit */
-if (ssp.PUSH == 1)           /* stack pointer shall be swapped */
+sspcs.PPUSH = sspcs.PUSH     /* Latch push bit into the previous push bit */
+if (sspcs.PUSH == 1)         /* stack pointer shall be swapped */
     tmp = rs                 /* save current sp for writing later */
-    rd = ssp.SP              /* Write the stack pointer with the low bits cleared */
-    ssp.SP = tmp[XLEN-1:4]   /* save original value of sp into ssp */
-    ssp.PUSH = 0             /* Indicates the stack pointer has been swapped */
+    rd = sspcs.SP            /* Write the stack pointer with the low bits cleared */
+    sspcs.SP = tmp[XLEN-1:4] /* save original value of sp into sspcs */
+    sspcs.PUSH = 0           /* Indicates the stack pointer has been swapped */
 ----
 
 Attempting to execute in a mode less privileged than supervisor level
@@ -826,12 +826,12 @@ Behavior::
 
 [source]
 ----
-ssp.PUSH = ssp.PPUSH         /* Restore PUSH bit from PPUSH */
-if (ssp.PPUSH == 1)
-    tmp = ssp.SP             /* save ssp.SP as temporary value */
-    ssp.SP = rs[XLEN-1:4]    /* write current stack pointer to ssp */
-    ssp.PPUSH = 0            /* Clear previous push bit */
-    rd = tmp                 /* write original ssp value to stack pointer */
+sspcs.PUSH = sspcs.PPUSH     /* Restore PUSH bit from PPUSH */
+if (sspcs.PPUSH == 1)
+    tmp = sspcs.SP           /* save sspcs.SP as temporary value */
+    sspcs.SP = rs[XLEN-1:4]  /* write current stack pointer to sspcs */
+    sspcs.PPUSH = 0          /* Clear previous push bit */
+    rd = tmp                 /* write original sspcs value to stack pointer */
 ----
 
 Attempting to execute in a mode less privileged than supervisor level
@@ -912,7 +912,7 @@ mpistatus
  19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of msp.ppush, if Smcsps is implemented
+ 8          psppush          Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
  7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
@@ -938,7 +938,7 @@ spistatus
  19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of ssp.ppush, if Sscsps is implemented
+ 8          psppush          Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
  7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
@@ -1425,7 +1425,7 @@ The behavior in RISC-V assembly is as follows:
 [source]
 ----
 mipopret:
-  mcspspop sp, sp           # Swap stack pointer with msp
+  mcspspop sp, sp           # Swap stack pointer with mspcs
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -1479,7 +1479,7 @@ The behavior in RISC-V assembly is as follows:
 [source]
 ----
 sipopret:
-  scspspop sp, sp           # Swap stack pointer with ssp
+  scspspop sp, sp           # Swap stack pointer with sspcs
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
