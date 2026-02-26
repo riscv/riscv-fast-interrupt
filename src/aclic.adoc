@@ -436,7 +436,7 @@ The layout of `acliciprio[k]` for XLEN = 32 is as follows:
 (draw-box "8" {:span 8 :borders {}})
 ----
 
-and for RV64 like:
+and for XLEN=64 like:
 
 [bytefield]
 ----
@@ -529,16 +529,108 @@ When XLEN = 32, the `xireg2` and `xireg3` registers combined control the source 
 [%autowidth]
 |===
 | `xiselect` |  `xireg2/3` size |  `xireg2` state      |  `xireg3` state
-| 0x1000     |   4B             | read-only zero       | `aclicsourcecfg1`
+| 0x1000     |   4B             | aclicsourcecfg0      | `aclicsourcecfg1`
 | ...        |   ...            | ...                  | ...
 | 0x10FF     |   4B             | `aclicsourcecfg510`  | `aclicsourcecfg511`
 |===
 
 Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*2][15:0]` up to `sourcecfg[k*2+1][15:0]`.
-Access to `aclicsourcecfg[0]` is read-only zero.
+Access to `aclicsourcecfg[0][15:0]` is read-only zero.
 
 When XLEN = 64, only the even-numbered registers exist and the `xireg2` and `xireg3` registers combined control the source configuration of eight interrupts.
 Indirect access to `aclicsourcecfg[k]` mirrors `sourcecfg[k*4][15:0]` up to `sourcecfg[k*4+3][15:0]`.
+
+The layout of `aclicsourcecfg[k]` for XLEN = 32 is as follows:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+
+;; ==============================================================
+;; Header row: byte start/end labels (MSB→LSB)
+;; ==============================================================
+
+;; [31:16]
+(draw-box "31" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "16" {:span 1 :text-anchor "end"   :borders {}})
+
+;; [15:0]
+(draw-box "15"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "0"  {:span 1 :text-anchor "end"   :borders {}})
+
+;; ==============================================================
+;; Data row (MSB→LSB)
+;; ==============================================================
+
+(draw-box "sourcecfg[k*2+1][15:0]" {:span 16})
+(draw-box "sourcecfg[k*2+0][15:0]" {:span 16})
+
+;; ==============================================================
+;; Widths row
+;; ==============================================================
+
+(draw-box "16" {:span 16 :borders {}})
+(draw-box "16" {:span 16 :borders {}})
+----
+
+and for XLEN=64 like:
+
+[bytefield]
+----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+
+;; ==============================================================
+;; Upper half (bits [63:32]) — header row: byte-start/end labels
+;; ==============================================================
+
+(draw-box "63" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "48" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "47" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "32" {:span 1 :text-anchor "end"   :borders {}})
+
+;; Upper half — data row (MSB→LSB)
+(draw-box "sourcecfg[k*4+3][15:0]" {:span 16})
+(draw-box "sourcecfg[k*4+2][15:0]" {:span 16})
+
+;; Upper half — widths
+(draw-box "16" {:span 16 :borders {}})
+(draw-box "16" {:span 16 :borders {}})
+
+;; ==============================================================
+;; Lower half (bits [31:0]) — header row aligned exactly the same
+;; ==============================================================
+
+(draw-box "31" {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "16" {:span 1 :text-anchor "end"   :borders {}})
+
+(draw-box "15"  {:span 1 :text-anchor "start" :borders {}})
+(draw-box nil  {:span 14 :borders {}})
+(draw-box "0"  {:span 1 :text-anchor "end"   :borders {}})
+
+;; Lower half — data row (MSB→LSB)
+(draw-box "sourcecfg[k*4+1][15:0]" {:span 16})
+(draw-box "sourcecfg[k*4+0][15:0]" {:span 16})
+
+;; Lower half — widths
+(draw-box "16" {:span 16 :borders {}})
+(draw-box "16" {:span 16 :borders {}})
+----
 
 ===== State Enable
 
