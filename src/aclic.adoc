@@ -1321,6 +1321,10 @@ It performs the following operations in order:
   * Adjusts the stack pointer to create the stack frame
   * Conditionally performs a stack pointer swap by executing xcspspush sp
 
+When creating the stack frame,
+the stack pointer is adjusted the the next 128b-aligned valued
+that is sufficient to save the specified registers.
+
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
 
@@ -1382,10 +1386,31 @@ Explicitly, {xepc}, {xpistatus} remain unchanged.
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the xipopret instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
-=== Fault handling
+==== Fault handling
 
-If synchronous exceptions can occur during the context save/restore segments,
-handling can only be resumed if the double trap extension is supported.
+This extension adds operations to the interrupt trap behavior, which can cause faults.
+Faults that occur during these operations are only recoverable,
+if the double trap extension(s) are implemented.
+For interrupts in M-mode, this additionally requires the Smrnmi extension.
+
+In this case, if an exception trap occurs while executing the trap side effects defined by this extension,
+the following holds true:
+Depending on where the second trap is handled,
+the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
+In addition, {tval} is either set to zero or written with the faulting address.
+
+NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
+In case a higher priority interrupt became pending and enabled, this will trap first.
+
+As long as synchronous exceptions can occur,
+side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+Specifically, the saving of registers needs to be completed before adjusting the stack pointer.
+
+NOTE: As the stack pointer is guaranteed to be 128b-aligned before attempting to execute the conditional stack pointer swap operation,
+no fault can occur from this.
+
+NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
+In case a higher priority interrupt became pending and enabled, this will trap first.
 
 <<<
 
