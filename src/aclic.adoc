@@ -883,8 +883,7 @@ NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ==== New Interrupt enable threshold ({mithreshold}) CSR
 
 A new WLRL M-mode CSR, {mithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
+determines the priority cutoff used to mask lower-priority interrupts (see <<op-threshold>>).
 
 Register {mithreshold} implements exactly IPRIOLEN bits.
 
@@ -972,6 +971,7 @@ in S-mode.
 
 The reset behavior of other fields is platform-specific.
 
+[#op-threshold]
 === Operation
 
 When {xithreshold} is a nonzero value,
