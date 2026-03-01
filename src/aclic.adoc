@@ -341,6 +341,12 @@ The `eip` and `eie` arrays act as an alias of the pending and enable bits of the
 
 [NOTE]
 ====
+For an inactive source, the corresponding bit in `eip` and `eie` are read-only zero.
+In addition, the AIA defined rules "Precise effects on interrupt-pending bits" apply.
+====
+
+[NOTE]
+====
 Providing access to APLIC pending and enable bits at the hart-level has several advantages over using an IMSIC with interrupt delivery from an APLIC
 
   * It removes unnecessary resource duplication between IMSIC and APLIC when integrated with a single hart.
