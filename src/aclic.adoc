@@ -1171,6 +1171,20 @@ privilege mode of the interrupt handler, and requires execute
 permission; read permission is irrelevant.
 It is recommended that the vector table fetches are ignored for hardware triggers and breakpoints.
 
+NOTE: If {xivt} or {xeivt} is configured such that multiple privilege levels
+share a single vector table, the memory protection units
+(e.g., PMP, Smepmp) must grant execution permission to the shared vector table
+for all applicable lower privilege levels. +
+ +
+Example 1: Standard PMP +
+For a system with M-mode and S-mode, a PMP entry with L=1, R=0, W=0 and X=1
+permits both privilege levels to execute from the table while preventing modifications.
+If L=0, S-mode retains execute only permission while M-mode maintains full permissions. +
+ +
+Example 2: Smepmp Extension +
+Under the Smepmp extension, the shared vector table can be secured as a "Locked Shared code region".
+Setting L=1, R=0, W=1 and X=0 grants both M-mode and S-mode execute only permission to the vector table.
+
 Memory writes to the vector table require an instruction barrier (_fence.i_) to guarantee that they are visible to the instruction fetch.
 
 It is recommended that the second fetch be ignored for hardware triggers and breakpoints.
