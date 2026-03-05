@@ -885,6 +885,44 @@ The behavior of an {xret} instruction is modified as follows:
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
 
+[[ex-threshold-nested]]
+=== Example: Threshold behavior under nested traps and interrupts
+
+This example illustrates heavy nesting with explicit threshold management,
+under the following assumptions:
+
+* Any handler must save xpistatus before enabling interrupts
+* Any handler that had interrupts enabled at any time must restore xpistatus with interrupts disabled before executing xret
+
+.Preconditions
+* Thread **T** starts with `xithreshold = 128`.
+* Interrupt **A** has `IPRIO = 32`; interrupt **B** has `IPRIO = 4`; interrupt **C** has `IPRIO = 2`.
+
+[cols="3,2,3,3,3,6", options="header"]
+|===
+| Step | Context | Event | xithreshold | xpistatus.pithreshold | Notes
+
+| 0  | T (thread) | —                         | 128 | X   | Baseline: thread running with cutoff 128.
+| 1  | A          | trap (interrupt A)        | 32  | 128 | Trap writes `pithreshold=128`; interrupt entry sets `xithreshold=32`.
+| 1  | A          | save context; IE=1        | 32  | 128 | Save xpistatus and enable interrupts afterwards.
+| 2  | A          | raise threshold           | 2   | 128 | Short critical section in A; `pithreshold` unchanged.
+| 3  | A          | lower threshold           | 32  | 128 | End of A's critical section; restore handler threshold to 32.
+| 4  | B          | trap (interrupt B)        | 4   | 32  | Trap writes `pithreshold=32`; interrupt entry sets `xithreshold=4`.
+| 1  | B          | save context; IE=1        | 4   | 32  | Save xpistatus and enable interrupts afterwards.
+| 5  | E          | trap (exception E)        | 4   | 4   | Exception trap captures current threshold into `pithreshold=4`.
+| 1  | E          | save context; IE=1        | 4   | 32  | Save xpistatus and enable interrupts afterwards.
+| 7  | C          | trap (interrupt C)        | 2   | 4   | Trap writes `pithreshold=4`; interrupt entry sets `xithreshold=2`.
+| 9  | C→E        | return (xRET)             | 4   | 4   | On C's return, `xithreshold` restored from `pithreshold=4`; resume E.
+| 1  | E          | IE=0; restore context     | 4   | 4   | Disable interrupts and restore xpistatus afterwards.
+| 10 | E→B        | return (xRET)             | 4   | 4   | E returns; `xithreshold` restored from `pithreshold=4`; resume B.
+| 1  | B          | IE=0; restore context     | 4   | 32  | Disable interrupts and restore xpistatus afterwards.
+| 11 | B→A        | return (xRET)             | 32  | 32  | On B's return, `xithreshold=32` from `pithreshold=32`; resume A.
+| 1  | A          | IE=0; restore context     | 32  | 128 | Disable interrupts and restore xpistatus afterwards.
+| 12 | A→T        | return (xRET)             | 128 | 128 | On A's return, `xithreshold=128` from `pithreshold=128`; resume T.
+|===
+
+This example demonstrates, how the correct threshold is always restored to the original level after a preemption completes.
+The threshold lineage is preserved across nested preemptions, which can include a mix of interrupts and synchronous exceptions.
 
 === State Enable
 
