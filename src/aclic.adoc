@@ -358,6 +358,9 @@ The {xtopei} CSR reflects both the interrupt identity and the interrupt priority
 |bits 10:0 | Interrupt priority (configured target[identity].iprio)
 |===
 
+NOTE: Claiming an external interrupt can be done with the same routine as with an IMSIC.
+I.e. a write to the {xtopei} CSR claims the highest-priority pending-and-enabled interrupt.
+
 ==== Indirect CSR access to hart-local APLIC domain configuration
 
 To have full control over the necessary APLIC registers, the following indirect CSR access is added.
