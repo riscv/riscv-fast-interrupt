@@ -1243,7 +1243,7 @@ Explicitly, {xepc}, {xpistatus} remain unchanged.
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the xipopret instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
-==== Fault handling
+=== Fault handling
 
 This extension adds operations to the interrupt trap behavior, which can cause faults.
 Faults that occur during these operations are only recoverable,
