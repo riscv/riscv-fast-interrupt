@@ -1182,10 +1182,6 @@ It performs the following operations in order:
   * Adjusts the stack pointer to create the stack frame
   * Conditionally performs a stack pointer swap by executing cspspush sp
 
-When creating the stack frame,
-the stack pointer is adjusted the the next 128b-aligned valued
-that is sufficient to save the specified registers.
-
 NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
 This is done to simplify and accelerate OS thread switching.
 
