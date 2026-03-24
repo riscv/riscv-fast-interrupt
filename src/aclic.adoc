@@ -647,11 +647,7 @@ Additional control is provided for the newly added registers `acliciprio[k]` and
 
 If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
 then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower-privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
+results in an illegal instruction exception.
 
 [[smcsps, Smcsps]]
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
@@ -749,11 +745,7 @@ If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
 then access to the new CSR {sspcs} by S-mode or a lower-privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
+results in an illegal instruction exception.
 
 <<<
 
@@ -1163,11 +1155,7 @@ If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
 then access to the new CSRs {spistatus} and {sithreshold} by S-mode or a lower-privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
+results in an illegal instruction exception.
 
 == Support for interrupt vector table (Smivt, Ssivt)
 
@@ -1361,11 +1349,7 @@ If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
 then access to the new CSR {sivt} by S-mode or a lower-privilege mode
-results in an illegal instruction exception,
-except if the hypervisor extension is implemented,
-and the conditions for a virtual instruction exception apply,
-in which case a virtual instruction exception is raised
-when in VS or VU mode instead of an illegal instruction exception.
+results in an illegal instruction exception.
 
 == Synchronous exception hardware vectoring (Smehv, Ssehv)
 
