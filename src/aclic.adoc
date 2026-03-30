@@ -203,6 +203,26 @@ As this specification aims for single-hart systems, no support for the H extensi
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
+[NOTE]
+====
+
+"Fast" interrupt features have become state of the art in microcontrollers in incumbent architectures.
+Namely, automatic hardware stacking, tailchaining, late arrival, lazy stacking, hardware vectoring, interrupt nesting, and stack pointer swapping.
+These features were introduced to minimize interrupt latency and memory footprint in microcontrollers.
+These are vital in ultra low-cost MCUs fabricated in older process nodes (90nm), running at 10s of MHz with only KiB of memory.
+However, these features become counter-productive as modern microcontrollers move to smaller technology nodes and higher performance, less memory constrained systems.
+It is therefore important to make a distinction between these two types of system, hereafter termed "Low Cost Microcontrollers" and "High Performance Microcontrollers".
+
+Low Cost Microcontrollers are characterized by low performance (10s of MHz), low memory availability (KiB), older technology nodes and running bare metal code.
+For these systems, the cycles and memory saved from fast interrupt features can have a large relative impact on the overall system cost and interrupt latency.
+Therefore, even features that have minimal cycle impact on interrupt latency and only bare metal code could take advantage of are considered for Low Cost Microcontrollers.
+
+High Performance Microcontrollers are characterized by high performance (100s of MHz), high memory availability (MiB), newer technology nodes, and running an RTOS or real-time hypervisor.
+For these systems, the cycles and memory saved from fast interrupt features have a relatively small impact on the overall system cost and interrupt latency.
+Therefore, only features that have a large cycle impact on interrupt latency and that major RTOSes could take advantage of are considered for High Performance Microcontrollers.
+
+====
+
 == Fundamental ACLIC Extensions
 
 This section lays the foundation for fast interrupt handling,
