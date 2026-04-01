@@ -1348,7 +1348,7 @@ side-effects of the trap may only be executed if they allow resuming of operatio
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {sivt} by S-mode or a lower-privilege mode
+then access to the new CSRs {sivt} and {seivt} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
 == Synchronous exception hardware vectoring (Smehv, Ssehv)
