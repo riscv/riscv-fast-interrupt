@@ -712,6 +712,8 @@ The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xsp
 It corresponds to the value of the `PUSH` bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
 
+All push and pop instructions use `x2` as the source/destination of the swap operation.
+
 Software can deactivate the stack pointer swap mechanism
 by writing zero to {xspcs}.`PUSH`.
 
