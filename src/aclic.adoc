@@ -649,6 +649,10 @@ If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 
 then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`) by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
+If the Smstateen extension is implemented, then the bit 58 (IMSIC) in mstateen is implemented, even though IMSIC is not present.
+If bit 58 (ACLIC) of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC (stopei, eip[k] and eie[k])
+by S-mode or a lower-privilege mode results in an illegal instruction exception.
+
 [[smcsps, Smcsps]]
 == Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
