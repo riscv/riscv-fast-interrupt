@@ -687,13 +687,20 @@ It provides additional state to resume execution of the previous handler after a
 ----
 mipreemptcfg fields
  bits        description
- XLEN-1:4    (reserved)
+ XLEN-1:6    (reserved)
+ 5           spreempten (if Ssnip is implemented)
+ 4           mpreempten
  3:0         preemptmsk
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 
+The fields `mpreempten` and `spreempten` enable this extension at M-mode and S-mode, respectively.
+Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
+
+If Ssnip is not implemented, then `spreempten` is read-only 0.
+
+The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
 
 [source,subs="attributes"]
@@ -743,7 +750,23 @@ mpistatus
        Number  Name         Description
  (NEW) 0x146   spistatus    Previous interrupt context
  (NEW) 0x147   sithreshold  Interrupt enable threshold
+ (NEW) 0x148   sipreemptcfg Interrupt preemption configuration
 ----
+
+===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
+
+[source]
+----
+sipreemptcfg fields
+ bits        description
+ XLEN-1:6    (reserved)
+ 5           spreempten
+ 4:0         reserved
+----
+
+{sipreemptcfg} is a WARL register used to configure the behavior of preemption at S-mode.
+
+The field `spreempten` enables this extension at S-mode.
 
 ===== New Previous Interrupt Status ({spistatus}) CSR
 
