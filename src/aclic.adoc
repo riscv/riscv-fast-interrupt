@@ -864,6 +864,98 @@ The behavior of an {xret} instruction is modified as follows:
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
 
+[[smnip-handler]]
+==== Example: Handler code for nested preemption
+
+This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip/Ssnip.
+
+===== Direct mode
+
+The first example modifies the example handler from AIA by adding support for nested preemption.
+This handler assumes `mtvec.mode` = Direct (0).
+In this mode, all traps have a common entry point, and thus all interrupts use a common SW dispatcher.
+
+[,c]
+----
+save processor registers including mpistatus
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    loop {
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        write (i & 0xFF) to mithreshold  /* raise threshold */
+        i = i>>16
+        enable interrupts
+        call the interrupt handler for major interrupt i
+        disable interrupts
+        restore mpistatus
+        write mpistatus.pithreshold to mithreshold /* restore threshold */
+    }
+}
+restore processor registers
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+The most important difference compared to not using Smnip is that interrupts are enabled before calling the interrupt handler.
+While the interrupt is handled, a pending-and-enabled higher-priority interrupt can preempt the currently running interrupt handler.
+
+It is necessary to raise the threshold after reading {mtopi},
+because a higher priority interrupt could have become pending after the trap was taken.
+
+Restoring the threshold after the handler call returns
+allows lower priority interrupts to be handled
+without restoring and saving the processor registers.
+
+===== Vectored mode
+
+This example further modifies the example handler by considering xtvec.mode = Vectored (1).
+In this mode, some interrupts may share a common SW dispatcher,
+while others (higher priority interrupts) are handled in dedicated handlers (referred to as fast interrupt handlers here).
+
+In a system based on this example, fast interrupts must be able to preempt other interrupts.
+Because the fast interrupt handlers are not guaranteed to comply with the psABI,
+it must also be guaranteed that the common SW dispatcher does not dispatch fast interrupt handlers.
+
+Any fast interrupt handler must be configured to a nested interrupt priority that is higher than interrupt using the common SW dispatcher.
+
+[,c]
+----
+save processor registers including mpistatus
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    enable interrupts
+    i = read CSR mtopi
+    loop {
+        i = i>>16
+        call the interrupt handler for major interrupt i
+        restore mpistatus
+        write mpistatus.pithreshold to mithreshold /* restore threshold */
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        write (i & 0xFF) to mithreshold  /* raise threshold */
+    }
+    disable interrupts
+}
+restore processor registers
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+In this example, interrupts are enabled for an extended period.
+This allows higher-priority interrups to preempt the dispatcher.
+Because of that, mtopi can never read an interrupt that has a higher nested preemption priority
+than the interrupt that caused the original trap.
+As a consequence, this means that we do not have to raise the priority threshold before calling the first handler.
+
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
 
