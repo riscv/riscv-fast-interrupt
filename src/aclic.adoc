@@ -95,6 +95,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
 :mie: pass:q[``mie``]
+:xie: pass:q[``xie``]
 :mtvec: pass:q[``mtvec``]
 :mivt: pass:q[``mivt``]
 :meivt: pass:q[``meivt``]
@@ -109,7 +110,14 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mpnipprio: pass:q[``mpnipprio``]
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
+:sipreemptcfg: pass:q[``mipreemptcfg``]
 :preemptmsk: pass:q[``preemptmsk``]
+:spreempten: pass:q[``spreempten``]
+:mpreempten: pass:q[``mpreempten``]
+:mfie: pass:q[``mfie``]
+:sfie: pass:q[``sfie``]
+:xfie: pass:q[``xfie``]
+:fithresh: pass:q[``fithresh``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mclaimi: pass:q[``mclaimi``]
@@ -687,18 +695,21 @@ It provides additional state to resume execution of the previous handler after a
 ----
 mipreemptcfg fields
  bits        description
- XLEN-1:6    (reserved)
- 5           spreempten (if Ssnip is implemented)
- 4           mpreempten
- 3:0         preemptmsk
+ XLEN-1:12   (reserved)
+ 11:8        preemptmsk
+ 7:4         fithresh
+ 3           spreempten (if Ssnip is implemented)
+ 2           mpreempten
+ 1           sfie (if Ssnip is implemented)
+ 0           mfie
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
 
-The fields `mpreempten` and `spreempten` enable this extension at M-mode and S-mode, respectively.
+The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-mode, respectively.
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
-If Ssnip is not implemented, then `spreempten` is read-only 0.
+If Ssnip is not implemented, then {spreempten} is read-only 0.
 
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
@@ -707,6 +718,35 @@ A mask for filtering out the bits of a priority number that will participate in 
 ----
 NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ----
+
+The bits {mfie} and {sfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {xie} bit is zero.
+If Ssnip is not implemented, then {sfie} is read-only 0.
+
+Which subset of the interrupts is considered fast interrupts is controlled by {fithresh}.
+The highest legal value of {mipreemptcfg}.{fithresh} is IPRIOLEN.
+
+NOTE: In the intended use-case, {fithresh} will be configured to values smaller than {preemptmsk}.
+This selects a subset of preemption groups as fast-interrupts.
+
+[source,subs="attributes"]
+----
+FITHRESHOLD = 2^mipreemptcfg.fithresh
+----
+
+An interrupt source is considered a fast interrupt source depending on its IPRIO value, if the following condition holds:
+
+[source]
+----
+IPRIO < FITHRESHOLD
+
+which is equivalent to
+
+IPRIO & FITHRESHOLD == 0
+----
+
+NOTE: The fast interrupt threshold is defined this way to simplify the logic to determine,
+if an interrupt is considered a fast interrupt.
+No comparator is needed this way, and the determination can be done through a bitwise and-operation.
 
 ===== New Interrupt enable threshold ({mithreshold}) CSR
 
@@ -740,7 +780,7 @@ mpistatus
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt-enable threshold
+ 7:0        pithreshold[17:0] Previous interrupt-enable threshold
 ----
 
 ==== Changed and new CSRs at Supervisor Level
@@ -755,18 +795,23 @@ mpistatus
 
 ===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
 
+
+
 [source]
 ----
-sipreemptcfg fields
+mipreemptcfg fields
  bits        description
- XLEN-1:6    (reserved)
- 5           spreempten
- 4:0         reserved
+ XLEN-1:4    (reserved)
+ 3           spreempten
+ 2           (reserved)
+ 1           sfie
+ 0           (reserved)
 ----
 
 {sipreemptcfg} is a WARL register used to configure the behavior of preemption at S-mode.
 
-The field `spreempten` enables this extension at S-mode.
+The field {spreempten} enables this extension at S-mode.
+The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
 
 ===== New Previous Interrupt Status ({spistatus}) CSR
 
@@ -805,7 +850,7 @@ mstatus.mie is reset to zero, interrupts will not be enabled coming
 out of reset.
 
 NOTE: For an S-mode execution environment, the EEI should specify
-that {sstatus}.`sie` is also reset on entry. It is then responsibility of
+that {sstatus}.{sie} is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
@@ -839,6 +884,18 @@ according to the rules defined in AIA.
 
 When {xithreshold} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
+
+If {xfie} is one, interrupts are enabled and can cause a trap irrespective of {xie},
+if the following holds:
+
+[source]
+----
+IPRIO < FITHRESHOLD
+
+which is equivalent to
+
+IPRIO & FITHRESHOLD == 0
+----
 
 ===== Trap behavior
 
@@ -966,42 +1023,45 @@ it must also be guaranteed that the common SW dispatcher does not dispatch fast 
 
 Any fast interrupt handler must be configured to a nested interrupt priority that is higher than interrupt using the common SW dispatcher.
 
+In this example, it is assumed that exceptions have an entry point on traps that is different from interrupts.
+
 [,c]
 ----
 save mepc, mpistatus
-enable fast interrupts
+enable fast interrupts (mfie = 1)
 save processor registers
-i = read CSR mcause
-if (i >= 0) {
-    handle synchronous exception i
-    restore mstatus if necessary
+
+loop {
+    i = read CSR mtopi
+    if (i == 0) exit loop
+    IPRIO = (i & 0xFF)
+    write IPRIO to mithreshold  /* raise threshold */
+    id = i>>16
+    enable interrupts (mie = 1)
+    call the interrupt handler for major interrupt id
+    disable interrupts (mie = 0)
+    restore mpistatus
+    write mpistatus.pithreshold to mithreshold /* restore threshold */
 }
-if (mstatus.MPIE == 1) {
-    loop {
-        i = read CSR mtopi
-        if (i == 0) exit loop
-        IPRIO = (i & 0xFF)
-        write IPRIO to mithreshold  /* raise threshold */
-        id = i>>16
-        enable interrupts
-        call the interrupt handler for major interrupt id
-        disable interrupts
-        restore mpistatus
-        write mpistatus.pithreshold to mithreshold /* restore threshold */
-    }
-}
+
 restore processor registers
-disable fast interrupts
+disable fast interrupts (mfie = 0)
 restore mepc, mpistatus
 return from trap
 ----
 (This example can be further optimized, but with an increase in complexity.)
 
-In this example, interrupts are enabled for an extended period.
-This allows higher-priority interrups to preempt the dispatcher.
-Because of that, mtopi can never read an interrupt that has a higher nested preemption priority
-than the interrupt that caused the original trap.
-As a consequence, this means that we do not have to raise the priority threshold before calling the first handler.
+In this example, fast interrupts are enabled for an extended period.
+After saving the minimal state needed to resume after preemption,
+fast interrupts are being enabled.
+Enabling fast interrupts has the highest urgency.
+
+This allows fast interrupts to preempt the dispatcher.
+Because of that, mtopi can never report a fast interrupt.
+
+Interrupts can still be globally enabled before calling the interrupt handler,
+to ensure that other interrupts, that are not fast interrupts, 
+but have a higher nested interrupt preemption priority can preempt the currently executing handler.
 
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
