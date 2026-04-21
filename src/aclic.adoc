@@ -120,6 +120,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :fithresh: pass:q[``fithresh``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
+:mtopei: pass:q[``mtopei``]
 :mclaimi: pass:q[``mclaimi``]
 
 :sstatus: pass:q[``sstatus``]
@@ -1062,7 +1063,7 @@ fast interrupts are being enabled.
 Enabling fast interrupts has the highest urgency.
 
 This allows fast interrupts to preempt the dispatcher.
-Because of that, mtopi can never report a fast interrupt.
+Because of that, {mtopi} can never report a fast interrupt.
 
 Interrupts can still be globally enabled before calling the interrupt handler,
 to ensure that other interrupts, that are not fast interrupts, 
@@ -1072,6 +1073,25 @@ While restoring the threshold before the next loop iteration,
 all interrupts have to be disabled.
 As writing zero to {mie} also clears {mfie},
 fast interrupts need to be enabled afterwards.
+
+An example of a preemptible fast interrupt handler is
+
+[,C]
+----
+fast_interrupt_handler:
+  save mepc, mpistatus
+  enable interrupts
+
+  /* interrupt handling */
+
+  disable interrupts
+  restore mepc, mpistatus
+  return from trap
+----
+
+It is important to only read/write {mtopi} or {mtopei} while interrupts are enabled,
+otherwise these registers may report the state of a higher priority pending-enabled interrupt.
+
 
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
