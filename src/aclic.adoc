@@ -912,6 +912,47 @@ Restoring the threshold after the handler call returns
 allows lower priority interrupts to be handled
 without restoring and saving the processor registers.
 
+===== Direct mode including external interrupts
+
+The handler needs to be extended for efficient handling of external interrupts,
+if external interrupts are prioritized among each other.
+The example below assumes that the top external interrupt can be read and claimed via {mtopei}.
+
+[,c]
+----
+save processor registers
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    save mpistatus
+    loop {
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        id = i>>16
+        if (id == MEI) {
+          i = read CSR mtopei
+          if (i == 0) skip to next loop iteration
+          eid = i>>16
+          handler_addr = ei_handlers[eid]
+        } else {
+          handler_addr = i_handlers[id]
+        }
+        IPRIO = (i & 0xFF)
+        write IPRIO to mithreshold  /* raise threshold */
+        enable interrupts
+        call the interrupt handler at handler_addr
+        disable interrupts
+        restore mpistatus
+        write mpistatus.pithreshold to mithreshold /* restore threshold */
+    }
+}
+restore processor registers
+return from trap
+----
+
 ===== Vectored mode
 
 This example further modifies the example handler by considering xtvec.mode = Vectored (1).
@@ -926,25 +967,28 @@ Any fast interrupt handler must be configured to a nested interrupt priority tha
 
 [,c]
 ----
-save processor registers including mpistatus
+save processor registers
 i = read CSR mcause
 if (i >= 0) {
     handle synchronous exception i
     restore mstatus if necessary
 }
 if (mstatus.MPIE == 1) {
-    enable interrupts
-    i = read CSR mtopi
+    save mpistatus
     loop {
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        write (i & 0xFF) to mithreshold  /* raise threshold */
         i = i>>16
+        enable interrupts
         call the interrupt handler for major interrupt i
+        disable interrupts
         restore mpistatus
         write mpistatus.pithreshold to mithreshold /* restore threshold */
         i = read CSR mtopi
         if (i == 0) exit loop
         write (i & 0xFF) to mithreshold  /* raise threshold */
     }
-    disable interrupts
 }
 restore processor registers
 return from trap
