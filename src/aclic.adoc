@@ -722,6 +722,9 @@ NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 The bits {mfie} and {sfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {xie} bit is zero.
 If Ssnip is not implemented, then {sfie} is read-only 0.
 
+When {xie} is one, {xfie} has no effect.
+When the {xfie} bit is set to 0 by an explicit CSR write, the {xie} bit is cleared to 0.
+
 Which subset of the interrupts is considered fast interrupts is controlled by {fithresh}.
 The highest legal value of {mipreemptcfg}.{fithresh} is IPRIOLEN.
 
@@ -795,8 +798,6 @@ mpistatus
 
 ===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
 
-
-
 [source]
 ----
 mipreemptcfg fields
@@ -812,6 +813,9 @@ mipreemptcfg fields
 
 The field {spreempten} enables this extension at S-mode.
 The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
+
+When {sie} is one, {sfie} has no effect.
+When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is cleared to 0.
 
 ===== New Previous Interrupt Status ({spistatus}) CSR
 
@@ -1039,9 +1043,10 @@ loop {
     id = i>>16
     enable interrupts (mie = 1)
     call the interrupt handler for major interrupt id
-    disable interrupts (mie = 0)
+    disable all interrupts (mie = 0 -> mfie = 0)
     restore mpistatus
     write mpistatus.pithreshold to mithreshold /* restore threshold */
+    enable fast interrupts (mfie = 1)
 }
 
 restore processor registers
@@ -1062,6 +1067,11 @@ Because of that, mtopi can never report a fast interrupt.
 Interrupts can still be globally enabled before calling the interrupt handler,
 to ensure that other interrupts, that are not fast interrupts, 
 but have a higher nested interrupt preemption priority can preempt the currently executing handler.
+
+While restoring the threshold before the next loop iteration,
+all interrupts have to be disabled.
+As writing zero to {mie} also clears {mfie},
+fast interrupts need to be enabled afterwards.
 
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
