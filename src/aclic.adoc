@@ -888,10 +888,11 @@ if (mstatus.MPIE == 1) {
     loop {
         i = read CSR mtopi
         if (i == 0) exit loop
-        write (i & 0xFF) to mithreshold  /* raise threshold */
-        i = i>>16
+        IPRIO = (i & 0xFF)
+        write IPRIO to mithreshold  /* raise threshold */
+        id = i>>16
         enable interrupts
-        call the interrupt handler for major interrupt i
+        call the interrupt handler for major interrupt id
         disable interrupts
         restore mpistatus
         write mpistatus.pithreshold to mithreshold /* restore threshold */
@@ -967,6 +968,8 @@ Any fast interrupt handler must be configured to a nested interrupt priority tha
 
 [,c]
 ----
+save mepc, mpistatus
+enable fast interrupts
 save processor registers
 i = read CSR mcause
 if (i >= 0) {
@@ -974,23 +977,22 @@ if (i >= 0) {
     restore mstatus if necessary
 }
 if (mstatus.MPIE == 1) {
-    save mpistatus
     loop {
         i = read CSR mtopi
         if (i == 0) exit loop
-        write (i & 0xFF) to mithreshold  /* raise threshold */
-        i = i>>16
+        IPRIO = (i & 0xFF)
+        write IPRIO to mithreshold  /* raise threshold */
+        id = i>>16
         enable interrupts
-        call the interrupt handler for major interrupt i
+        call the interrupt handler for major interrupt id
         disable interrupts
         restore mpistatus
         write mpistatus.pithreshold to mithreshold /* restore threshold */
-        i = read CSR mtopi
-        if (i == 0) exit loop
-        write (i & 0xFF) to mithreshold  /* raise threshold */
     }
 }
 restore processor registers
+disable fast interrupts
+restore mepc, mpistatus
 return from trap
 ----
 (This example can be further optimized, but with an increase in complexity.)
