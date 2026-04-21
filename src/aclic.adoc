@@ -1017,7 +1017,7 @@ return from trap
 
 ===== Vectored mode
 
-This example further modifies the example handler by considering xtvec.mode = Vectored (1).
+This example further modifies the example handler by considering `mtvec.mode` = Vectored (1).
 In this mode, some interrupts may share a common SW dispatcher,
 while others (higher priority interrupts) are handled in dedicated handlers (referred to as fast interrupt handlers here).
 
@@ -1534,17 +1534,18 @@ After executing the required side-effects as required with the existing behavior
 the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (VTBASE).
 The trap handler function address is fetched from `VTBASE+XLEN/8*vtoffset`.
-If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
-clears the corresponding interrupt-pending bit if possible,
+If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address
 and sets the PC to this handler address.
-The masked vector table entry bit(s) are reserved and should be zero.
+
+If the LSB of the vector table entry is 1, and the fetch is successful,
+the hart clears the corresponding interrupt-pending bit if possible.
 
 NOTE: The original vectored mode simply jumps to an address in
 the trap vector table, while the interrupt vector table mode reads a
 handler function address from the table, and jumps to it in hardware.
 
 NOTE: In case of a level-sensitive interrupt,
-it might not be possible to clear the interurpt-pending bit.
+it might not be possible to clear the interrupt-pending bit.
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
@@ -1594,6 +1595,53 @@ In case a higher priority interrupt became pending and enabled, this will trap f
 
 As long as synchronous exceptions can occur during the interrupt vector table fetch,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+
+==== Example handler code in combination with Smnip
+
+This section builds upon the handler examples introduced in Section <<smnip-handler>>.
+
+This example further modifies the example handler by considering `mtvec.mode` = Interrupt vector table mode (11).
+The handler is structurally the same, and the same assumptions hold for the configuration of interrupts.
+
+Additionally, it is assumed that all interrupts that share a common SW dispatcher,
+have the same entry in the (external) interrupt vector table,
+with the LSB zero (i.e. the interrupt is not claimed upon successful handler address fetch).
+
+[,c]
+----
+save mepc, mpistatus
+enable fast interrupts (mfie = 1)
+save processor registers
+
+loop {
+    i = read CSR mtopi
+    if (i == 0) exit loop
+    id = i>>16
+    if (id == MEI) {
+      i = read CSR mtopei
+      if (i == 0) skip to next loop iteration
+      eid = i>>16
+      handler_addr = ei_handlers[eid]
+    } else {
+      handler_addr = i_handlers[id]
+    }
+    IPRIO = (i & 0xFF)
+    write IPRIO to mithreshold  /* raise threshold */
+    enable all interrupts (mie = 1)
+    call the interrupt handler at handler_addr
+    disable all interrupts (mie = 0 -> mfie = 0)
+    restore mpistatus
+    write mpistatus.pithreshold to mithreshold  /* restore threshold */
+    enable fast interrupts (mfie = 1)
+}
+
+restore processor registers
+disable fast interrupts (mfie = 0)
+restore mepc, mpistatus
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
 
 ==== State Enable
 
