@@ -877,13 +877,14 @@ In this mode, all traps have a common entry point, and thus all interrupts use a
 
 [,c]
 ----
-save processor registers including mpistatus
+save processor registers
 i = read CSR mcause
 if (i >= 0) {
     handle synchronous exception i
     restore mstatus if necessary
 }
 if (mstatus.MPIE == 1) {
+    save mpistatus
     loop {
         i = read CSR mtopi
         if (i == 0) exit loop
