@@ -1836,16 +1836,25 @@ It is however an implementation choice to perform tail-chaining to the next high
 
 ==== C interrupt handlers
 
-When this extension is implemented, a compiler may assume for any interrupt handler defined with the interrupt attribute like
+When this extension is implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
 
 [source,c]
 ----
-void interrupt_handler() __attribute__((interrupt));
+void interrupt_handler() __attribute__((interrupt("push-pop")));
 ----
 
 that the registers x10-x15 have been saved.
 Additionally, the compiler does not need to restore these registers.
 Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
+
+The attribute can be combined with other attributes, e.g. like
+
+[source,c]
+----
+void interrupt_handler() __attribute__((interrupt("preemptible", "push-pop")));
+----
+
+To indicate that the nested preemption is used in addition.
 
 ==== Late Preemption of the interrupt handler
 
