@@ -110,7 +110,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mpnipprio: pass:q[``mpnipprio``]
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
-:sipreemptcfg: pass:q[``mipreemptcfg``]
+:sipreemptcfg: pass:q[``sipreemptcfg``]
 :preemptmsk: pass:q[``preemptmsk``]
 :spreempten: pass:q[``spreempten``]
 :mpreempten: pass:q[``mpreempten``]
@@ -801,7 +801,7 @@ mpistatus
 
 [source]
 ----
-mipreemptcfg fields
+sipreemptcfg fields
  bits        description
  XLEN-1:4    (reserved)
  3           spreempten
