@@ -784,7 +784,7 @@ mpistatus
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
  16:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 7:0        pithreshold[17:0] Previous interrupt-enable threshold
+ 7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
 ==== Changed and new CSRs at Supervisor Level
