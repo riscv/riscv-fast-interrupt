@@ -95,6 +95,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
 :mie: pass:q[``mie``]
+:xie: pass:q[``xie``]
 :mtvec: pass:q[``mtvec``]
 :mivt: pass:q[``mivt``]
 :meivt: pass:q[``meivt``]
@@ -109,9 +110,17 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mpnipprio: pass:q[``mpnipprio``]
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
+:sipreemptcfg: pass:q[``sipreemptcfg``]
 :preemptmsk: pass:q[``preemptmsk``]
+:spreempten: pass:q[``spreempten``]
+:mpreempten: pass:q[``mpreempten``]
+:mfie: pass:q[``mfie``]
+:sfie: pass:q[``sfie``]
+:xfie: pass:q[``xfie``]
+:fithresh: pass:q[``fithresh``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
+:mtopei: pass:q[``mtopei``]
 :mclaimi: pass:q[``mclaimi``]
 
 :sstatus: pass:q[``sstatus``]
@@ -687,19 +696,61 @@ It provides additional state to resume execution of the previous handler after a
 ----
 mipreemptcfg fields
  bits        description
- XLEN-1:4    (reserved)
- 3:0         preemptmsk
+ XLEN-1:12   (reserved)
+ 11:8        preemptmsk
+ 7:4         fithresh
+ 3           spreempten (if Ssnip is implemented)
+ 2           mpreempten
+ 1           sfie (if Ssnip is implemented)
+ 0           mfie
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
-The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 
+The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-mode, respectively.
+Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
+
+If Ssnip is not implemented, then {spreempten} is read-only 0.
+
+The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
 
 [source,subs="attributes"]
 ----
 NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
 ----
+
+The bits {mfie} and {sfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {xie} bit is zero.
+If Ssnip is not implemented, then {sfie} is read-only 0.
+
+When {xie} is one, {xfie} has no effect.
+When the {xfie} bit is set to 0 by an explicit CSR write, the {xie} bit is cleared to 0.
+
+Which subset of the interrupts is considered fast interrupts is controlled by {fithresh}.
+The highest legal value of {mipreemptcfg}.{fithresh} is IPRIOLEN.
+
+NOTE: In the intended use-case, {fithresh} will be configured to values smaller than {preemptmsk}.
+This selects a subset of preemption groups as fast-interrupts.
+
+[source,subs="attributes"]
+----
+FITHRESHOLD = 2^mipreemptcfg.fithresh
+----
+
+An interrupt source is considered a fast interrupt source depending on its IPRIO value, if the following condition holds:
+
+[source]
+----
+IPRIO < FITHRESHOLD
+
+which is equivalent to
+
+IPRIO & FITHRESHOLD == 0
+----
+
+NOTE: The fast interrupt threshold is defined this way to simplify the logic to determine,
+if an interrupt is considered a fast interrupt.
+No comparator is needed this way, and the determination can be done through a bitwise and-operation.
 
 ===== New Interrupt enable threshold ({mithreshold}) CSR
 
@@ -743,7 +794,29 @@ mpistatus
        Number  Name         Description
  (NEW) 0x146   spistatus    Previous interrupt context
  (NEW) 0x147   sithreshold  Interrupt enable threshold
+ (NEW) 0x148   sipreemptcfg Interrupt preemption configuration
 ----
+
+===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
+
+[source]
+----
+sipreemptcfg fields
+ bits        description
+ XLEN-1:4    (reserved)
+ 3           spreempten
+ 2           (reserved)
+ 1           sfie
+ 0           (reserved)
+----
+
+{sipreemptcfg} is a WARL register used to configure the behavior of preemption at S-mode.
+
+The field {spreempten} enables this extension at S-mode.
+The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
+
+When {sie} is one, {sfie} has no effect.
+When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is cleared to 0.
 
 ===== New Previous Interrupt Status ({spistatus}) CSR
 
@@ -782,7 +855,7 @@ mstatus.mie is reset to zero, interrupts will not be enabled coming
 out of reset.
 
 NOTE: For an S-mode execution environment, the EEI should specify
-that {sstatus}.`sie` is also reset on entry. It is then responsibility of
+that {sstatus}.{sie} is also reset on entry. It is then responsibility of
 the execution environment to ensure that is true before beginning execution
 in S-mode.
 
@@ -817,6 +890,18 @@ according to the rules defined in AIA.
 When {xithreshold} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
 
+If {xfie} is one, interrupts are enabled and can cause a trap irrespective of {xie},
+if the following holds:
+
+[source]
+----
+IPRIO < FITHRESHOLD
+
+which is equivalent to
+
+IPRIO & FITHRESHOLD == 0
+----
+
 ===== Trap behavior
 
 The existing trap behavior is modified as follows:
@@ -840,6 +925,233 @@ The behavior of an {xret} instruction is modified as follows:
 {xret} sets {xithreshold} to {xpistatus}.{pithreshold}.
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
+
+[[smnip-handler]]
+==== Example: Handler code for nested preemption
+
+This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip.
+Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
+
+===== Direct mode SW dispatcher
+
+The first example modifies the example handler from AIA by adding support for nested preemption.
+This handler assumes `mtvec.mode` = Direct (0).
+In this mode, all traps have a common entry point, and thus all interrupts use a common SW dispatcher.
+
+[,c]
+----
+save processor registers
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    save mpistatus
+    loop {
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        IPRIO = (i & 0xFF)
+        write IPRIO to mithreshold  /* raise threshold */
+        id = i>>16
+        enable interrupts
+        call the interrupt handler for major interrupt id
+        disable interrupts
+        restore mpistatus
+        write mpistatus.pithreshold to mithreshold /* restore threshold */
+    }
+}
+restore processor registers
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+The most important difference compared to not using Smnip is that interrupts are enabled before calling the interrupt handler.
+While the interrupt is handled, a pending-and-enabled higher-priority interrupt can preempt the currently running interrupt handler.
+
+It is necessary to raise the threshold after reading {mtopi},
+because a higher priority interrupt could have become pending after the trap was taken.
+
+Restoring the threshold after the handler call returns
+allows lower priority interrupts to be handled
+without restoring and saving the processor registers.
+
+===== Direct mode SW dispatcher including external interrupts
+
+The handler needs to be extended for efficient handling of external interrupts,
+if external interrupts are prioritized among each other.
+The example below assumes that the top external interrupt can be read and claimed via {mtopei}.
+
+[,c]
+----
+save processor registers
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    save mpistatus
+    loop {
+        i = read CSR mtopi
+        if (i == 0) exit loop
+        id = i>>16
+        if (id == MEI) {
+          i = read CSR mtopei
+          if (i == 0) skip to next loop iteration
+          eid = i>>16
+          handler_addr = ei_handlers[eid]
+        } else {
+          handler_addr = i_handlers[id]
+        }
+        IPRIO = (i & 0xFF)
+        write IPRIO to mithreshold  /* raise threshold */
+        enable interrupts
+        call the interrupt handler at handler_addr
+        disable interrupts
+        restore mpistatus
+        write mpistatus.pithreshold to mithreshold /* restore threshold */
+    }
+}
+restore processor registers
+return from trap
+----
+
+===== Vectored mode SW dispatcher
+
+This example further modifies the example handler by considering `mtvec.mode` = Vectored (1).
+In this mode, some interrupts may share a common SW dispatcher,
+while others (higher priority interrupts) are handled in dedicated handlers (referred to as fast interrupt handlers here).
+
+In a system based on this example, fast interrupts must be able to preempt other interrupts.
+Because the fast interrupt handlers are not guaranteed to comply with the psABI,
+it must also be guaranteed that the common SW dispatcher does not dispatch fast interrupt handlers.
+
+Any fast interrupt handler must be configured to a nested interrupt priority that is higher than interrupt using the common SW dispatcher.
+
+In this example, it is assumed that exceptions have an entry point on traps that is different from interrupts.
+
+[,c]
+----
+save mepc, mpistatus
+enable fast interrupts (mfie = 1)
+save processor registers
+
+loop {
+    i = read CSR mtopi
+    if (i == 0) exit loop
+    IPRIO = (i & 0xFF)
+    write IPRIO to mithreshold  /* raise threshold */
+    id = i>>16
+    enable interrupts (mie = 1)
+    call the interrupt handler for major interrupt id
+    disable all interrupts (mie = 0 -> mfie = 0)
+    restore mpistatus
+    write mpistatus.pithreshold to mithreshold /* restore threshold */
+    enable fast interrupts (mfie = 1)
+}
+
+restore processor registers
+disable fast interrupts (mfie = 0)
+restore mepc, mpistatus
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+In this example, fast interrupts are enabled for an extended period.
+After saving the minimal state needed to resume after preemption,
+fast interrupts are being enabled.
+Enabling fast interrupts has the highest urgency.
+
+This allows fast interrupts to preempt the dispatcher.
+Because of that, {mtopi} can never report a fast interrupt.
+
+Interrupts can still be globally enabled before calling the interrupt handler,
+to ensure that other interrupts, that are not fast interrupts, 
+but have a higher nested interrupt preemption priority can preempt the currently executing handler.
+
+While restoring the threshold before the next loop iteration,
+all interrupts have to be disabled.
+As writing zero to {mie} also clears {mfie},
+fast interrupts need to be enabled afterwards.
+
+[[smnip-handler-vectored-external]]
+===== Vectored SW dispatcher including external interrupts
+
+This section builds upon the two handler examples introduced previously.
+
+[,c]
+----
+save mepc, mpistatus
+enable fast interrupts (mfie = 1)
+save processor registers
+
+loop {
+    i = read CSR mtopi
+    if (i == 0) exit loop
+    id = i>>16
+    if (id == MEI) {
+      i = read CSR mtopei
+      if (i == 0) skip to next loop iteration
+      eid = i>>16
+      handler_addr = ei_handlers[eid]
+    } else {
+      handler_addr = i_handlers[id]
+    }
+    IPRIO = (i & 0xFF)
+    write IPRIO to mithreshold  /* raise threshold */
+    enable all interrupts (mie = 1)
+    call the interrupt handler at handler_addr
+    disable all interrupts (mie = 0 -> mfie = 0)
+    restore mpistatus
+    write mpistatus.pithreshold to mithreshold  /* restore threshold */
+    enable fast interrupts (mfie = 1)
+}
+
+restore processor registers
+disable fast interrupts (mfie = 0)
+restore mepc, mpistatus
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+[[smnip-fast-handler]]
+===== Preemptible Fast Interrupt Handler
+
+An example of a preemptible fast interrupt handler is
+
+[,C]
+----
+fast_interrupt_handler:
+  save mepc, mpistatus
+  enable interrupts
+
+  /* interrupt handling */
+
+  disable interrupts
+  restore mepc, mpistatus
+  return from trap
+----
+
+As part of the interrupt handling, the pending bit needs to be cleared by software.
+
+It is expected that GNU toolchains will preemptible C-handlers like
+
+[,C]
+----
+void fast_interrupt_handler() __attribute__((interrupt("preemptible")))
+{
+
+  /* interrupt handling */
+
+  return;
+}
+----
+
+Context needed to return after preemption is saved before enabling interrupts.
+Interrupts are enabled before executing the first statement of the function.
+Before returning, interrupts are disabled, and context is restored.
+
 
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
@@ -1302,17 +1614,18 @@ After executing the required side-effects as required with the existing behavior
 the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (VTBASE).
 The trap handler function address is fetched from `VTBASE+XLEN/8*vtoffset`.
-If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address,
-clears the corresponding interrupt-pending bit if possible,
+If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address
 and sets the PC to this handler address.
-The masked vector table entry bit(s) are reserved and should be zero.
+
+If the LSB of the vector table entry is 1, and the fetch is successful,
+the hart clears the corresponding interrupt-pending bit if possible.
 
 NOTE: The original vectored mode simply jumps to an address in
 the trap vector table, while the interrupt vector table mode reads a
 handler function address from the table, and jumps to it in hardware.
 
 NOTE: In case of a level-sensitive interrupt,
-it might not be possible to clear the interurpt-pending bit.
+it might not be possible to clear the interrupt-pending bit.
 
 For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is an _implicit_ fetch at the
@@ -1362,6 +1675,18 @@ In case a higher priority interrupt became pending and enabled, this will trap f
 
 As long as synchronous exceptions can occur during the interrupt vector table fetch,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+
+==== Handler support
+
+The extension is expected to be used in conjunction with the <<smnip>> extensions.
+In this case, the handlers introduced in Sections <<smnip-handler-vectored-external>> and <<smnip-fast-handler>> are applicable.
+
+For the SW dispatcher, an additional configuration assumption is
+that interrupts trapping to the SW dispatcher have the LSB of their interrupt vector table entry zero.
+
+If the interrupt vector table associated with a fast interrupt has its LSB set to one,
+the handler does not have to clear the pending bit at the hart level.
+It may nevertheless need to clear the pending bit at the peripheral, typically in case of a level-sensitive interrupt.
 
 ==== State Enable
 
@@ -1511,16 +1836,25 @@ It is however an implementation choice to perform tail-chaining to the next high
 
 ==== C interrupt handlers
 
-When this extension is implemented, a compiler may assume for any interrupt handler defined with the interrupt attribute like
+When this extension is implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
 
 [source,c]
 ----
-void interrupt_handler() __attribute__((interrupt));
+void interrupt_handler() __attribute__((interrupt("push-pop")));
 ----
 
 that the registers x10-x15 have been saved.
 Additionally, the compiler does not need to restore these registers.
 Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
+
+The attribute can be combined with other attributes, e.g. like
+
+[source,c]
+----
+void interrupt_handler() __attribute__((interrupt("preemptible", "push-pop")));
+----
+
+To indicate that the nested preemption is used in addition.
 
 ==== Late Preemption of the interrupt handler
 
