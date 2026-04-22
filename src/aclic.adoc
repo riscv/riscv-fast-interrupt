@@ -929,9 +929,10 @@ This automatically restores the interrupt-enable threshold to the level of the p
 [[smnip-handler]]
 ==== Example: Handler code for nested preemption
 
-This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip/Ssnip.
+This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip.
+Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
 
-===== Direct mode
+===== Direct mode SW dispatcher
 
 The first example modifies the example handler from AIA by adding support for nested preemption.
 This handler assumes `mtvec.mode` = Direct (0).
@@ -975,7 +976,7 @@ Restoring the threshold after the handler call returns
 allows lower priority interrupts to be handled
 without restoring and saving the processor registers.
 
-===== Direct mode including external interrupts
+===== Direct mode SW dispatcher including external interrupts
 
 The handler needs to be extended for efficient handling of external interrupts,
 if external interrupts are prioritized among each other.
@@ -1016,7 +1017,7 @@ restore processor registers
 return from trap
 ----
 
-===== Vectored mode
+===== Vectored mode SW dispatcher
 
 This example further modifies the example handler by considering `mtvec.mode` = Vectored (1).
 In this mode, some interrupts may share a common SW dispatcher,
@@ -1074,6 +1075,49 @@ all interrupts have to be disabled.
 As writing zero to {mie} also clears {mfie},
 fast interrupts need to be enabled afterwards.
 
+[[smnip-handler-vectored-external]]
+===== Vectored SW dispatcher including external interrupts
+
+This section builds upon the two handler examples introduced previously.
+
+[,c]
+----
+save mepc, mpistatus
+enable fast interrupts (mfie = 1)
+save processor registers
+
+loop {
+    i = read CSR mtopi
+    if (i == 0) exit loop
+    id = i>>16
+    if (id == MEI) {
+      i = read CSR mtopei
+      if (i == 0) skip to next loop iteration
+      eid = i>>16
+      handler_addr = ei_handlers[eid]
+    } else {
+      handler_addr = i_handlers[id]
+    }
+    IPRIO = (i & 0xFF)
+    write IPRIO to mithreshold  /* raise threshold */
+    enable all interrupts (mie = 1)
+    call the interrupt handler at handler_addr
+    disable all interrupts (mie = 0 -> mfie = 0)
+    restore mpistatus
+    write mpistatus.pithreshold to mithreshold  /* restore threshold */
+    enable fast interrupts (mfie = 1)
+}
+
+restore processor registers
+disable fast interrupts (mfie = 0)
+restore mepc, mpistatus
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+[[smnip-fast-handler]]
+===== Preemptible Fast Interrupt Handler
+
 An example of a preemptible fast interrupt handler is
 
 [,C]
@@ -1089,8 +1133,24 @@ fast_interrupt_handler:
   return from trap
 ----
 
-It is important to only read/write {mtopi} or {mtopei} while interrupts are enabled,
-otherwise these registers may report the state of a higher priority pending-enabled interrupt.
+As part of the interrupt handling, the pending bit needs to be cleared by software.
+
+It is expected that GNU toolchains will preemptible C-handlers like
+
+[,C]
+----
+void fast_interrupt_handler() __attribute__((interrupt("preemptible")))
+{
+
+  /* interrupt handling */
+
+  return;
+}
+----
+
+Context needed to return after preemption is saved before enabling interrupts.
+Interrupts are enabled before executing the first statement of the function.
+Before returning, interrupts are disabled, and context is restored.
 
 
 [[ex-threshold-nested]]
@@ -1616,52 +1676,17 @@ In case a higher priority interrupt became pending and enabled, this will trap f
 As long as synchronous exceptions can occur during the interrupt vector table fetch,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
-==== Example handler code in combination with Smnip
+==== Handler support
 
-This section builds upon the handler examples introduced in Section <<smnip-handler>>.
+The extension is expected to be used in conjunction with the <<smnip>> extensions.
+In this case, the handlers introduced in Sections <<smnip-handler-vectored-external>> and <<smnip-fast-handler>> are applicable.
 
-This example further modifies the example handler by considering `mtvec.mode` = Interrupt vector table mode (11).
-The handler is structurally the same, and the same assumptions hold for the configuration of interrupts.
+For the SW dispatcher, an additional configuration assumption is
+that interrupts trapping to the SW dispatcher have the LSB of their interrupt vector table entry zero.
 
-Additionally, it is assumed that all interrupts that share a common SW dispatcher,
-have the same entry in the (external) interrupt vector table,
-with the LSB zero (i.e. the interrupt is not claimed upon successful handler address fetch).
-
-[,c]
-----
-save mepc, mpistatus
-enable fast interrupts (mfie = 1)
-save processor registers
-
-loop {
-    i = read CSR mtopi
-    if (i == 0) exit loop
-    id = i>>16
-    if (id == MEI) {
-      i = read CSR mtopei
-      if (i == 0) skip to next loop iteration
-      eid = i>>16
-      handler_addr = ei_handlers[eid]
-    } else {
-      handler_addr = i_handlers[id]
-    }
-    IPRIO = (i & 0xFF)
-    write IPRIO to mithreshold  /* raise threshold */
-    enable all interrupts (mie = 1)
-    call the interrupt handler at handler_addr
-    disable all interrupts (mie = 0 -> mfie = 0)
-    restore mpistatus
-    write mpistatus.pithreshold to mithreshold  /* restore threshold */
-    enable fast interrupts (mfie = 1)
-}
-
-restore processor registers
-disable fast interrupts (mfie = 0)
-restore mepc, mpistatus
-return from trap
-----
-(This example can be further optimized, but with an increase in complexity.)
-
+If the interrupt vector table associated with a fast interrupt has its LSB set to one,
+the handler does not have to clear the pending bit at the hart level.
+It may nevertheless need to clear the pending bit at the peripheral, typically in case of a level-sensitive interrupt.
 
 ==== State Enable
 
