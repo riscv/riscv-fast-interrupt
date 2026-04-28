@@ -1162,14 +1162,42 @@ Assembly version:
 .globl fast_interrupt_dispatcher
 
 fast_interrupt_dispatcher:
-    addi    SP_REG, SP_REG, -(2*REGSZ)
-    sr      EPC,      0*REGSZ, SP_REG
-    sr      ISTATUS, 1*REGSZ, SP_REG
+#if __riscv_xlen == 64
+  #define REGSZ 8
+  .macro sr r,o,b; sd \r,\o(\b); .endm
+  .macro lr r,o,b; ld \r,\o(\b); .endm
+  .macro shxadd r,idx,b; sh3add \r,\idx,\b; .endm
+#else
+  #define REGSZ 4
+  .macro sr r,o,b; sw \r,\o(\b); .endm
+  .macro lr r,o,b; lw \r,\o(\b); .endm
+  .macro shxadd r,idx,b; sh2add \r,\idx,\b; .endm
+#endif
 
-    csrr    EPC,      mepc
-    csrr    ISTATUS, CSR_MISTATUS
+#define MEI_ID 11
 
-    csrsi   CSR_MIPREEMPTCFG, 1
+#define CSR_MISTATUS     0x346
+#define CSR_MITHRESHOLD  0x347
+
+#define EPC       s0
+#define PISTATUS  s1
+
+#define TOPI_VAL    t0
+#define IRQ_ID      t1
+#define CMP_TMP     t2
+#define HANDLER_PTR t3
+
+.section .text
+.align 4
+.globl fast_interrupt_dispatcher
+
+fast_interrupt_dispatcher:
+    addi    sp, sp, -(2*REGSZ)
+    sr      EPC,      0*REGSZ, sp
+    sr      PISTATUS, 1*REGSZ, sp
+
+    csrr    EPC, mepc
+    csrrsi  PISTATUS, CSR_MISTATUS, 1
 
     call    __riscv_save
 
@@ -1196,8 +1224,8 @@ have_handler:
     jalr    HANDLER_PTR
     csrci   mie, 1
 
-    csrw    CSR_MITHRESHOLD, ISTATUS
-    csrsi   CSR_MIPREEMPTCFG, 1
+    csrw    CSR_MITHRESHOLD, PISTATUS
+    csrsi   CSR_MISTATUS, 1
 
     j       dispatch_loop
 
@@ -1210,11 +1238,11 @@ int_irq:
 dispatch_exit:
     call    __riscv_restore
     csrw    mepc, EPC
-    csrw    CSR_MISTATUS, ISTATUS
+    csrw    CSR_MISTATUS, PISTATUS
 
-    lr      EPC,      0*REGSZ, SP_REG
-    lr      ISTATUS, 1*REGSZ, SP_REG
-    addi    SP_REG, SP_REG, (2*REGSZ)
+    lr      EPC,      0*REGSZ, sp
+    lr      PISTATUS, 1*REGSZ, sp
+    addi    sp, sp, (2*REGSZ)
     mret
 ----
 
