@@ -1211,7 +1211,7 @@ int_irq:
 dispatch_exit:
     call    __riscv_restore
     csrw    mepc, s0
-    csrw    CSR_MISTATUS, s1
+    csrci   CSR_MIPREEMPTCFG, 1  /* disable all interrupts */
 
     lr      s0, 0*REGSZ, sp
     lr      s1, 1*REGSZ, sp
