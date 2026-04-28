@@ -1130,118 +1130,86 @@ Assembly version:
 
 [source,asm]
 ----
-#if __riscv_xlen == 64
-  #define REGSZ 8
-  .macro sr r,o,b; sd \r,\o(\b); .endm
-  .macro lr r,o,b; ld \r,\o(\b); .endm
-  .macro shxadd r,idx,b; sh3add \r,\idx,\b; .endm
-#else
-  #define REGSZ 4
-  .macro sr r,o,b; sw \r,\o(\b); .endm
-  .macro lr r,o,b; lw \r,\o(\b); .endm
-  .macro shxadd r,idx,b; sh2add \r,\idx,\b; .endm
-#endif
+    .if XLEN == 64
+        .equ REGSZ, 8
+        .macro sr reg, off, base
+            sd \reg, \off(\base)
+        .endm
+        .macro lr reg, off, base
+            ld \reg, \off(\base)
+        .endm
+        .macro shxadd dst, idx, base
+            sh3add \dst, \idx, \base
+        .endm
+    .else
+        .equ REGSZ, 4
+        .macro sr reg, off, base
+            sw \reg, \off(\base)
+        .endm
+        .macro lr reg, off, base
+            lw \reg, \off(\base)
+        .endm
+        .macro shxadd dst, idx, base
+            sh2add \dst, \idx, \base
+        .endm
+    .endif
 
-#define MEI_ID 11
+.equ MEI_ID,           11
+.equ CSR_MISTATUS,     0x346
+.equ CSR_MITHRESHOLD,  0x347
+.equ MSTATUS_MIE,      8
 
-#define CSR_MISTATUS     0x346
-#define CSR_MITHRESHOLD   0x347
-#define CSR_MIPREEMPTCFG  0x348
-
-#define EPC       s0
-#define ISTATUS  s1
-#define SP_REG    sp
-
-#define TOPI_VAL    t0
-#define IRQ_ID      t1
-#define CMP_TMP     t2
-#define HANDLER_PTR t3
-
-.section .text
-.align 4
-.globl fast_interrupt_dispatcher
-
-fast_interrupt_dispatcher:
-#if __riscv_xlen == 64
-  #define REGSZ 8
-  .macro sr r,o,b; sd \r,\o(\b); .endm
-  .macro lr r,o,b; ld \r,\o(\b); .endm
-  .macro shxadd r,idx,b; sh3add \r,\idx,\b; .endm
-#else
-  #define REGSZ 4
-  .macro sr r,o,b; sw \r,\o(\b); .endm
-  .macro lr r,o,b; lw \r,\o(\b); .endm
-  .macro shxadd r,idx,b; sh2add \r,\idx,\b; .endm
-#endif
-
-#define MEI_ID 11
-
-#define CSR_MISTATUS     0x346
-#define CSR_MITHRESHOLD  0x347
-
-#define EPC       s0
-#define PISTATUS  s1
-
-#define TOPI_VAL    t0
-#define IRQ_ID      t1
-#define CMP_TMP     t2
-#define HANDLER_PTR t3
-
-.section .text
-.align 4
-.globl fast_interrupt_dispatcher
-
-fast_interrupt_dispatcher:
+interrupt_dispatcher:
     addi    sp, sp, -(2*REGSZ)
-    sr      EPC,      0*REGSZ, sp
-    sr      PISTATUS, 1*REGSZ, sp
+    sr      s0, 0*REGSZ, sp
+    sr      s1, 1*REGSZ, sp
 
-    csrr    EPC, mepc
-    csrrsi  PISTATUS, CSR_MISTATUS, 1
+    csrr    s0, mepc
+    csrrsi  s1, CSR_MISTATUS, 1
 
     call    __riscv_save
 
 dispatch_loop:
-    csrr    TOPI_VAL, mtopi
-    beqz    TOPI_VAL, dispatch_exit
+    csrr    t0, mtopi
+    beqz    t0, dispatch_exit
 
-    srli    IRQ_ID, TOPI_VAL, 16
-    li      CMP_TMP, MEI_ID
-    bne     IRQ_ID, CMP_TMP, int_irq
+    srli    t1, t0, 16
+    li      t2, MEI_ID
+    bne     t1, t2, int_irq
 
 ext_irq:
-    csrr    TOPI_VAL, mtopei
-    beqz    TOPI_VAL, dispatch_loop
-    srli    IRQ_ID, TOPI_VAL, 16
-    la      HANDLER_PTR, ei_handlers
-    shxadd  HANDLER_PTR, IRQ_ID, HANDLER_PTR
-    lr      HANDLER_PTR, 0, HANDLER_PTR
+    csrr    t0, mtopei
+    beqz    t0, dispatch_loop
+    srli    t1, t0, 16
+    la      t3, ei_handlers
+    shxadd  t3, t1, t3
+    lr      t3, 0, t3
 
 have_handler:
-    csrw    CSR_MITHRESHOLD, TOPI_VAL
+    csrw    CSR_MITHRESHOLD, t0
 
-    csrsi   mie, 1
-    jalr    HANDLER_PTR
-    csrci   mie, 1
+    csrsi   mstatus, MSTATUS_MIE
+    jalr    t3
+    csrci   mstatus, MSTATUS_MIE
 
-    csrw    CSR_MITHRESHOLD, PISTATUS
+    csrw    CSR_MITHRESHOLD, s1
     csrsi   CSR_MISTATUS, 1
 
     j       dispatch_loop
 
 int_irq:
-    la      HANDLER_PTR, i_handlers
-    shxadd  HANDLER_PTR, IRQ_ID, HANDLER_PTR
-    lr      HANDLER_PTR, 0, HANDLER_PTR
+    la      t3, i_handlers
+    shxadd  t3, t1, t3
+    lr      t3, 0, t3
     j       have_handler
 
 dispatch_exit:
     call    __riscv_restore
-    csrw    mepc, EPC
-    csrw    CSR_MISTATUS, PISTATUS
+    csrw    mepc, s0
+    csrw    CSR_MISTATUS, s1
 
-    lr      EPC,      0*REGSZ, sp
-    lr      PISTATUS, 1*REGSZ, sp
+    lr      s0, 0*REGSZ, sp
+    lr      s1, 1*REGSZ, sp
     addi    sp, sp, (2*REGSZ)
     mret
 ----
