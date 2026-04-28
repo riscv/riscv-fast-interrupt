@@ -1115,6 +1115,100 @@ return from trap
 ----
 (This example can be further optimized, but with an increase in complexity.)
 
+
+Assembly version:
+
+[source,asm]
+----
+#if __riscv_xlen == 64
+  #define REGSZ 8
+  .macro sr r,o,b; sd \r,\o(\b); .endm
+  .macro lr r,o,b; ld \r,\o(\b); .endm
+  .macro shxadd r,idx,b; sh3add \r,\idx,\b; .endm
+#else
+  #define REGSZ 4
+  .macro sr r,o,b; sw \r,\o(\b); .endm
+  .macro lr r,o,b; lw \r,\o(\b); .endm
+  .macro shxadd r,idx,b; sh2add \r,\idx,\b; .endm
+#endif
+
+#define MEI_ID 11
+
+#define CSR_MPISTATUS     0x346
+#define CSR_MITHRESHOLD   0x347
+#define CSR_MIPREEMPTCFG  0x348
+
+#define EPC       s0
+#define PISTATUS  s1
+#define SP_REG    sp
+
+#define TOPI_VAL    t0
+#define IRQ_ID      t1
+#define CMP_TMP     t2
+#define HANDLER_PTR t3
+
+.section .text
+.align 4
+.globl fast_interrupt_dispatcher
+
+fast_interrupt_dispatcher:
+    addi    SP_REG, SP_REG, -(2*REGSZ)
+    sr      EPC,      0*REGSZ, SP_REG
+    sr      PISTATUS, 1*REGSZ, SP_REG
+
+    csrr    EPC,      mepc
+    csrr    PISTATUS, CSR_MPISTATUS
+
+    csrsi   CSR_MIPREEMPTCFG, 1
+
+    call    __riscv_save
+
+dispatch_loop:
+    csrr    TOPI_VAL, mtopi
+    beqz    TOPI_VAL, dispatch_exit
+
+    srli    IRQ_ID, TOPI_VAL, 16
+    li      CMP_TMP, MEI_ID
+    bne     IRQ_ID, CMP_TMP, int_irq
+
+ext_irq:
+    csrr    TOPI_VAL, mtopei
+    beqz    TOPI_VAL, dispatch_loop
+    srli    IRQ_ID, TOPI_VAL, 16
+    la      HANDLER_PTR, ei_handlers
+    shxadd  HANDLER_PTR, IRQ_ID, HANDLER_PTR
+    lr      HANDLER_PTR, 0, HANDLER_PTR
+
+have_handler:
+    csrw    CSR_MITHRESHOLD, TOPI_VAL
+
+    csrsi   mie, 1
+    jalr    HANDLER_PTR
+    csrci   mie, 1
+
+    csrw    CSR_MITHRESHOLD, PISTATUS
+    csrsi   CSR_MIPREEMPTCFG, 1
+
+    j       dispatch_loop
+
+int_irq:
+    la      HANDLER_PTR, i_handlers
+    shxadd  HANDLER_PTR, IRQ_ID, HANDLER_PTR
+    lr      HANDLER_PTR, 0, HANDLER_PTR
+    j       have_handler
+
+dispatch_exit:
+    call    __riscv_restore
+    csrw    mepc, EPC
+    csrw    CSR_MPISTATUS, PISTATUS
+
+    lr      EPC,      0*REGSZ, SP_REG
+    lr      PISTATUS, 1*REGSZ, SP_REG
+    addi    SP_REG, SP_REG, (2*REGSZ)
+    mret
+----
+
+
 [[smnip-fast-handler]]
 ===== Preemptible Fast Interrupt Handler
 
