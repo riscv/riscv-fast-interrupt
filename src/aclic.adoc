@@ -125,6 +125,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mtopei: pass:q[``mtopei``]
+:stopei: pass:q[``stopei``]
 :mclaimi: pass:q[``mclaimi``]
 
 :sstatus: pass:q[``sstatus``]
@@ -705,7 +706,8 @@ mipreemptcfg fields
  7:4         fithresh
  3           spreempten (if Ssnip is implemented)
  2           mpreempten
- 1:0         (reserved)
+ 1           sfie (if Ssnip is implemented)
+ 0           mfie
 ----
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
@@ -714,6 +716,11 @@ The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-m
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
 If Ssnip is not implemented, then {spreempten} is read-only 0.
+
+The bit {xfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {xie} bit is zero.
+
+When {xie} is one, {xfie} has no effect.
+When the {xfie} bit is set to 0 by an explicit CSR write, the {xie} bit is cleared to 0.
 
 The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
@@ -777,7 +784,7 @@ A new M-mode CSR, {mistatus}, holds consolidated state related to interrupts.
 
 [source]
 ----
-mistatus 
+mistatus
  Bits       Field            Description
  XLEN-1:30  (reserved)
  29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
@@ -786,20 +793,10 @@ mistatus
  25:20      (reserved)
  19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
- 16:9       pithreshold[7:0] Previous interrupt-enable threshold
+ 15:9       (reserved) 
  8          psppush          Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 7:2        (reserved) 
- 0          mfie             Fast interrupts enable
+ 7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
-
-The bits {mfie} and {sfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {xie} bit is zero.
-If Ssnip is not implemented, then {sfie} is read-only 0.
-
-When {xie} is one, {xfie} has no effect.
-When the {xfie} bit is set to 0 by an explicit CSR write, the {xie} bit is cleared to 0.
-
-NOTE: The inclusion of mfie in bit 0 allows setting it with a CSRRSI instruction while also reading the CSR for the purpose of context saving.
-This saves one instruction in the path to enabling fast interrupts.
 
 ==== Changed and new CSRs at Supervisor Level
 
@@ -819,12 +816,19 @@ sipreemptcfg fields
  bits        description
  XLEN-1:4    (reserved)
  3           spreempten
- 2:0         (reserved)
+ 2           (reserved)
+ 1           sfie
+ 0           (reserved)
 ----
 
 {sipreemptcfg} is a WARL register used to configure the behavior of preemption at S-mode.
 
 The field {spreempten} enables this extension at S-mode.
+
+The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
+
+When {sie} is one, {sfie} has no effect.
+When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is cleared to 0.
 
 ===== New Interrupt Status ({sistatus}) CSR
 
@@ -839,19 +843,13 @@ sistatus
  25:20      (reserved)
  19:18      VS[1:0]          Vector extension status, mirror of sstatus.VS
  17:16      FS[1:0]          Floating-point extension status, mirror of sstatus.FS
- 16:9       pithreshold[7:0] Previous interrupt-enable threshold
+ 15:9       (reserved)
  8          psppush          Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
- 7:2        (reserved) 
- 0          sfie             Fast interrupts enable
+ 7:0        pithreshold[7:0] Previous interrupt-enable threshold
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
-
-The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
-
-When {sie} is one, {sfie} has no effect.
-When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is cleared to 0.
 
 ===== New Interrupt enable threshold ({sithreshold}) CSR
 
@@ -1166,6 +1164,7 @@ Assembly version:
 .equ MEI_ID,           11
 .equ CSR_MISTATUS,     0x346
 .equ CSR_MITHRESHOLD,  0x347
+.equ CSR_MIPREEMPTCFG, 0x348
 .equ MSTATUS_MIE,      8
 
 interrupt_dispatcher:
@@ -1174,7 +1173,8 @@ interrupt_dispatcher:
     sr      s1, 1*REGSZ, sp
 
     csrr    s0, mepc
-    csrrsi  s1, CSR_MISTATUS, 1
+    csrr    s1, CSR_MISTATUS
+    csrsi   CSR_MIPREEMPTCFG, 1  /* enable fast interrupts */
 
     call    __riscv_save
 
@@ -1199,7 +1199,7 @@ have_handler:
     csrci   mstatus, MSTATUS_MIE
 
     csrw    CSR_MITHRESHOLD, s1
-    csrsi   CSR_MISTATUS, 1
+    csrsi   CSR_MIPREEMPTCFG, 1
 
     j       dispatch_loop
 
