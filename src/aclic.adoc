@@ -93,6 +93,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :claimi: pass:q[``claimi``]
 :iprio: pass:q[``iprio``]
 :IPRIO: pass:q[``IPRIO``]
+:FITHRESHOLD: pass:q[``FITHRESHOLD``]
 
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
@@ -113,7 +114,9 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
 :sipreemptcfg: pass:q[``sipreemptcfg``]
-:nipbits: pass:q[``nipbits``]
+:mnipbits: pass:q[``mnipbits``]
+:snipbits: pass:q[``snipbits``]
+:xnipbits: pass:q[``xnipbits``]
 :spreempten: pass:q[``spreempten``]
 :mpreempten: pass:q[``mpreempten``]
 :mfie: pass:q[``mfie``]
@@ -122,7 +125,9 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mpfie: pass:q[``mpfie``]
 :spfie: pass:q[``spfie``]
 :xpfie: pass:q[``xpfie``]
-:fibits: pass:q[``fibits``]
+:mfibits: pass:q[``mfibits``]
+:sfibits: pass:q[``sfibits``]
+:xfibits: pass:q[``xfibits``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mtopei: pass:q[``mtopei``]
@@ -702,9 +707,11 @@ It provides additional state to resume execution of the previous handler after a
 ----
 mipreemptcfg fields
  bits        description
- XLEN-1:12   (reserved)
- 11:8        nipbits
- 7:4         fibits
+ XLEN-1:17   (reserved)
+ 16:13       snipbits (if Ssnip is implemented)
+ 12:9        sfibits (if Ssnip is implemented)
+ 11:8        mnipbits
+ 7:4         mfibits
  3           spreempten (if Ssnip is implemented)
  2           mpreempten
  1:0         (reserved)
@@ -712,37 +719,43 @@ mipreemptcfg fields
 
 {mipreemptcfg} is a WARL register used to configure the behavior of preemption.
 
+If Ssnip is implemented, the fields {snipbits}, {sfibits}, and {spreempten} of {mipreemptcfg}
+control nested interrupt preemption behavior for supervisor level.
+
+The supervisor-level CSR {sipreemptcfg} is a subset of {mipreemptcfg}.
+Reading or writing a field of {sipreemptcfg} reads or writes the corresponding field of {mipreemptcfg}.
+
 The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-mode, respectively.
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
 If Ssnip is not implemented, then {spreempten} is read-only 0.
 
-The field {mipreemptcfg}.{nipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
+The field {mipreemptcfg}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
 Interrupts whose priorities differ only in less-significant bits cannot preempt each other.
-The highest legal value of {mipreemptcfg}.{nipbits} is IPRIOLEN.
-A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
+The highest legal value of {mipreemptcfg}.{mnipbits}/{snipbits} is IPRIOLEN.
+A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption at mode `x` is:
 
 [source,subs="attributes"]
 ----
-NIPPRIO_MASK = ~(2^(mipreemptcfg.nipbits) - 1)
+NIPPRIO_MASK = ~(2^(mipreemptcfg.xnipbits) - 1)
 ----
 
-NOTE: For example, if {mipreemptcfg}.{nipbits}=4, 
+NOTE: For example, if {mipreemptcfg}.{mnipbits}=4, 
 NIPPRIO_MASK=11110000, i.e. the four MSBs are participating in interrupt preemption.
 
-{fibits} defines the number of low-order priority bits used to form a contiguous fast-interrupt priority range from 0 through FITHRESHOLD.
-This definition is intentionally orthogonal to {nipbits}.
-The highest legal value of {mipreemptcfg}.{fibits} is IPRIOLEN.
+{mfibits} and {sfibits} define the number of low-order priority bits used to form a contiguous fast-interrupt priority range from 0 through FITHRESHOLD.
+This definition is intentionally orthogonal to {xnipbits}.
+The highest legal value of {mipreemptcfg}.{mfibits}/{sfibits} is IPRIOLEN.
 
-NOTE: In the intended use-case, {mipreemptcfg}.{fibits} will be configured to values smaller than {mipreemptcfg}.{nipbits}.
+NOTE: In the intended use-case, {mipreemptcfg}.{xfibits} will be configured to values smaller than {mipreemptcfg}.{xnipbits}.
 This selects a subset of preemption groups as fast-interrupts.
 
 [source,subs="attributes"]
 ----
-FITHRESHOLD = (2^mipreemptcfg.fibits) - 1
+FITHRESHOLD = (2^mipreemptcfg.xfibits) - 1
 ----
 
-An interrupt source is considered a fast interrupt source depending on its IPRIO value, if the following condition holds:
+An interrupt source is considered a fast interrupt source depending on its {IPRIO} value, if the following condition holds:
 
 [source]
 ----
@@ -753,8 +766,15 @@ which is equivalent to
 IPRIO & ~FITHRESHOLD == 0
 ----
 
+where {FITHRESHOLD} at mode `x` is defined as:
+
+[source,subs="attributes"]
+----
+FITHRESHOLD = (2^mipreemptcfg.xfibits) - 1
+----
+
 NOTE: 
-E.g. expanding on the example above, if {mipreemptcfg}.{fibits} = 2, then FITHRESHOLD = 00000011.
+E.g. expanding on the example above, if {mipreemptcfg}.{mfibits} = 2, then FITHRESHOLD = 00000011.
 In this case, only interrupts with {IPRIO}=0,1,2,3 are considered fast interrupts.
 In AIA, IPRIO = 0 may represent the highest-priority class for certain interrupts using default priority ordering.
 Such interrupts are therefore considered fast interrupts whenever the configured FITHRESHOLD includes zero.
@@ -832,16 +852,21 @@ When the {mfie} bit is set to 0 by an explicit CSR write, the {mie} bit is clear
 
 [source]
 ----
-sipreemptcfg fields
+mipreemptcfg fields
  bits        description
- XLEN-1:4    (reserved)
+ XLEN-1:17   (reserved)
+ 16:13       snipbits
+ 12:9        sfibits
+ 11:4        (reserved)
  3           spreempten
  2:0         (reserved)
 ----
 
-{sipreemptcfg} is a WARL register used to configure the behavior of preemption at S-mode.
+{sipreemptcfg} is a WARL register that is a subset of {mipreemptcfg}.
+The implemented fields of {sipreemptcfg} are aliases of the corresponding fields of {mipreemptcfg}.
 
 The field {spreempten} enables this extension at S-mode.
+The fields {snipbits} and {sfibits} configure nested interrupt preemption grouping and fast-interrupt classification for S-mode, respectively.
 
 ===== New Interrupt Status ({sistatus}) CSR
 
@@ -916,7 +941,7 @@ when the following condition holds:
 
 [source]
 ----
-(IPRIO & NIPPRIO_MASK) >= (xithreshold.iprio & NIPPRIO_MASK)
+IPRIO >= (xithreshold.iprio & NIPPRIO_MASK)
 ----
 
 where {IPRIO} is the value reported in the {xtopi} CSR,
@@ -932,7 +957,7 @@ When {xithreshold}.{iprio} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
 
 If {xfie} is one, an interrupt can cause a trap irrespective of {xie}
-if the interrupt is classified as a fast interrupt according to the configured value of `FITHRESHOLD`.
+if the interrupt is classified as a fast interrupt according to the configured value of {FITHRESHOLD}.
 
 ===== Trap behavior
 
