@@ -18,6 +18,7 @@
         .endm
     .endif
 
+.equ GPR_TOPI          s0
 .equ MEI_ID,           11
 .equ CSR_MISTATUS,     0x346
 .equ CSR_MITHRESHOLD,  0x347
@@ -25,37 +26,37 @@
 .equ MSTATUS_MIE,      8
 
 interrupt_dispatcher:
-    addi    sp, sp, -(2*REGSZ)
+    addi    sp, sp, -(3*REGSZ)
     sr      s0, 0*REGSZ, sp
-    sr      s1, 1*REGSZ, sp
-
     csrr    s0, mepc
-    csrr    s1, CSR_MISTATUS
+    sr      s0, 1*REGSZ, sp      # save mepc to stack
+    csrr    s0, CSR_MISTATUS
     csrsi   CSR_MIPREEMPTCFG, 1  # enable fast interrupts
+    sr      s0, 2*REGSZ, sp      # save mpistatus to stack
 
     call    __riscv_save
 
 dispatch_loop:
-    csrr    t0, mtopi
-    srli    t1, t0, (16 - P_ALIGN)
+    csrr    GPR_TOPI, mtopi
+    srli    t1, GPR_TOPI, (16 - P_ALIGN)
     li      t2, (MEI_ID << P_ALIGN)
     bne     t1, t2, int_irq
 
 ext_irq:
-    csrr    t0, mtopei
-    srli    t1, t0, (16 - P_ALIGN)
+    csrr    GPR_TOPI, mtopei
+    srli    t1, GPR_TOPI, (16 - P_ALIGN)
     la      t3, ei_handlers
     add     t3, t1, t3
     lr      t3, 0, t3
 
 have_handler:
-    csrw    CSR_MITHRESHOLD, t0  # raise threshold
+    csrrw   CSR_MITHRESHOLD, GPR_TOPI, GPR_TOPI  # raise threshold
 
     csrsi   mstatus, MSTATUS_MIE
     jalr    t3
     csrci   mstatus, MSTATUS_MIE
 
-    csrw    CSR_MITHRESHOLD, s1  # restore threshold
+    csrrw    CSR_MITHRESHOLD, GPR_TOPI, GPR_TOPI  # restore threshold
 
     j       dispatch_loop
 
