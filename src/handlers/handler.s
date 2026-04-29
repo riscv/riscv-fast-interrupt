@@ -1,4 +1,4 @@
-    .if XLEN == 64
+.if XLEN == 64
         .equ REGSZ, 8
         .equ P_ALIGN, 3  # pointer alignment
         .macro sr reg, off, base
@@ -18,11 +18,14 @@
         .endm
     .endif
 
-.equ MEI_ID,           11
-.equ CSR_MISTATUS,     0x346
-.equ CSR_MITHRESHOLD,  0x347
-.equ CSR_MIPREEMPTCFG, 0x348
-.equ MSTATUS_MIE,      8
+    .equ MEI_ID,           11
+    .equ MAJOR_IRQ_COUNT,  64
+    .equ HANDLER_SPLIT,    (MAJOR_IRQ_COUNT << P_ALIGN)
+
+    .equ CSR_MISTATUS,     0x346
+    .equ CSR_MITHRESHOLD,  0x347
+    .equ CSR_MIPREEMPTCFG, 0x348
+    .equ MSTATUS_MIE,      8
 
 interrupt_dispatcher:
     addi    sp, sp, -(3*REGSZ)   # create stack frame
@@ -30,7 +33,6 @@ interrupt_dispatcher:
     csrr    s0, mepc
     sr      s0, 1*REGSZ, sp      # save mepc to stack
     csrrci  s0, CSR_MISTATUS, 1  # enables fast interrupts
-
     sr      s0, 2*REGSZ, sp      # save mpistatus to stack
 
     call    __riscv_save
@@ -44,7 +46,9 @@ dispatch_loop:
 ext_irq:
     csrr    s0, mtopei
     srli    t1, s0, (16 - P_ALIGN)
-    la      t3, ei_handlers
+
+load_handler:
+    la      t3, i_handlers + HANDLER_SPLIT
     add     t3, t1, t3
     lr      t3, 0, t3
 
@@ -54,16 +58,14 @@ have_handler:
 
     jalr    t3
 
-    csrrw    s0, CSR_MITHRESHOLD, s0  # restore threshold
+    csrrw   s0, CSR_MITHRESHOLD, s0  # restore threshold
     # interrupts disabled by restoring mithreshold.mien
 
     j       dispatch_loop
 
 int_irq:
-    la      t3, i_handlers
-    add     t3, t1, t3
-    lr      t3, 0, t3
-    j       have_handler
+    neg     t1, t1
+    j       load_handler
 
 dispatch_exit:
     call    __riscv_restore
