@@ -18,7 +18,6 @@
         .endm
     .endif
 
-.equ GPR_TOPI          s0
 .equ MEI_ID,           11
 .equ CSR_MISTATUS,     0x346
 .equ CSR_MITHRESHOLD,  0x347
@@ -26,37 +25,37 @@
 .equ MSTATUS_MIE,      8
 
 interrupt_dispatcher:
-    addi    sp, sp, -(3*REGSZ)
+    addi    sp, sp, -(3*REGSZ)   # create stack frame
     sr      s0, 0*REGSZ, sp
     csrr    s0, mepc
     sr      s0, 1*REGSZ, sp      # save mepc to stack
-    csrr    s0, CSR_MISTATUS
-    csrsi   CSR_MIPREEMPTCFG, 1  # enable fast interrupts
+    csrrci  s0, CSR_MISTATUS, 1  # enables fast interrupts
+
     sr      s0, 2*REGSZ, sp      # save mpistatus to stack
 
     call    __riscv_save
 
 dispatch_loop:
-    csrr    GPR_TOPI, mtopi
-    srli    t1, GPR_TOPI, (16 - P_ALIGN)
+    csrr    s0, mtopi
+    srli    t1, s0, (16 - P_ALIGN)
     li      t2, (MEI_ID << P_ALIGN)
     bne     t1, t2, int_irq
 
 ext_irq:
-    csrr    GPR_TOPI, mtopei
-    srli    t1, GPR_TOPI, (16 - P_ALIGN)
+    csrr    s0, mtopei
+    srli    t1, s0, (16 - P_ALIGN)
     la      t3, ei_handlers
     add     t3, t1, t3
     lr      t3, 0, t3
 
 have_handler:
-    csrrw   CSR_MITHRESHOLD, GPR_TOPI, GPR_TOPI  # raise threshold
+    csrrw   s0, CSR_MITHRESHOLD, s0  # raise threshold
+    # interrupts enabled by writing 0 to mithreshold.mien
 
-    csrsi   mstatus, MSTATUS_MIE
     jalr    t3
-    csrci   mstatus, MSTATUS_MIE
 
-    csrrw    CSR_MITHRESHOLD, GPR_TOPI, GPR_TOPI  # restore threshold
+    csrrw    s0, CSR_MITHRESHOLD, s0  # restore threshold
+    # interrupts disabled by restoring mithreshold.mien
 
     j       dispatch_loop
 
@@ -68,11 +67,12 @@ int_irq:
 
 dispatch_exit:
     call    __riscv_restore
-    csrci   CSR_MIPREEMPTCFG, 1  # disable fast interrupts
-    csrw    mepc, s0
-    csrw    CSR_MISTATUS, s1
 
+    lr      s0, 2*REGSZ, sp      # restore mpistatus from stack
+    csrw    CSR_MISTATUS, s0     # disables fast interrupts
+    lr      s0, 1*REGSZ, sp      # restore mepc from stack
+    csrw    mepc, s0
     lr      s0, 0*REGSZ, sp
-    lr      s1, 1*REGSZ, sp
-    addi    sp, sp, (2*REGSZ)
+    addi    sp, sp, (3*REGSZ)    # destroy stack frame
+
     mret

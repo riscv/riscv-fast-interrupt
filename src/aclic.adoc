@@ -91,6 +91,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xtopi: pass:q[``xtopi``]
 :xtopei: pass:q[``xtopei``]
 :claimi: pass:q[``claimi``]
+:iprio: pass:q[``iprio``]
 :IPRIO: pass:q[``IPRIO``]
 
 :mstatus: pass:q[``mstatus``]
@@ -761,7 +762,15 @@ No comparator is needed this way, and the determination can be done through a bi
 A new WLRL M-mode CSR, {mithreshold},
 determines the priority cutoff used to mask lower-priority interrupts (see <<op-threshold>>).
 
-Register {mithreshold} implements exactly IPRIOLEN bits.
+
+[source]
+----
+mithreshold
+ 8          mien        Alias of ~mstatus.mie
+ 7:0        iprio[7:0]  Previous interrupt-enable threshold
+----
+
+The field {mithreshold}.{iprio} implements exactly IPRIOLEN bits.
 
 [NOTE]
 ====
@@ -773,9 +782,9 @@ Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
 ====
 
 When reading from {mtopi} or {mtopei}, and no interrupt is pending and enabled at machine level,
-the {IPRIO} field returns {mithreshold}.
+the {IPRIO} field returns {mithreshold}.{iprio}.
 
-NOTE: Returning mithreshold as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
 ===== New Interrupt Status ({mistatus}) CSR
@@ -785,17 +794,18 @@ A new M-mode CSR, {mistatus}, holds consolidated state related to interrupts.
 [source]
 ----
 mistatus
- Bits       Field            Description
+ Bits       Field             Description
  XLEN-1:30  (reserved)
- 29:28      mpp[1:0]         Previous privilege mode, mirror of mstatus.mpp
- 27         mpie             Previous interrupt enable, mirror of mstatus.mpie
- 26         pmfie            Previous fast interrupts enable
+ 29:28      mpp[1:0]          Previous privilege mode, mirror of mstatus.mpp
+ 27         mpie              Previous interrupt enable, mirror of mstatus.mpie
+ 26         pmfie             Previous fast interrupts enable
  25:20      (reserved)
- 19:18      VS[1:0]          Vector extension status, mirror of mstatus.VS
- 17:16      FS[1:0]          Floating-point extension status, mirror of mstatus.FS
- 15:9       (reserved) 
- 8          psppush          Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt-enable threshold
+ 19:18      VS[1:0]           Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
+ 15:8       pithreshprio[7:0] Previous mithreshold.iprio value
+ 7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
+ 6:1        (reserved) 
+ 0          mfie              Fast interrupts enable
 ----
 
 ==== Changed and new CSRs at Supervisor Level
@@ -841,11 +851,12 @@ sistatus
  27         spie             Previous interrupt enable, mirror of sstatus.spie
  26         psfie            Previous fast interrupts enable
  25:20      (reserved)
- 19:18      VS[1:0]          Vector extension status, mirror of sstatus.VS
- 17:16      FS[1:0]          Floating-point extension status, mirror of sstatus.FS
- 15:9       (reserved)
- 8          psppush          Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
- 7:0        pithreshold[7:0] Previous interrupt-enable threshold
+ 19:18      VS[1:0]           Vector extension status, mirror of mstatus.VS
+ 17:16      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
+ 15:8       pithreshprio[7:0] Previous mithreshold.iprio value
+ 7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
+ 6:1        (reserved) 
+ 0          sfie              Fast interrupts enable
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
@@ -884,17 +895,17 @@ The reset behavior of other fields is platform-specific.
 [#op-threshold]
 ==== Operation
 
-When {xithreshold} is a nonzero value,
+When {xithreshold}.{iprio} is a nonzero value,
 an interrupt source is considered disabled
 irrespective of its interrupt-enable bit,
 when the following condition holds:
 
 [source]
 ----
-IPRIO >= xithreshold & NIPPRIO_MASK
+IPRIO >= xithreshold.iprio & NIPPRIO_MASK
 ----
 
-where `IPRIO` is the value reported in the {xtopi} CSR,
+where {IPRIO} is the value reported in the {xtopi} CSR,
 if the interrupt source is the highest priority pending-enabled one.
 
 [NOTE]
@@ -923,11 +934,11 @@ IPRIO & FITHRESHOLD == 0
 The existing trap behavior is modified as follows:
 
 When a trap is taken into level `x`,
-the current value of {xithreshold} is written to {xistatus}.{pithreshold}.
+the current value of {xithreshold}.{iprio} is written to {xistatus}.{pithreshprio}.
 Also, the current value of {xistatus}.{xfie} is written into {xistatus}.{xpfie}, and then {xistatus}.{xfie} is set to zero.
 
 Additionally, if the trap was taken on an interrupt,
-{xithreshold} is set to `IPRIO`.
+{xithreshold} is set to {IPRIO}.
 This automatically raises the interrupt-enable threshold.
 
 If a double trap occurs while in M-mode,
@@ -939,7 +950,7 @@ NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {xithreshold} to {xistatus}.{pithreshold}.
+{xret} sets {xithreshold}.{iprio} to {xistatus}.{pithreshprio}.
 {xret} sets {xistatus}.{xfie} to {xistatus}.{xpfie}.
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
