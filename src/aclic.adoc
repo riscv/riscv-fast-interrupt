@@ -113,7 +113,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
 :sipreemptcfg: pass:q[``sipreemptcfg``]
-:preemptmsk: pass:q[``preemptmsk``]
+:preemptbits: pass:q[``preemptbits``]
 :spreempten: pass:q[``spreempten``]
 :mpreempten: pass:q[``mpreempten``]
 :mfie: pass:q[``mfie``]
@@ -122,7 +122,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mpfie: pass:q[``mpfie``]
 :spfie: pass:q[``spfie``]
 :xpfie: pass:q[``xpfie``]
-:fithresh: pass:q[``fithresh``]
+:fibits: pass:q[``fibits``]
 :mintthresh: pass:q[``mintthresh``]
 :mtopi: pass:q[``mtopi``]
 :mtopei: pass:q[``mtopei``]
@@ -703,8 +703,8 @@ It provides additional state to resume execution of the previous handler after a
 mipreemptcfg fields
  bits        description
  XLEN-1:12   (reserved)
- 11:8        preemptmsk
- 7:4         fithresh
+ 11:8        preemptbits
+ 7:4         fibits
  3           spreempten (if Ssnip is implemented)
  2           mpreempten
  1           sfie (if Ssnip is implemented)
@@ -723,35 +723,43 @@ The bit {xfie} (Fast Interrupt Enable) controls if fast interrupts can trap when
 When {xie} is one, {xfie} has no effect.
 When the {xfie} bit is set to 0 by an explicit CSR write, the {xie} bit is cleared to 0.
 
-The highest legal value of {mipreemptcfg}.{preemptmsk} is IPRIOLEN.
+The field {mipreemptcfg}.{preemptbits} defines the number of bits considered in preemption.
+The highest legal value of {mipreemptcfg}.{preemptbits} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption is:
 
 [source,subs="attributes"]
 ----
-NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptmsk) - 1)
+NIPPRIO_MASK = ~(2^(mipreemptcfg.preemptbits) - 1)
 ----
 
-Which subset of the interrupts is considered fast interrupts is controlled by {fithresh}.
-The highest legal value of {mipreemptcfg}.{fithresh} is IPRIOLEN.
+NOTE: For example, if {mipreemptcfg}.{preemptbits}=4, 
+NIPPRIO_MASK=11110000, i.e. the four MSBs are participating in interrupt preemption.
 
-NOTE: In the intended use-case, {fithresh} will be configured to values smaller than {preemptmsk}.
+Which subset of the interrupts is considered fast interrupts is controlled by {fibits}.
+The highest legal value of {mipreemptcfg}.{fibits} is IPRIOLEN.
+
+NOTE: In the intended use-case, {mipreemptcfg}.{fibits} will be configured to values smaller than {mipreemptcfg}.{preemptbits}.
 This selects a subset of preemption groups as fast-interrupts.
 
 [source,subs="attributes"]
 ----
-FITHRESHOLD = 2^mipreemptcfg.fithresh
+FITHRESHOLD = (2^mipreemptcfg.fibits) - 1
 ----
 
 An interrupt source is considered a fast interrupt source depending on its IPRIO value, if the following condition holds:
 
 [source]
 ----
-IPRIO < FITHRESHOLD
+IPRIO <= FITHRESHOLD
 
 which is equivalent to
 
-IPRIO & FITHRESHOLD == 0
+IPRIO & ~FITHRESHOLD == 0
 ----
+
+NOTE: 
+E.g. expanding on the example above, if {mipreemptcfg}.{fibits}, then FITHRESHOLD = 00000011.
+In this case, only interrupts with {IPRIO}=1,2,3 are consider fast interrupts.
 
 NOTE: The fast interrupt threshold is defined this way to simplify the logic to determine,
 if an interrupt is considered a fast interrupt.
