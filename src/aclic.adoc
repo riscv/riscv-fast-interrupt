@@ -1139,7 +1139,7 @@ Assembly version:
 ----
     .if XLEN == 64
         .equ REGSZ, 8
-        .equ P_ALIGN, 3  /* pointer alignment */
+        .equ P_ALIGN, 3  # pointer alignment
         .macro sr reg, off, base
             sd \reg, \off(\base)
         .endm
@@ -1148,7 +1148,7 @@ Assembly version:
         .endm
     .else
         .equ REGSZ, 4
-        .equ P_ALIGN, 2  /* pointer alignment */
+        .equ P_ALIGN, 2  # pointer alignment
         .macro sr reg, off, base
             sw \reg, \off(\base)
         .endm
@@ -1170,7 +1170,7 @@ interrupt_dispatcher:
 
     csrr    s0, mepc
     csrr    s1, CSR_MISTATUS
-    csrsi   CSR_MIPREEMPTCFG, 1  /* enable fast interrupts */
+    csrsi   CSR_MIPREEMPTCFG, 1  # enable fast interrupts
 
     call    __riscv_save
 
@@ -1188,13 +1188,13 @@ ext_irq:
     lr      t3, 0, t3
 
 have_handler:
-    csrw    CSR_MITHRESHOLD, t0  /* raise threshold */
+    csrw    CSR_MITHRESHOLD, t0  # raise threshold
 
     csrsi   mstatus, MSTATUS_MIE
     jalr    t3
     csrci   mstatus, MSTATUS_MIE
 
-    csrw    CSR_MITHRESHOLD, s1  /* restore threshold */
+    csrw    CSR_MITHRESHOLD, s1  # restore threshold
 
     j       dispatch_loop
 
@@ -1206,7 +1206,7 @@ int_irq:
 
 dispatch_exit:
     call    __riscv_restore
-    csrci   CSR_MIPREEMPTCFG, 1  /* disable fast interrupts */
+    csrci   CSR_MIPREEMPTCFG, 1  # disable fast interrupts
     csrw    mepc, s0
     csrw    CSR_MISTATUS, s1
 
