@@ -71,7 +71,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :ip: pass:q[``**__x__**ip``]
 :istatus: pass:q[``**__x__**istatus``]
 :xistatus: pass:q[``xistatus``]
-:pithreshold: pass:q[``pithreshold``]
+:pithreshprio: pass:q[``pithreshprio``]
 :mithreshold: pass:q[``mithreshold``]
 :sithreshold: pass:q[``sithreshold``]
 :xithreshold: pass:q[``xithreshold``]
@@ -683,7 +683,7 @@ The Smnip extension depends on the Smaia extension and adds nested preemption su
 
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
-The extensions enable higher priority interrupts to preempt a lower priority interrupts in a nested fashion.
+The extensions enable higher-priority interrupts to preempt lower-priority interrupts in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
 
 ==== Changed and new CSRs at Machine Level
@@ -756,6 +756,8 @@ IPRIO & ~FITHRESHOLD == 0
 NOTE: 
 E.g. expanding on the example above, if {mipreemptcfg}.{fibits} = 2, then FITHRESHOLD = 00000011.
 In this case, only interrupts with {IPRIO}=0,1,2,3 are considered fast interrupts.
+In AIA, IPRIO = 0 may represent the highest-priority class for certain interrupts using default priority ordering.
+Such interrupts are therefore considered fast interrupts whenever the configured FITHRESHOLD includes zero.
 
 NOTE: The fast interrupt threshold is defined this way to simplify the logic to determine,
 if an interrupt is considered a fast interrupt.
@@ -871,8 +873,7 @@ When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is clear
 ===== New Interrupt enable threshold ({sithreshold}) CSR
 
 A new WLRL S-mode CSR, {sithreshold},
-determines the minimum interrupt priority (maximum priority number)
-for an interrupt to be considered enabled at the hart.
+determines the priority cutoff used to mask lower-priority interrupts.
 
 [source]
 ----
@@ -883,7 +884,7 @@ sithreshold
 
 The field {sithreshold}.{iprio} implements exactly IPRIOLEN bits.
 
-When reading from {stopi} or {stopei}, and no interrupt is pending and enabled at machine level,
+When reading from {stopi} or {stopei}, and no interrupt is pending and enabled at supervisor level,
 the {IPRIO} field returns {sithreshold}.{iprio}.
 
 ==== Reset Behavior
@@ -901,7 +902,7 @@ in S-mode.
 
 ===== Mandatory reset state
 
-{mithreshold} resets to zero.
+{mithreshold}.{iprio} resets to zero.
 
 The reset behavior of other fields is platform-specific.
 
@@ -915,7 +916,7 @@ when the following condition holds:
 
 [source]
 ----
-IPRIO >= xithreshold.iprio & NIPPRIO_MASK
+(IPRIO & NIPPRIO_MASK) >= (xithreshold.iprio & NIPPRIO_MASK)
 ----
 
 where {IPRIO} is the value reported in the {xtopi} CSR,
@@ -930,8 +931,8 @@ according to the rules defined in AIA.
 When {xithreshold}.{iprio} is zero,
 all enabled interrupt sources can contribute to signaling interrupts to the hart.
 
-If {xfie} is one, interrupts are enabled and can cause a trap irrespective of {xie},
-if they are considered fast interrupts as per configuration of `FITHRESHOLD`.
+If {xfie} is one, an interrupt can cause a trap irrespective of {xie}
+if the interrupt is classified as a fast interrupt according to the configured value of `FITHRESHOLD`.
 
 ===== Trap behavior
 
