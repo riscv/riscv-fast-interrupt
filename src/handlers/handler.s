@@ -32,7 +32,7 @@ interrupt_dispatcher:
     sr      s0, 0*REGSZ, sp
     csrr    s0, mepc
     sr      s0, 1*REGSZ, sp      # save mepc to stack
-    csrrci  s0, CSR_MISTATUS, 1  # enables fast interrupts
+    csrrsi  s0, CSR_MISTATUS, 1  # enables fast interrupts
     sr      s0, 2*REGSZ, sp      # save mpistatus to stack
     sr      s1, 3*REGSZ, sp      # save s1 to stack
 
