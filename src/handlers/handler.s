@@ -24,7 +24,6 @@
 
     .equ CSR_MISTATUS,     0x346
     .equ CSR_MITHRESHOLD,  0x347
-    .equ CSR_MIPREEMPTCFG, 0x348
     .equ MSTATUS_MIE,      8
 
 interrupt_dispatcher:
@@ -33,7 +32,7 @@ interrupt_dispatcher:
     csrr    s0, mepc
     sr      s0, 1*REGSZ, sp      # save mepc to stack
     csrrsi  s0, CSR_MISTATUS, 1  # enables fast interrupts
-    sr      s0, 2*REGSZ, sp      # save mpistatus to stack
+    sr      s0, 2*REGSZ, sp      # save mistatus to stack
     sr      s1, 3*REGSZ, sp      # save s1 to stack
 
     call    __riscv_save
@@ -51,8 +50,7 @@ ext_irq:
     srli    t1, s0, (16 - P_ALIGN)
 
 load_handler:
-    la      t0, i_handlers + HANDLER_SPLIT
-    add     t0, t1, t0
+    add     t0, t1, s1
     lr      t0, 0, t0
 
 have_handler:
@@ -77,7 +75,7 @@ dispatch_exit:
     call    __riscv_restore
 
     lr      s1, 3*REGSZ, sp      # restore s1 from stack
-    lr      s0, 2*REGSZ, sp      # restore mpistatus from stack
+    lr      s0, 2*REGSZ, sp      # restore mistatus from stack
     csrw    CSR_MISTATUS, s0     # disables fast interrupts
     lr      s0, 1*REGSZ, sp      # restore mepc from stack
     csrw    mepc, s0
