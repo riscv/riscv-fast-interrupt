@@ -698,8 +698,15 @@ It provides additional state to resume execution of the previous handler after a
        Number  Name         Description
  (NEW) 0x346   mistatus     Interrupt status
  (NEW) 0x347   mithreshold  Interrupt enable threshold
- (NEW) 0x348   mipreemptcfg Interrupt preemption configuration
 ----
+
+Additionally, this extension adds an indirect CSR
+
+[%autowidth]
+|===
+| `miselect` |  `mireg4` size |  `mireg4` state
+| 0x1000     |   XLEN         |  `mipreemptcfg`
+|===
 
 ===== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
 
@@ -845,8 +852,15 @@ When the {mfie} bit is set to 0 by an explicit CSR write, the {mie} bit is clear
        Number  Name         Description
  (NEW) 0x146   sistatus     Interrupt status
  (NEW) 0x147   sithreshold  Interrupt enable threshold
- (NEW) 0x148   sipreemptcfg Interrupt preemption configuration
 ----
+
+Additionally, this extension adds an indirect CSR
+
+[%autowidth]
+|===
+| `siselect` |  `sireg4` size |  `sireg4` state
+| 0x1000     |   XLEN         |  `sipreemptcfg`
+|===
 
 ===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
 
