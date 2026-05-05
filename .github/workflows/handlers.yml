@@ -1,0 +1,25 @@
+name: Build RISC-V handler
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-handler:
+    runs-on: ubuntu-24.04-riscv
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Build handler.s with host default tools
+        run: |
+          as -o build/handler-rv64.o src/handlers/handler.s
+
+      - name: Build handler.s for rv32e_zicsr
+        run: |
+          as -march=rv32e_zicsr -mabi=ilp32e \
+             -o build/handler-rv32e.o src/handlers/handler.s
