@@ -46,7 +46,7 @@ dispatch_loop:
     bne     t1, t0, int_irq
 
 ext_irq:
-    csrr    s0, mtopei
+    csrrw   s0, mtopei, x0       # reads mtopei and claims interrupt
     srli    t1, s0, (16 - P_ALIGN)
 
 load_handler:
