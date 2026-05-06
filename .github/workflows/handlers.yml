@@ -24,3 +24,13 @@ jobs:
         run: |
           as -march=rv32e_zicsr -mabi=ilp32e \
              -o build/handler-rv32e.o src/handlers/handler.s
+
+      - name: Build fast-handler.s for rv64e_zicsr
+        run: |
+          as -march=rv64e_zicsr --defsym XLEN=64 \
+             -o build/fast-handler-rv64e.o src/handlers/fast-handler.s 
+
+      - name: Build fast-handler.s for rv32e_zicsr
+        run: |
+          as -march=rv32e_zicsr -mabi=ilp32e \
+             -o build/fast-handler-rv32e.o src/handlers/fast-handler.s

@@ -836,7 +836,8 @@ mistatus
  17:16      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
  15:8       pithreshprio[7:0] Previous mithreshold.iprio value
  7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 6:1        (reserved) 
+ 6:2        (reserved) 
+ 1          mie               Interrupt enable, alias of mstatus.mie
  0          mfie              Fast interrupts enable
 ----
 
@@ -897,7 +898,8 @@ sistatus
  17:16      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
  15:8       pithreshprio[7:0] Previous sithreshold.iprio value
  7          psppush           Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
- 6:1        (reserved) 
+ 6:2        (reserved) 
+ 1          sie               Interrupt enable, alias of sstatus.sie
  0          sfie              Fast interrupts enable
 ----
 
@@ -1232,6 +1234,12 @@ Context needed to return after preemption is saved before enabling interrupts.
 Interrupts are enabled before executing the first statement of the function.
 Before returning, interrupts are disabled, and context is restored.
 
+A possible assembly version of the handler is as follows:
+
+[source,asm]
+----
+include::handlers/fast-handler.s[]
+----
 
 [[ex-threshold-nested]]
 ==== Example: Threshold behavior under nested traps and interrupts
