@@ -15,9 +15,10 @@ jobs:
       - name: Create build directory
         run: mkdir -p build
 
-      - name: Build handler.s with host default tools
+      - name: Build handler.s for rv64e_zicsr
         run: |
-          as -o build/handler-rv64.o src/handlers/handler.s
+          as -march=rv64e_zicsr --defsym XLEN=64 \
+             -o build/handler-rv64e.o src/handlers/handler.s 
 
       - name: Build handler.s for rv32e_zicsr
         run: |
