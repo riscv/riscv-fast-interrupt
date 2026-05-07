@@ -718,9 +718,9 @@ Additionally, this extension adds an indirect CSR
 ----
 mipreemptcfg fields
  bits        description
- XLEN-1:17   (reserved)
- 16:13       snipbits (if Ssnip is implemented)
- 12:9        sfibits (if Ssnip is implemented)
+ XLEN-1:20   (reserved)
+ 19:16       snipbits (if Ssnip is implemented)
+ 15:12       sfibits (if Ssnip is implemented)
  11:8        mnipbits
  7:4         mfibits
  3           spreempten (if Ssnip is implemented)
@@ -739,7 +739,7 @@ Reading or writing a field of {sipreemptcfg} reads or writes the corresponding f
 The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-mode, respectively.
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
-If Ssnip is not implemented, then {spreempten} is read-only 0.
+If Ssnip is not implemented, then {snipbits}, {sfibits}, and {spreempten} are read-only 0.
 
 The field {mipreemptcfg}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
 Interrupts whose priorities differ only in less-significant bits cannot preempt each other.
@@ -784,8 +784,7 @@ where {FITHRESHOLD} at mode `x` is defined as:
 FITHRESHOLD = (2^mipreemptcfg.xfibits) - 1
 ----
 
-NOTE: 
-E.g. expanding on the example above, if {mipreemptcfg}.{mfibits} = 2, then FITHRESHOLD = 00000011.
+NOTE: E.g. expanding on the example above, if {mipreemptcfg}.{mfibits} = 2, then FITHRESHOLD = 00000011.
 In this case, only interrupts with {IPRIO}=0,1,2,3 are considered fast interrupts.
 In AIA, IPRIO = 0 may represent the highest-priority class for certain interrupts using default priority ordering.
 Such interrupts are therefore considered fast interrupts whenever the configured FITHRESHOLD includes zero.
@@ -902,11 +901,11 @@ Additionally, this extension adds an indirect CSR
 
 [source]
 ----
-mipreemptcfg fields
+sipreemptcfg fields
  bits        description
- XLEN-1:17   (reserved)
- 16:13       snipbits
- 12:9        sfibits
+ XLEN-1:20   (reserved)
+ 19:16       snipbits
+ 15:12       sfibits
  11:4        (reserved)
  3           spreempten
  2:0         (reserved)
