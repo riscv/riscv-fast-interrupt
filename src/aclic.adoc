@@ -155,6 +155,30 @@ Graphics used are either explicitly available for free, are the property of RISC
 :stopi: pass:q[``stopi``]
 :sclaimi: pass:q[``sclaimi``]
 
+:miselect: pass:q[``miselect``]
+:mireg: pass:q[``mireg``]
+:mireg2: pass:q[``mireg2``]
+:mireg3: pass:q[``mireg3``]
+:mireg4: pass:q[``mireg4``]
+:mireg5: pass:q[``mireg5``]
+:mireg6: pass:q[``mireg6``]
+
+:siselect: pass:q[``siselect``]
+:sireg: pass:q[``sireg``]
+:sireg2: pass:q[``sireg2``]
+:sireg3: pass:q[``sireg3``]
+:sireg4: pass:q[``sireg4``]
+:sireg5: pass:q[``sireg5``]
+:sireg6: pass:q[``sireg6``]
+
+:xiselect: pass:q[``xiselect``]
+:xireg: pass:q[``xireg``]
+:xireg2: pass:q[``xireg2``]
+:xireg3: pass:q[``xireg3``]
+:xireg4: pass:q[``xireg4``]
+:xireg5: pass:q[``xireg5``]
+:xireg6: pass:q[``xireg6``]
+
 :pp: pass:q[``**__x__**pp``]
 :xpp: pass:q[``xpp``]
 :pie: pass:q[``**__x__**pie``]
@@ -708,9 +732,12 @@ Additionally, this extension adds an indirect CSR
 
 [%autowidth]
 |===
-| `miselect` |  `mireg4` size |  `mireg4` state
-| 0x1000     |   XLEN         |  `mipreemptcfg`
+| {miselect} |  {mireg4} size |  {mireg4} state
+| 0x1000     |   XLEN         |  {mipreemptcfg}
 |===
+
+The registers {mireg}, {mireg2}, {mireg3}, {mireg5}, and {mireg6} are reserved
+when {miselect} is 0x1000.
 
 ===== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
 
@@ -893,9 +920,12 @@ Additionally, this extension adds an indirect CSR
 
 [%autowidth]
 |===
-| `siselect` |  `sireg4` size |  `sireg4` state
-| 0x1000     |   XLEN         |  `sipreemptcfg`
+| {siselect} |  {sireg4} size |  {sireg4} state
+| 0x1000     |   XLEN         |  {sipreemptcfg}
 |===
+
+The registers {sireg}, {sireg2}, {sireg3}, {sireg5}, and {sireg6} are reserved
+when {siselect} is 0x1000.
 
 ===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
 
