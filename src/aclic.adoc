@@ -114,11 +114,13 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mistatus: pass:q[``mistatus``]
 :mipreemptcfg: pass:q[``mipreemptcfg``]
 :sipreemptcfg: pass:q[``sipreemptcfg``]
+:xipreemptcfg: pass:q[``xipreemptcfg``]
 :mnipbits: pass:q[``mnipbits``]
 :snipbits: pass:q[``snipbits``]
 :xnipbits: pass:q[``xnipbits``]
 :spreempten: pass:q[``spreempten``]
 :mpreempten: pass:q[``mpreempten``]
+:xpreempten: pass:q[``xpreempten``]
 :mfie: pass:q[``mfie``]
 :sfie: pass:q[``sfie``]
 :xfie: pass:q[``xfie``]
@@ -695,9 +697,11 @@ It provides additional state to resume execution of the previous handler after a
 
 [source]
 ----
-       Number  Name         Description
- (NEW) 0x346   mistatus     Interrupt status
- (NEW) 0x347   mithreshold  Interrupt enable threshold
+           Number  Name         Description
+ (NEW)     0x346   mistatus     Interrupt status
+ (NEW)     0x347   mithreshold  Interrupt enable threshold
+ (changed) 0x35C   mtopei       Top external interrupt
+ (changed) 0xFB0   mtopi        Top interrupt
 ----
 
 Additionally, this extension adds an indirect CSR
@@ -798,26 +802,29 @@ determines the priority cutoff used to mask lower-priority interrupts (see <<op-
 [source]
 ----
 mithreshold
- 8          mien        Alias of ~mstatus.mie
- 7:0        iprio[7:0]  Interrupt-enable threshold
+ 9          mien        Alias of ~mstatus.mie
+ 8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
-The field {mithreshold}.{iprio} implements exactly IPRIOLEN bits.
+The field {mithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
 
 [NOTE]
 ====
 In contrast to existing threshold mechanisms in AIA,
 this CSR applies to major and minor interrupt identities.
 
-It is needed in an efficient implementation of synchronization protocols like
-Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
+Because {IPRIO} = 0 is a valid value for major interrupts with a default priority greater
+than external interrupts,
+{mithreshold}.{iprio} = 0 does not enable all interrupts,
+and the field needs to be one bit wider than IPRIOLEN in order to allow a threshold
+that enables all interrupts.
 ====
 
-When reading from {mtopi} or {mtopei}, and no interrupt is pending and enabled at machine level,
-the {IPRIO} field returns {mithreshold}.{iprio}.
-
-NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
-If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+[NOTE]
+====
+An interrupt threshold is needed in an efficient implementation of synchronization protocols like
+Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
+====
 
 ===== New Interrupt Status ({mistatus}) CSR
 
@@ -831,10 +838,10 @@ mistatus
  29:28      mpp[1:0]          Previous privilege mode, mirror of mstatus.mpp
  27         mpie              Previous interrupt enable, mirror of mstatus.mpie
  26         mpfie             Previous fast interrupts enable
- 25:20      (reserved)
- 19:18      VS[1:0]           Vector extension status, mirror of mstatus.VS
- 17:16      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
- 15:8       pithreshprio[7:0] Previous mithreshold.iprio value
+ 25:21      (reserved)
+ 20:19      VS[1:0]           Vector extension status, mirror of mstatus.VS
+ 18:17      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
+ 16:8       pithreshprio[8:0] Previous mithreshold.iprio value
  7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
  6:2        (reserved) 
  1          mie               Interrupt enable, alias of mstatus.mie
@@ -846,13 +853,41 @@ The bit {mfie} (Fast Interrupt Enable) controls if fast interrupts can trap when
 When {mie} is one, {mfie} has no effect.
 When the {mfie} bit is set to 0 by an explicit CSR write, the {mie} bit is cleared to 0.
 
+===== Changed top interrupt ({mtopi}) and top external interrupt ({mtopei}) CSRs
+
+The CSRs {mtopi} and {mtopei} are enhanced
+for efficient operation in combination with the thresholding operation
+introduced for supporting efficient nested preemption.
+
+The CSRs are modified as follows when {mipreemptcfg}.{mpreempten} is one:
+
+When reading from {mtopi} or {mtopei}, and no interrupt is pending and enabled at machine level,
+the {IPRIO} field returns {mithreshold}.{iprio}.
+
+NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+
+As {mithreshold}.{iprio} is IPRIOLEN+1 wide, the format of {mtopi} and {mtopei} is adjusted to:
+
+[source]
+----
+mtopi/mtopei
+ Bits       Field
+ XLEN-1:27  (reserved)
+ 27:16      IID
+ 25:21      (reserved)
+ 8:0        IPRIO
+----
+
 ==== Changed and new CSRs at Supervisor Level
 
 [source]
 ----
-       Number  Name         Description
- (NEW) 0x146   sistatus     Interrupt status
- (NEW) 0x147   sithreshold  Interrupt enable threshold
+           Number  Name         Description
+ (NEW)     0x146   sistatus     Interrupt status
+ (NEW)     0x147   sithreshold  Interrupt enable threshold
+ (changed) 0x15C   mtopei       Top external interrupt
+ (changed) 0xDB0   mtopi        Top interrupt
 ----
 
 Additionally, this extension adds an indirect CSR
@@ -893,10 +928,10 @@ sistatus
  28         spp               Previous privilege mode, mirror of sstatus.spp
  27         spie              Previous interrupt enable, mirror of sstatus.spie
  26         spfie             Previous fast interrupts enable
- 25:20      (reserved)
- 19:18      VS[1:0]           Vector extension status, mirror of sstatus.VS
- 17:16      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
- 15:8       pithreshprio[7:0] Previous sithreshold.iprio value
+ 25:21      (reserved)
+ 20:19      VS[1:0]           Vector extension status, mirror of sstatus.VS
+ 18:17      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
+ 16:8       pithreshprio[8:0] Previous sithreshold.iprio value
  7          psppush           Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
  6:2        (reserved) 
  1          sie               Interrupt enable, alias of sstatus.sie
@@ -919,14 +954,37 @@ determines the priority cutoff used to mask lower-priority interrupts.
 [source]
 ----
 sithreshold
- 8          sien        Alias of ~sstatus.sie
- 7:0        iprio[7:0]  Interrupt-enable threshold
+ 9          sien        Alias of ~sstatus.sie
+ 8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
-The field {sithreshold}.{iprio} implements exactly IPRIOLEN bits.
+The field {sithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
 
-When reading from {stopi} or {stopei}, and no interrupt is pending and enabled at supervisor level,
+===== Changed top interrupt ({stopi}) and top external interrupt ({stopei}) CSRs
+
+The CSRs {stopi} and {stopei} are enhanced
+for efficient operation in combination with the thresholding operation
+introduced for supporting efficient nested preemption.
+
+The CSRs are modified as follows when {sipreemptcfg}.{spreempten} is one:
+
+When reading from {stopi} or {stopei}, and no interrupt is pending and enabled at machine level,
 the {IPRIO} field returns {sithreshold}.{iprio}.
+
+NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+
+As {sithreshold}.{iprio} is IPRIOLEN+1 wide, the format of {stopi} and {stopei} is adjusted to:
+
+[source]
+----
+stopi/stopei
+ Bits       Field
+ XLEN-1:27  (reserved)
+ 27:16      IID
+ 25:21      (reserved)
+ 8:0        IPRIO
+----
 
 ==== Reset Behavior
 
@@ -950,7 +1008,7 @@ The reset behavior of other fields is platform-specific.
 [#op-threshold]
 ==== Operation
 
-When {xithreshold}.{iprio} is a nonzero value,
+When {xipreemptcfg}.{xpreempten} is one,
 an interrupt source is considered disabled
 irrespective of its interrupt-enable bit,
 when the following condition holds:
@@ -965,12 +1023,23 @@ if the interrupt source is the highest priority pending-enabled one.
 
 [NOTE]
 ====
+The highest priority value of {IPRIO} is 0.
+When {xithreshold}.{iprio} and NIPPRIO_MASK is 0,
+all interrupts are considered disabled.
+====
+
+[NOTE]
+====
+The lowest priority value of {IPRIO} is 255.
+When {xithreshold}.{iprio} is 256 or larger,
+no interrupts are disabled by the thresholding mechanism.
+====
+
+[NOTE]
+====
 IPRIO is derived from the configured priority or default priority order
 according to the rules defined in AIA.
 ====
-
-When {xithreshold}.{iprio} is zero,
-all enabled interrupt sources can contribute to signaling interrupts to the hart.
 
 If {xfie} is one, an interrupt can cause a trap irrespective of {xie}
 if the interrupt is classified as a fast interrupt according to the configured value of {FITHRESHOLD}.
