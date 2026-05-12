@@ -57,8 +57,9 @@ Graphics used are either explicitly available for free, are the property of RISC
 :tvec: pass:q[``**__x__**tvec``]
 :ivt: pass:q[``**__x__**ivt``]
 :xivt: pass:q[``xivt``]
-:EHV: pass:q[``EHV``]
-:xeivt: pass:q[``xeivt``]
+:mehv: pass:q[``mehv``]
+:sehv: pass:q[``sehv``]
+:xehv: pass:q[``xehv``]
 :xtvec: pass:q[``xtvec``]
 :mode: pass:q[``mode``]
 :xepc: pass:q[``xepc``]
@@ -102,7 +103,6 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xie: pass:q[``xie``]
 :mtvec: pass:q[``mtvec``]
 :mivt: pass:q[``mivt``]
-:meivt: pass:q[``meivt``]
 :mscratch: pass:q[``mscratch``]
 :mspcs: pass:q[``mspcs``]
 :mepc: pass:q[``mepc``]
@@ -137,7 +137,6 @@ Graphics used are either explicitly available for free, are the property of RISC
 :sie: pass:q[``sie``]
 :stvec: pass:q[``stvec``]
 :sivt: pass:q[``sivt``]
-:seivt: pass:q[``seivt``]
 :sscratch: pass:q[``sscratch``]
 :sspcs: pass:q[``sspcs``]
 :sepc: pass:q[``sepc``]
@@ -1630,13 +1629,13 @@ Included in: <<smcsps,Sscsps>>
 
 These extensions add a new mode for taking interrupts via a dedicated interrupt vector table.
 
-This increases the range of reachable addresses to the entire address space.
-This is useful when handlers are more than 2 MiB away from the vector table entry.
-
 In this new mode, when an interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to the new {xivt} or {xeivt} CSR),
+table entry for the associated interrupt (table pointed to the new {xivt} CSR),
 masks off the least-significant bit (for IALIGN=16) or masks off the two least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
+
+This increases the range of reachable addresses to the entire address space.
+This is useful when handlers are more than 2 MiB away from the vector table entry.
 
 ==== Changed and new CSRs
 
@@ -1645,44 +1644,19 @@ and then jumps to the masked address.
        Number  Name         Description
        0x305   mtvec        M-mode Trap-handler base address / interrupt mode
  (NEW) 0x307   mivt         M-mode Interrupt-handler vector table base address
- (NEW) 0x308   meivt        M-mode External Interrupt-handler vector table base address
        0x105   stvec        S-mode Trap-handler base address / interrupt mode
  (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
- (NEW) 0x108   seivt        S-mode External Interrupt-handler vector table base address
 ----
 
-===== New {xivt} and {xeivt} CSR
+===== New {xivt} CSR
 
-Two new base addresses for vector tables are introduced.
-One for internal interrupts (major and local interrupts),
-and one for external interrupts.
+A new base address for the vector table is introduced.
 
-Both {xivt} and {xeivt} are WARL XLEN-bit CSRs,
-which hold the base address of the interrupt vector table.
-The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boundary.
+The WARL XLEN-bit {xivt} CSR
+holds the base address of the interrupt vector table.
+The address held in {xivt} is aligned on a 64-byte or greater power-of-two boundary.
 
 {xivt} is defined as follows:
-
-[bytefield]
-----
-(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
-(def row-height 35 )
-(def row-header-fn nil)
-(def left-margin 100)
-(def right-margin 100)
-(def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "" "" "" "1" "2" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
-
-(draw-box "BASE" {:span 13 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 13 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "reserved" {:span 3 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-
-(draw-box "XLEN-2" {:span 26 :borders {}})
-(draw-box "2" {:span 6 :borders {}})
-----
-
-{xeivt} is defined as follows:
 
 [bytefield]
 ----
@@ -1703,7 +1677,6 @@ The address held in {xeivt} is aligned on a 64-byte or greater power-of-two boun
 (draw-box "6" {:span 8 :borders {}})
 ----
 
-
 NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
 then reading them back.
@@ -1711,7 +1684,7 @@ then reading them back.
 NOTE: The resulting vector tables, especially for external interrupts,
 can consume non-negligible memory space.
 To limit the overall memory footprint,
-{xivt} or {xeivt} values at different privilege levels may be configured to the same values, respectively.
+{xivt} values at different privilege levels may be configured to the same values, respectively.
 
 ===== New {xtvec} CSR Mode
 
@@ -1719,31 +1692,32 @@ Interrupt vector table mode is encoded as a new state in the
 existing {xtvec} WARL register, where {xtvec}.`mode` (the two
 least-significant bits) is `11`.
 
-===== Smivt Changes to {xtvec} CSR Mode
+===== Changes to {xtvec} CSR Mode
 
 The PC upon interrupt is changed as follows:
 
 [source]
 ----
  mode  PC on Interrupt
- 00    OBASE                                # Direct mode
- 01    OBASE+4*exccode                      # Vectored mode
- 11    M[VTBASE+XLEN/8*vtoffset] & VTMASK   # Interrupt vector table mode
- 10    Reserved
+ 11    handler   # Interrupt vector table mode
 
 where:
-  M[a]     = Contents of memory address at address "a"
-  VTMASK   = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32
-  exccode  = xcause.Exception Code
 
-  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
+  M[a]   = Contents of memory address at address "a"
+  entry = M[VTBASE+XLEN/8*vtoffset]
+  VEN    = entry & 0x1  # Vectoring enable
+  VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32  # Vector table mask
+  VTBASE = xivt[XLEN-1:6]<<6  # IVT base is at least 64-byte aligned
+
   if external interrupt:
-    VTBASE = xeivt[XLEN-1:6]<<6   # External Interrupt Vector Table base is at least 64-byte aligned
     vtoffset = Minor Interrupt Identity
-    # Corresponds to xtopei[26:16] with interrupt delivery from interrupt file or ACLIC
   else
-    VTBASE = xivt[XLEN-1:2]<<2    # Interrupt Vector Table base is at least 4-byte aligned
-    vtoffset = Major Interrupt Identity
+    vtoffset = - (Major Interrupt Identity)
+
+  if VEN = 1
+    handler = entry & VTMASK
+  else
+    handler = xtvec[XLEN-1:2]<<2
 ----
 
 In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
@@ -1751,11 +1725,19 @@ After executing the required side-effects as required with the existing behavior
 the hart then fetches an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (VTBASE).
 The trap handler function address is fetched from `VTBASE+XLEN/8*vtoffset`.
-If the fetch is successful, the hart clears the low bit(s) (depending on IALIGN) of the handler address
-and sets the PC to this handler address.
 
-If the LSB of the vector table entry is 1, and the fetch is successful,
-the hart clears the corresponding interrupt-pending bit if possible.
+If the fetch is successful and the LSB of the entry is 0,
+the interrupt should not be hardware-vectored.
+Instead, the trap is redirected to a common entry point defined by {mtvec}.
+
+NOTE: Even with hardware vectoring, some interrupts are expected to used a common SW dispatcher.
+By deasserting the LSB of their vector table entry,
+a trap will take them to a SW dispatcher at a common entry point indicated by {mtvec}.
+This SW dispatcher may access the table pointed to by {xivt} to retrive the interrupts handler address.
+
+If the fetch is successful and the LSB of entry is one,
+the hart clears the low bit(s) (depending on IALIGN) of the handler address
+and sets the PC to this handler address.
 
 NOTE: The original vectored mode simply jumps to an address in
 the trap vector table, while the interrupt vector table mode reads a
@@ -1770,7 +1752,7 @@ privilege mode of the interrupt handler, and requires execute
 permission; read permission is irrelevant.
 It is recommended that the vector table fetches are ignored for hardware triggers and breakpoints.
 
-NOTE: If {xivt} or {xeivt} is configured such that multiple privilege levels
+NOTE: If {xivt} is configured such that multiple privilege levels
 share a single vector table, the memory protection units
 (e.g., PMP, Smepmp) must grant execution permission to the shared vector table
 for all applicable lower privilege levels. +
@@ -1830,7 +1812,7 @@ It may nevertheless need to clear the pending bit at the peripheral, typically i
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSRs {sivt} and {seivt} by S-mode or a lower-privilege mode
+then access to the new CSR {sivt} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
 [[smehv, Smehv/Ssehv]]
@@ -1843,58 +1825,40 @@ During synchronous exceptions, interrupts are disabled.
 Acceleration of this critical segment decreases the time during which interrupts are masked.
 Typical examples of synchronous exceptions that occur as part of normal program execution include traps due to ECALLs, misaligned accesses, instruction page faults, or illegal instructions.
 
-With this extension, synchronous exceptions can be vectored using xtvec as an offset.
+With this extension, synchronous exceptions can be vectored using {xtvec} as an offset.
 
-==== Changed CSRs
+==== Additional bit in {xiconfig} CSR
+
+The {xiconfig} CSR is changed by adding a bit to control
+if synchronous exception hardware vectoring is active.
+
+The following bits of {xiconfig} are allocated to control exception hardware vectoring:
 
 [source]
 ----
-       Number  Name         Description
-       0x307   mivt         M-mode Interrupt-handler vector table base address
-       0x107   sivt         S-mode Interrupt-handler vector table base address
+xiconfig fields
+ bits        description
+ 7           sehv (if Ssehv is implemented)
+ 6           mehv (if Smehv is implemented, reserved in siconfig)
 ----
 
-===== Changes to the {xivt} CSR
-
-The CSR is changed by adding a bit to control
-if synchronous exception hardware vectoring is active.
-
-[bytefield]
-----
-(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
-(def row-height 35 )
-(def row-header-fn nil)
-(def left-margin 100)
-(def right-margin 100)
-(def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
-
-(draw-box "BASE" {:span 11 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 11 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "reserved" {:span 3 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "EHV" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-
-(draw-box "XLEN-2" {:span 22 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-----
+Other bits remain unchanged.
 
 ==== Operation
 
-When {xivt}.{EHV} is clear, the exception trap behavior is unchanged.
+When {xiconfig}.{xehv} is clear, the exception trap behavior is unchanged.
 
-When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry point:
+When {xiconfig}.{xehv} is set, the synchronous exceptions trap to the following entry point:
 
 [source]
 ----
  mode  PC on Synchronous Exception
- 00       OBASE              # Direct mode
- 01       OBASE              # Vectored mode
- 11       OBASE+4*exccode    # Interrupt vector table mode
- 10       Reserved
+ 11    OBASE+4*exccode    # Interrupt vector table mode
+
+ where OBASE = xtvec[XLEN-1:2]<<2  # Vector base is at least 4-byte aligned
 ----
+
+In all other modes, the trap behavior of synchronous exceptions is unchanged.
 
 [[smip, Smip/Ssip]]
 === Interrupt handler push and pop extension (Smip & Ssip)
