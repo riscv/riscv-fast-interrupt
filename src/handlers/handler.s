@@ -39,16 +39,16 @@ interrupt_dispatcher:
     slli    a0, s1, P_ALIGN        # create vector table offset
     la      s1, i_handlers + HANDLER_SPLIT
 
-goto_handler:
+call_handler:
     add     a0, a0, s1
     lr      a0, 0, a0
     jalr    a0
 
 next_handler:
     csrrw   a0, CSR_MTOPSI, s0  # restores threshold from s0[8:0], claims interrupt and raises threshold
-    srai    a0, a0, (16 - P_ALIGN)
+    srai    a0, a0, (16 - P_ALIGN) # extract vector table index
 
-    j       load_handler
+    j       call_handler
 
 spurious_handler:
 
