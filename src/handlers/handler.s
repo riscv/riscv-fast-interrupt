@@ -23,63 +23,44 @@
     .equ HANDLER_SPLIT,    (MAJOR_IRQ_COUNT << P_ALIGN)
 
     .equ CSR_MISTATUS,     0x346
-    .equ CSR_MITHRESHOLD,  0x347
-    .equ MSTATUS_MIE,      8
+    .equ CSR_MTOPSI,       0x348
 
 interrupt_dispatcher:
-    addi    sp, sp, -(4*REGSZ)   # create stack frame
-    sr      s0, 0*REGSZ, sp
+    addi    sp, sp, -(4*REGSZ)     # create stack frame
+    sr      s0, 0*REGSZ, sp        # save s0 to stack
     csrr    s0, mepc
-    sr      s0, 1*REGSZ, sp      # save mepc to stack
-    csrrsi  s0, CSR_MISTATUS, 1  # enables fast interrupts
-    sr      s0, 2*REGSZ, sp      # save mistatus to stack
-    sr      s1, 3*REGSZ, sp      # save s1 to stack
+    sr      s0, 1*REGSZ, sp        # save mepc to stack
+    sr      s1, 2*REGSZ, sp        # save s1 to stack
+    csrr    s1, mcause
+    csrrs   s0, CSR_MISTATUS, 1    # enable interrupts
 
-    call    __riscv_save
+    call    __riscv_save           # save ra, t0-t6, a0-a7
 
+    slli    a0, s1, P_ALIGN        # create vector table offset
     la      s1, i_handlers + HANDLER_SPLIT
 
-dispatch_loop:
-    csrr    s0, mtopi
-    srli    t1, s0, (16 - P_ALIGN)
-    li      t0, (MEI_ID << P_ALIGN)
-    bne     t1, t0, int_irq
+goto_handler:
+    add     a0, a0, s1
+    lr      a0, 0, a0
+    jalr    a0
 
-ext_irq:
-    csrrw   s0, mtopei, x0       # reads mtopei and claims interrupt
-    srli    t1, s0, (16 - P_ALIGN)
+next_handler:
+    csrrw   a0, CSR_MTOPSI, s0  # restores threshold from s0[8:0], claims interrupt and raises threshold
+    srai    a0, a0, (16 - P_ALIGN)
 
-load_handler:
-    add     t0, t1, s1
-    lr      t0, 0, t0
-
-have_handler:
-    csrrw   s0, CSR_MITHRESHOLD, s0  # raise threshold
-    # interrupts enabled by writing 0 to mithreshold.mien
-
-    jalr    t0
-
-    csrrw   s0, CSR_MITHRESHOLD, s0  # restore threshold
-    # interrupts disabled by restoring mithreshold.mien
-
-    j       dispatch_loop
-
-int_irq:
-    neg     t1, t1
     j       load_handler
 
 spurious_handler:
-    csrrw   s0, CSR_MITHRESHOLD, s0  # restore threshold, disable interrupts
 
 dispatch_exit:
-    call    __riscv_restore
+    call    __riscv_restore      # restore ra, t0-t6, a0-a7
 
-    lr      s1, 3*REGSZ, sp      # restore s1 from stack
-    lr      s0, 2*REGSZ, sp      # restore mistatus from stack
-    csrw    CSR_MISTATUS, s0     # disables fast interrupts
+    lr      s1, 2*REGSZ, sp      # restore s1 from stack
+
+    csrw    CSR_MISTATUS, s0     # disables interrupts
     lr      s0, 1*REGSZ, sp      # restore mepc from stack
     csrw    mepc, s0
-    lr      s0, 0*REGSZ, sp
+    lr      s0, 0*REGSZ, sp      # restore s0 from stack
     addi    sp, sp, (4*REGSZ)    # destroy stack frame
 
     mret

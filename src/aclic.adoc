@@ -60,6 +60,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :EHV: pass:q[``EHV``]
 :xeivt: pass:q[``xeivt``]
 :xtvec: pass:q[``xtvec``]
+:mode: pass:q[``mode``]
 :xepc: pass:q[``xepc``]
 :xspcs: pass:q[``xspcs``]
 :scratch: pass:q[``**__x__**scratch``]
@@ -112,25 +113,20 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mistatus: pass:q[``mistatus``]
 :mpnipprio: pass:q[``mpnipprio``]
 :mistatus: pass:q[``mistatus``]
-:mipreemptcfg: pass:q[``mipreemptcfg``]
-:sipreemptcfg: pass:q[``sipreemptcfg``]
-:xipreemptcfg: pass:q[``xipreemptcfg``]
+:miconfig: pass:q[``miconfig``]
+:siconfig: pass:q[``siconfig``]
+:xiconfig: pass:q[``xiconfig``]
 :mnipbits: pass:q[``mnipbits``]
 :snipbits: pass:q[``snipbits``]
 :xnipbits: pass:q[``xnipbits``]
-:spreempten: pass:q[``spreempten``]
-:mpreempten: pass:q[``mpreempten``]
-:xpreempten: pass:q[``xpreempten``]
-:mfie: pass:q[``mfie``]
-:sfie: pass:q[``sfie``]
-:xfie: pass:q[``xfie``]
-:mpfie: pass:q[``mpfie``]
-:spfie: pass:q[``spfie``]
-:xpfie: pass:q[``xpfie``]
-:mfibits: pass:q[``mfibits``]
-:sfibits: pass:q[``sfibits``]
-:xfibits: pass:q[``xfibits``]
+:snipen: pass:q[``snipen``]
+:mnipen: pass:q[``mnipen``]
+:xnipen: pass:q[``xnipen``]
 :mintthresh: pass:q[``mintthresh``]
+:mtopsi: pass:q[``mtopsi``]
+:stopsi: pass:q[``stopsi``]
+:xtopsi: pass:q[``xtopsi``]
+:SIID: pass:q[``SIID``]
 :mtopi: pass:q[``mtopi``]
 :mtopei: pass:q[``mtopei``]
 :stopei: pass:q[``stopei``]
@@ -714,8 +710,9 @@ The Smnip extension depends on the Smaia extension and adds nested preemption su
 
 The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
 
-The extensions enable higher-priority interrupts to preempt lower-priority interrupts in a nested fashion.
+The extensions enable higher-priority interrupts to preempt lower-priority interrupts efficiently in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
+Additionally, it provides interrupt vectoring capabilities for external interrupts.
 
 ==== Changed and new CSRs at Machine Level
 
@@ -724,8 +721,8 @@ It provides additional state to resume execution of the previous handler after a
            Number  Name         Description
  (NEW)     0x346   mistatus     Interrupt status
  (NEW)     0x347   mithreshold  Interrupt enable threshold
- (changed) 0x35C   mtopei       Top external interrupt
- (changed) 0xFB0   mtopi        Top interrupt
+ (NEW)     0x348   mtopsi       Interrupt top signed interrupt
+ (Changed) 0x342   mcause       Cause register
 ----
 
 Additionally, this extension adds an indirect CSR
@@ -733,92 +730,53 @@ Additionally, this extension adds an indirect CSR
 [%autowidth]
 |===
 | {miselect} |  {mireg4} size |  {mireg4} state
-| 0x1000     |   XLEN         |  {mipreemptcfg}
+| 0x1000     |   XLEN         |  {miconfig}
 |===
 
 The registers {mireg}, {mireg2}, {mireg3}, {mireg5}, and {mireg6} are reserved
 when {miselect} is 0x1000.
 
-===== New Interrupt Preemption Configuration ({mipreemptcfg}) CSR
+===== New Interrupt Configuration ({miconfig}) CSR
 
 [source]
 ----
-mipreemptcfg fields
+miconfig fields
  bits        description
  XLEN-1:20   (reserved)
  19:16       snipbits (if Ssnip is implemented)
- 15:12       sfibits (if Ssnip is implemented)
+ 15:12       (reserved)
  11:8        mnipbits
- 7:4         mfibits
- 3           spreempten (if Ssnip is implemented)
- 2           mpreempten
+ 7:4         (reserved)
+ 3           snipen (if Ssnip is implemented)
+ 2           mnipen
  1:0         (reserved)
 ----
 
-{mipreemptcfg} is a WARL register used to configure the behavior of preemption.
+{miconfig} is a WARL register used to configure the behavior of interrupts.
 
-If Ssnip is implemented, the fields {snipbits}, {sfibits}, and {spreempten} of {mipreemptcfg}
+If Ssnip is implemented, the fields {snipbits} and {snipen} of {miconfig}
 control nested interrupt preemption behavior for supervisor level.
 
-The supervisor-level CSR {sipreemptcfg} is a subset of {mipreemptcfg}.
-Reading or writing a field of {sipreemptcfg} reads or writes the corresponding field of {mipreemptcfg}.
+The supervisor-level CSR {siconfig} is a subset of {miconfig}.
+Reading or writing a field of {siconfig} reads or writes the corresponding field of {miconfig}.
 
-The fields {mpreempten} and {spreempten} enable this extension at M-mode and S-mode, respectively.
+The fields {mnipen} and {snipen} enable this extension at M-mode and S-mode, respectively.
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
-If Ssnip is not implemented, then {snipbits}, {sfibits}, and {spreempten} are read-only 0.
+If Ssnip is not implemented, then {snipbits} and {snipen} are read-only 0.
 
-The field {mipreemptcfg}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
+The field {miconfig}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
 Interrupts whose priorities differ only in less-significant bits cannot preempt each other.
-The highest legal value of {mipreemptcfg}.{mnipbits}/{snipbits} is IPRIOLEN.
+The highest legal value of {miconfig}.{mnipbits}/{snipbits} is IPRIOLEN.
 A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption at mode `x` is:
 
 [source,subs="attributes"]
 ----
-NIPPRIO_MASK = ~(2^(mipreemptcfg.xnipbits) - 1)
+NIPPRIO_MASK = ~(2^(miconfig.xnipbits) - 1)
 ----
 
-NOTE: For example, if {mipreemptcfg}.{mnipbits}=4, 
+NOTE: For example, if {miconfig}.{mnipbits}=4, 
 NIPPRIO_MASK=11110000, i.e. the four MSBs are participating in interrupt preemption.
-
-{mfibits} and {sfibits} define the number of low-order priority bits used to form a contiguous fast-interrupt priority range from 0 through FITHRESHOLD.
-This definition is intentionally orthogonal to {xnipbits}.
-The highest legal value of {mipreemptcfg}.{mfibits}/{sfibits} is IPRIOLEN.
-
-NOTE: In the intended use-case, {mipreemptcfg}.{xfibits} will be configured to values smaller than {mipreemptcfg}.{xnipbits}.
-This selects a subset of preemption groups as fast-interrupts.
-
-[source,subs="attributes"]
-----
-FITHRESHOLD = (2^mipreemptcfg.xfibits) - 1
-----
-
-An interrupt source is considered a fast interrupt source depending on its {IPRIO} value, if the following condition holds:
-
-[source]
-----
-IPRIO <= FITHRESHOLD
-
-which is equivalent to
-
-IPRIO & ~FITHRESHOLD == 0
-----
-
-where {FITHRESHOLD} at mode `x` is defined as:
-
-[source,subs="attributes"]
-----
-FITHRESHOLD = (2^mipreemptcfg.xfibits) - 1
-----
-
-NOTE: E.g. expanding on the example above, if {mipreemptcfg}.{mfibits} = 2, then FITHRESHOLD = 00000011.
-In this case, only interrupts with {IPRIO}=0,1,2,3 are considered fast interrupts.
-In AIA, IPRIO = 0 may represent the highest-priority class for certain interrupts using default priority ordering.
-Such interrupts are therefore considered fast interrupts whenever the configured FITHRESHOLD includes zero.
-
-NOTE: The fast interrupt threshold is defined this way to simplify the logic to determine,
-if an interrupt is considered a fast interrupt.
-No comparator is needed this way, and the determination can be done through a bitwise and-operation.
 
 ===== New Interrupt enable threshold ({mithreshold}) CSR
 
@@ -828,7 +786,7 @@ determines the priority cutoff used to mask lower-priority interrupts (see <<op-
 [source]
 ----
 mithreshold
- 9          mien        Alias of ~mstatus.mie
+ XLEN:9     (reserved)
  8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
@@ -863,47 +821,75 @@ mistatus
  XLEN-1:30  (reserved)
  29:28      mpp[1:0]          Previous privilege mode, mirror of mstatus.mpp
  27         mpie              Previous interrupt enable, mirror of mstatus.mpie
- 26         mpfie             Previous fast interrupts enable
- 25:21      (reserved)
+ 26:21      (reserved)
  20:19      VS[1:0]           Vector extension status, mirror of mstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
  16:8       pithreshprio[8:0] Previous mithreshold.iprio value
  7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 6:2        (reserved) 
- 1          mie               Interrupt enable, alias of mstatus.mie
- 0          mfie              Fast interrupts enable
+ 6:1        (reserved)
+ 0          mie               Alias of mstatus.mie
 ----
 
-The bit {mfie} (Fast Interrupt Enable) controls if fast interrupts can trap when the corresponding {mie} bit is zero.
+===== New Top Signed Interrupt Status ({mtopsi}) CSR
 
-When {mie} is one, {mfie} has no effect.
-When the {mfie} bit is set to 0 by an explicit CSR write, the {mie} bit is cleared to 0.
+The CSRs {mtopsi} is provided for efficiently handling major and external interrupts
+in a scheme, where interrupts are dispatched by software.
+It is designed to manage the interrupt threshold when claiming interrupts,
+to enable efficient nested preemption.
 
-===== Changed top interrupt ({mtopi}) and top external interrupt ({mtopei}) CSRs
-
-The CSRs {mtopi} and {mtopei} are enhanced
-for efficient operation in combination with the thresholding operation
-introduced for supporting efficient nested preemption.
-
-The CSRs are modified as follows when {mipreemptcfg}.{mpreempten} is one:
-
-When reading from {mtopi} or {mtopei}, and no interrupt is pending and enabled at machine level,
-the {IPRIO} field returns {mithreshold}.{iprio}.
-
-NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
-If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
-
-As {mithreshold}.{iprio} is IPRIOLEN+1 wide, the format of {mtopi} and {mtopei} is adjusted to:
+A read of {mtopsi} returns information about the highest-priority pending-and-enabled interrupt for machine level, in this format:
 
 [source]
 ----
-mtopi/mtopei
- Bits       Field
- XLEN-1:27  (reserved)
- 27:16      IID
- 25:21      (reserved)
+mtopsi
+ XLEN:16    SIID  Signed Interrupt Identity
+ 15:9       (reserved)
  8:0        IPRIO
 ----
+
+If an external interrupt `i` is the highest-priority pending-and-enabled interrupt:
+
+- {SIID} is equivalent to the minor interrupt identity of `i`
+- {IPRIO} is the interrupt priority number of `i` configured with in the external interrupt controller
+
+Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt:
+
+- {SIID} is the two's complement representation of the negated major interrupt identity of `i`
+- {IPRIO} is equivalent to what would be reported in {mtopi}.{IPRIO}
+
+NOTE: The intention of providing a signed version of interrupt identity is to index into a table with 
+decreasing memory address per major identity and increasing addresses for minor identities.
+A signed table index can be extracted through an arithmetic right shift.
+
+Else, if no interupt is pending-and-enabled:
+
+- {SIID} is 0
+- {IPRIO} is equivalent to {mithreshold}.{iprio}
+
+NOTE: Returning {mithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+
+A write to the {mtopsi} CSR performs the following stepwise actions:
+
+. The the source registers bits [16:8] are written to {mithreshold}.{iprio}
+. The reported interrupt identity is claimed by clearing its pending bit if possible.
+. The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio}
+
+If a read and write of the {mtopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
+the value returned by the read indicates the claimed interrupt.
+
+===== Changed Cause ({mcause}) CSR
+
+When {miconfig}.{mnipen} is one,
+the exception code in {mcause} is modified as follows:
+
+If a trap was taken on an external interrupt,
+the Exception Code field reports the minor interrupt identity.
+
+Else, if a trap was taken on a major interrupt identity,
+the Exception Code field reports the two's complement representation of the negated major interrupt identity of `i`.
+
+NOTE: The representation of exception code on interrupts is aligned with the {SIID} field in {mtopsi}.
 
 ==== Changed and new CSRs at Supervisor Level
 
@@ -912,8 +898,8 @@ mtopi/mtopei
            Number  Name         Description
  (NEW)     0x146   sistatus     Interrupt status
  (NEW)     0x147   sithreshold  Interrupt enable threshold
- (changed) 0x15C   mtopei       Top external interrupt
- (changed) 0xDB0   mtopi        Top interrupt
+ (NEW)     0x148   stopsi       Interrupt top signed interrupt
+ (Changed) 0x142   scause       Cause register
 ----
 
 Additionally, this extension adds an indirect CSR
@@ -921,31 +907,30 @@ Additionally, this extension adds an indirect CSR
 [%autowidth]
 |===
 | {siselect} |  {sireg4} size |  {sireg4} state
-| 0x1000     |   XLEN         |  {sipreemptcfg}
+| 0x1000     |   XLEN         |  {siconfig}
 |===
 
 The registers {sireg}, {sireg2}, {sireg3}, {sireg5}, and {sireg6} are reserved
 when {siselect} is 0x1000.
 
-===== New Interrupt Preemption Configuration ({sipreemptcfg}) CSR
+===== New Interrupt Preemption Configuration ({siconfig}) CSR
 
 [source]
 ----
-sipreemptcfg fields
+siconfig fields
  bits        description
  XLEN-1:20   (reserved)
  19:16       snipbits
- 15:12       sfibits
- 11:4        (reserved)
- 3           spreempten
+ 15:4        (reserved)
+ 3           snipen
  2:0         (reserved)
 ----
 
-{sipreemptcfg} is a WARL register that is a subset of {mipreemptcfg}.
-The implemented fields of {sipreemptcfg} are aliases of the corresponding fields of {mipreemptcfg}.
+{siconfig} is a WARL register that is a subset of {miconfig}.
+The implemented fields of {siconfig} are aliases of the corresponding fields of {miconfig}.
 
-The field {spreempten} enables this extension at S-mode.
-The fields {snipbits} and {sfibits} configure nested interrupt preemption grouping and fast-interrupt classification for S-mode, respectively.
+The field {snipen} enables this extension at S-mode.
+The field {snipbits} configures nested interrupt preemption grouping for S-mode.
 
 ===== New Interrupt Status ({sistatus}) CSR
 
@@ -956,24 +941,16 @@ sistatus
  XLEN-1:29  (reserved)
  28         spp               Previous privilege mode, mirror of sstatus.spp
  27         spie              Previous interrupt enable, mirror of sstatus.spie
- 26         spfie             Previous fast interrupts enable
- 25:21      (reserved)
+ 26:21      (reserved)
  20:19      VS[1:0]           Vector extension status, mirror of sstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
- 16:8       pithreshprio[8:0] Previous sithreshold.iprio value
- 7          psppush           Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
- 6:2        (reserved) 
- 1          sie               Interrupt enable, alias of sstatus.sie
- 0          sfie              Fast interrupts enable
+ 16:10      (reserved) 
+ 9          psppush           Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
+ 8:0        pithreshprio[8:0] Previous sithreshold.iprio value
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
 indicate user/supervisor).
-
-The field {sfie} controls if fast interrupts can trap when the corresponding {sie} bit is zero.
-
-When {sie} is one, {sfie} has no effect.
-When the {sfie} bit is set to 0 by an explicit CSR write, the {sie} bit is cleared to 0.
 
 ===== New Interrupt enable threshold ({sithreshold}) CSR
 
@@ -983,61 +960,77 @@ determines the priority cutoff used to mask lower-priority interrupts.
 [source]
 ----
 sithreshold
- 9          sien        Alias of ~sstatus.sie
+ XLEN-1:9   (reserved)
  8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
 The field {sithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
 
-===== Changed top interrupt ({stopi}) and top external interrupt ({stopei}) CSRs
+===== New Top Signed Interrupt Status ({stopsi}) CSR
 
-The CSRs {stopi} and {stopei} are enhanced
-for efficient operation in combination with the thresholding operation
-introduced for supporting efficient nested preemption.
+The CSRs {stopsi} is provided for efficiently handling major and external interrupts
+in a scheme, where interrupts are dispatched by software.
+It is designed to manage the interrupt threshold when claiming interrupts,
+to enable efficient nested preemption.
 
-The CSRs are modified as follows when {sipreemptcfg}.{spreempten} is one:
-
-When reading from {stopi} or {stopei}, and no interrupt is pending and enabled at machine level,
-the {IPRIO} field returns {sithreshold}.{iprio}.
-
-NOTE: Returning mithreshold.iprio as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
-If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
-
-As {sithreshold}.{iprio} is IPRIOLEN+1 wide, the format of {stopi} and {stopei} is adjusted to:
+A read of {stopsi} returns information about the highest-priority pending-and-enabled interrupt for supervisor level, in this format:
 
 [source]
 ----
-stopi/stopei
- Bits       Field
- XLEN-1:27  (reserved)
- 27:16      IID
- 25:21      (reserved)
+mtopsi
+ XLEN:16    SIID  Signed Interrupt Identity
+ 15:9       (reserved)
  8:0        IPRIO
 ----
 
-==== Reset Behavior
+If an external interrupt `i` is the highest-priority pending-and-enabled interrupt:
 
-In general, in RISC-V, mandatory reset state is minimized but platform
-specifications or company policy might add additional reset
-requirements.  Since the general privileged architecture states that
-mstatus.mie is reset to zero, interrupts will not be enabled coming
-out of reset.
+- {SIID} is equivalent to the minor interrupt identity of `i`
+- {IPRIO} is the interrupt priority number of `i` configured with in the external interrupt controller
 
-NOTE: For an S-mode execution environment, the EEI should specify
-that {sstatus}.{sie} is also reset on entry. It is then responsibility of
-the execution environment to ensure that is true before beginning execution
-in S-mode.
+Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt:
 
-===== Mandatory reset state
+- {SIID} is the two's complement representation of the negated major interrupt identity of `i`
+- {IPRIO} is equivalent to what would be reported in {stopi}.{IPRIO}
 
-{mithreshold}.{iprio} resets to zero.
+NOTE: The intention of providing a signed version of interrupt identity is to index into a table with 
+decreasing memory address per major identity and increasing addresses for minor identities.
+A signed table index can be extracted through an arithmetic right shift.
 
-The reset behavior of other fields is platform-specific.
+Else, if no interupt is pending-and-enabled:
+
+- {SIID} is 0
+- {IPRIO} is equivalent to {sithreshold}.{iprio}
+
+NOTE: Returning {sithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+
+A write to the {stopsi} CSR performs the following stepwise actions:
+
+. The the source registers value is written to {sithreshold}.{iprio}
+. The reported interrupt identity is claimed by clearing its pending bit if possible.
+. The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio}
+
+If a read and write of the {stopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
+the value returned by the read indicates the claimed interrupt.
+
+===== Changed Cause ({scause}) CSR
+
+When {siconfig}.{snipen} is one,
+the exception code in {scause} is modified as follows:
+
+If a trap was taken on an external interrupt,
+the Exception Code field reports the minor interrupt identity.
+
+Else, if a trap was taken on a major interrupt identity,
+the Exception Code field reports the two's complement representation of the negated major interrupt identity of `i`.
+
+NOTE: The representation of exception code on interrupts is aligned with the {SIID} field in {stopsi}.
 
 [#op-threshold]
 ==== Operation
 
-When {xipreemptcfg}.{xpreempten} is one,
+When {xiconfig}.{xnipen} is one,
 an interrupt source is considered disabled
 irrespective of its interrupt-enable bit,
 when the following condition holds:
@@ -1059,19 +1052,16 @@ all interrupts are considered disabled.
 
 [NOTE]
 ====
-The lowest priority value of {IPRIO} is 255.
+The lowest priority value reported by a pending-enabled interrupt in {IPRIO} is 255.
 When {xithreshold}.{iprio} is 256 or larger,
 no interrupts are disabled by the thresholding mechanism.
 ====
 
 [NOTE]
 ====
-IPRIO is derived from the configured priority or default priority order
+{IPRIO} is derived from the configured priority or default priority order
 according to the rules defined in AIA.
 ====
-
-If {xfie} is one, an interrupt can cause a trap irrespective of {xie}
-if the interrupt is classified as a fast interrupt according to the configured value of {FITHRESHOLD}.
 
 ===== Trap behavior
 
@@ -1079,11 +1069,11 @@ The existing trap behavior is modified as follows:
 
 When a trap is taken into level `x`,
 the current value of {xithreshold}.{iprio} is written to {xistatus}.{pithreshprio}.
-Also, the current value of {xistatus}.{xfie} is written into {xistatus}.{xpfie}, and then {xistatus}.{xfie} is set to zero.
 
 Additionally, if the trap was taken on an interrupt,
 {xithreshold}.{iprio} is set to {IPRIO}.
 This automatically raises the interrupt-enable threshold.
+Also, the interrupt is claimed by clearing the pending bit if possible.
 
 If a double trap occurs while in M-mode,
 {xistatus}.{pithreshprio} is unchanged.
@@ -1095,7 +1085,6 @@ NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 The behavior of an {xret} instruction is modified as follows:
 
 {xret} sets {xithreshold}.{iprio} to {xistatus}.{pithreshprio}.
-{xret} sets {xistatus}.{xfie} to {xistatus}.{xpfie}.
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
 
@@ -1105,11 +1094,16 @@ This automatically restores the interrupt-enable threshold to the level of the p
 This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip.
 Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
 
-===== Direct mode SW dispatcher
+===== SW dispatcher
 
 The first example modifies the example handler from AIA by adding support for nested preemption.
-This handler assumes `mtvec.mode` = Direct (0).
-In this mode, all traps have a common entry point, and thus all interrupts use a common SW dispatcher.
+When {mtvec}.{mode} = Direct (0), all interrupts use the SW dispatcher as a common entry point.
+In vectored mode, some interrupt may jump directly into a custom handler,
+if their nested interrupt preemption priority is higher than any interrupt that uses the SW dispatcher.
+In this case, the entry in the interrupt table corresponding to those interrupts,
+which should use the SW dispatcher,
+need to cause the execution to jump to the common SW dispatcher.
+
 
 [,c]
 ----
@@ -1121,174 +1115,33 @@ if (i >= 0) {
 }
 if (mstatus.MPIE == 1) {
     save mistatus
+    enable interrupts
+
     loop {
-        i = read CSR mtopi
-        IPRIO = (i & 0xFF)
-        write IPRIO to mithreshold  /* raise threshold */
-        id = i>>16
-        enable interrupts
         call the interrupt handler for major interrupt id
-        disable interrupts
-        restore mistatus
-        write mistatus.pithreshold to mithreshold /* restore threshold */
+
+        topsi_val = read/write CSR mtopsi with value of mistatus
+        i = (int) topsi_val >> 16
     }
-}
-restore processor registers
-return from trap
-----
-(This example can be further optimized, but with an increase in complexity.)
 
-The most important difference compared to not using Smnip is that interrupts are enabled before calling the interrupt handler.
-While the interrupt is handled, a pending-and-enabled higher-priority interrupt can preempt the currently running interrupt handler.
-
-It is necessary to raise the threshold after reading {mtopi},
-because a higher priority interrupt could have become pending after the trap was taken.
-
-Restoring the threshold after the handler call returns
-allows lower priority interrupts to be handled
-without restoring and saving the processor registers.
-
-In case an interrupt an interrupt ceases to be pending before {mtopi} is read,
-this is a spurious interrupt.
-It can occur for level-sensitive interrupts.
-To handle those, a spurious interrupt handler needs to be installed for interrupt id 0.
-
-===== Direct mode SW dispatcher including external interrupts
-
-The handler needs to be extended for efficient handling of external interrupts,
-if external interrupts are prioritized among each other.
-The example below assumes that the top external interrupt can be read and claimed via {mtopei}.
-
-[,c]
-----
-save processor registers
-i = read CSR mcause
-if (i >= 0) {
-    handle synchronous exception i
-    restore mstatus if necessary
-}
-if (mstatus.MPIE == 1) {
-    save mistatus
-    loop {
-        i = read CSR mtopi
-        id = i>>16
-        if (id == MEI) {
-          i = read CSR mtopei
-          eid = i>>16
-          handler_addr = ei_handlers[eid]
-        } else {
-          handler_addr = i_handlers[id]
-        }
-        IPRIO = (i & 0xFF)
-        write IPRIO to mithreshold  /* raise threshold */
-        enable interrupts
-        call the interrupt handler at handler_addr
-        disable interrupts
-        restore mistatus
-        write mistatus.pithreshold to mithreshold /* restore threshold */
-    }
-}
-restore processor registers
-return from trap
-----
-
-===== Vectored mode SW dispatcher
-
-This example further modifies the example handler by considering `mtvec.mode` = Vectored (1).
-In this mode, some interrupts may share a common SW dispatcher,
-while others (higher priority interrupts) are handled in dedicated handlers (referred to as fast interrupt handlers here).
-
-In a system based on this example, fast interrupts must be able to preempt other interrupts.
-Because the fast interrupt handlers are not guaranteed to comply with the psABI,
-it must also be guaranteed that the common SW dispatcher does not dispatch fast interrupt handlers.
-
-Any fast interrupt handler must be configured to a nested interrupt priority that is higher than interrupt using the common SW dispatcher.
-
-In this example, it is assumed that exceptions have an entry point on traps that is different from interrupts.
-
-[,c]
-----
-save mepc, mistatus
-enable fast interrupts (mfie = 1)
-save processor registers
-
-loop {
-    i = read CSR mtopi
-    IPRIO = (i & 0xFF)
-    write IPRIO to mithreshold  /* raise threshold */
-    id = i>>16
-    enable interrupts (mie = 1)
-    call the interrupt handler for major interrupt id
-    disable all interrupts (mie = 0 -> mfie = 0)
+    disable interrupts
     restore mistatus
-    write mistatus.pithreshold to mithreshold /* restore threshold */
-    enable fast interrupts (mfie = 1)
 }
-
 restore processor registers
-disable fast interrupts (mfie = 0)
-restore mepc, mistatus
 return from trap
 ----
 (This example can be further optimized, but with an increase in complexity.)
 
-In this example, fast interrupts are enabled for an extended period.
-After saving the minimal state needed to resume after preemption,
-fast interrupts are being enabled.
-Enabling fast interrupts has the highest urgency.
+A pending-and-enabled higher-priority interrupt can preempt a currently running interrupt handler.
 
-This allows fast interrupts to preempt the dispatcher.
-Because of that, {mtopi} can never report a fast interrupt.
+The interrupt threshold is raised automatically on interrupt trap,
+and through the write portion of the {mtopsi} access.
 
-Interrupts can still be globally enabled before calling the interrupt handler,
-to ensure that other interrupts, that are not fast interrupts, 
-but have a higher nested interrupt preemption priority can preempt the currently executing handler.
+If no interrupt is pending-enabled when {mtopsi} is read,
+a special handler, located at vector table entry of interrupt id 0,
+jumps to the epilogue of the handler.
 
-While restoring the threshold before the next loop iteration,
-all interrupts have to be disabled.
-As writing zero to {mie} also clears {mfie},
-fast interrupts need to be enabled afterwards.
-
-[[smnip-handler-vectored-external]]
-===== Vectored SW dispatcher including external interrupts
-
-This section builds upon the two handler examples introduced previously.
-
-[,c]
-----
-save mepc, mistatus
-enable fast interrupts (mfie = 1)
-save processor registers
-
-loop {
-    i = read CSR mtopi
-    id = i>>16
-    if (id == MEI) {
-      i = read CSR mtopei
-      eid = i>>16
-      handler_addr = ei_handlers[eid]
-    } else {
-      handler_addr = i_handlers[id]
-    }
-    IPRIO = (i & 0xFF)
-    write IPRIO to mithreshold  /* raise threshold */
-    enable all interrupts (mie = 1)
-    call the interrupt handler at handler_addr
-    disable all interrupts (mie = 0 -> mfie = 0)
-    restore mistatus
-    write mistatus.pithreshold to mithreshold  /* restore threshold */
-    enable fast interrupts (mfie = 1)
-}
-
-restore processor registers
-disable fast interrupts (mfie = 0)
-restore mepc, mistatus
-return from trap
-----
-(This example can be further optimized, but with an increase in complexity.)
-
-
-Assembly version:
+Below is an example of the SW dispatcher written in assembly:
 
 [source,asm]
 ----
