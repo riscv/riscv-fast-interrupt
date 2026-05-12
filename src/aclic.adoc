@@ -723,52 +723,61 @@ where:
 
 An example vector table in the new mode could be:
 
-.External interrupt hardware vector table layout for `{xtvec}.MODE=10`
-[cols="1,3",options="header"]
+.Hardware vector table layout for `{xtvec}.MODE=10`
+[cols="1,1,1",options="header"]
 |===
+| Event
 | Address relative to `OBASE`
 | Contents
 
-| `...`
-| ...
-
+| custom IRQ N
 | `-4 * N`
-| Jump to the handler for the corresponding major interrupt identity N.
-
-| `-4 * 11`
-| Jump to the handler for a machine external interrupt.
-
-| `-4 * 9`
-| Jump to the handler for a supervisor external interrupt.
-
-| `-4 * 7`
-| Jump to the handler for a machine timer interrupt.
-
-| `-4 * 5`
-| Jump to the handler for a supervisor timer interrupt.
-
-| `-4 * 3`
-| Jump to the handler for a machine software interrupt.
-
-| `-4 * 1`
-| Jump to the handler for a supervisor software interrupt.
-
-| `+0`
-| Jump to the common synchronous exception handler and interrupt handler
-
-| `+4 * 1`
-| Jump to the handler for external interrupt minor identity 1.
-
-| `+4 * 2`
-| Jump to the handler for external interrupt minor identity 2.
-
-| `+4 * N`
-| Jump to the handler for external interrupt minor identity N.
+| j handler_irq_n.
 
 | `...`
 | ...
+| 
+
+| Machine timer interrupt
+| `-4 * 7`
+| j interrupt_dispatcher
+
+| Supervisor timer interrupt
+| `-4 * 5`
+| j interrupt_dispatcher
+
+| Machine software interrupt
+| `-4 * 3`
+| j interrupt_dispatcher
+
+| Supervisor software interrupt
+| `-4 * 1`
+| j interrupt_dispatcher
+
+| Synchronous exception
+| `+0`
+| j exception_handler
+
+| External IRQ 1
+| `+4 * 1`
+| j handler_ext_1
+
+| External IRQ 2
+| `+4 * 2`
+| j interrupt_dispatcher
+
+| `...`
+| ...
+| 
+
+| External IRQ N
+| `+4 * N`
+| j handler_ext_n
 
 |===
+
+Note that the table contains some entries, which jump to a common interrupt dispatcher,
+and others, which jump to an interrupt source specific handler.
 
 [[smnip, Smnip/Ssnip]]
 === Nested Interrupt Preemption Support (Smnip & Ssnip)
