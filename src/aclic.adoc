@@ -228,6 +228,8 @@ The table below provides a summary of the ACLIC extensions.
 2+| Fundamental ACLIC Extensions
 | Smidctrl     | Interrupt domain control interface at Machine level
 | Ssidctrl     | Interrupt domain control interface at Supervisor level
+| Smeihv       | External interrupt hardware vectoring at Machine level
+| Sseihv       | External interrupt hardware vectoring at Supervisor level
 | Smnip        | Nested Interrupt Preemption support at Machine level
 | Ssnip        | Nested Interrupt Preemption support at Supervisor level
 2+| Fast Interrupt Extensions for Microcontrollers
@@ -248,19 +250,15 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 == Fundamental ACLIC Extensions
 
-This section lays the foundation for fast interrupt handling,
-by providing a simple interrupt controller addressing the following goals:
-
-  * Up to 1023 external interrupts
-  * Low area overhead
-  * Maximize compatibility with AIA
-  * Low latency interrupt handling (achieved through nested preemption)
+This section lays the foundation for fast interrupt handling.
 
 To achieve this, it builds upon the hart-level extensions of AIA,
 and integrates a subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
 
 In terms of compatibility, the goal is that a hart
 can be used with the same trap handlers as one developed for AIA.
+
+Interrupt latency can be improved by adopting handler to exploit the additional features introduced in this specification.
 
 At config-time, the interface differs from AIA,
 but the same structures for configuration as in the APLIC are used.
@@ -275,7 +273,7 @@ The latter is additionally made up of
 . Interrupt control interface for pending and enable bits based on IMSIC
 . New indirect CSRs for accessing the remaining state of the hart-local APLIC domains
 
-In addition, an extension is defined for accelerating nested preemption (<<smnip>>).
+In addition, extensions are defined for vectoring of external interrupts (<<smeihv>>) and accelerating nested preemption (<<smnip>>).
 
 [[domains, Hart-local APLIC Domains]]
 === Hart-local APLIC domains (Non-ISA)
@@ -702,6 +700,75 @@ results in an illegal instruction exception.
 If the Smstateen extension is implemented, then the bit 58 (IMSIC) in mstateen is implemented, even though IMSIC is not present.
 If bit 58 of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC (stopei, eip[k] and eie[k])
 by S-mode or a lower-privilege mode results in an illegal instruction exception.
+
+
+[[smeihv, Smeihv/Sseihv]]
+=== External interrupt hardware vectoring (Smeihv & Sseihv)
+
+In this extension, a new mode is enabled in {xtvec}.{mode}.
+
+[source]
+----
+ mode  PC on Interrupt
+ 10    OBASE+4*siid                         # External interrupt vectored mode
+
+where:
+  on external interrupt:
+    siid = minor interrupt identity
+  else, on major interrupt
+    siid = - major interrupt identity
+
+  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
+----
+
+An example vector table in the new mode could be:
+
+.External interrupt hardware vector table layout for `{xtvec}.MODE=10`
+[cols="1,3",options="header"]
+|===
+| Address relative to `OBASE`
+| Contents
+
+| `...`
+| ...
+
+| `-4 * N`
+| Jump to the handler for the corresponding major interrupt identity N.
+
+| `-4 * 11`
+| Jump to the handler for a machine external interrupt.
+
+| `-4 * 9`
+| Jump to the handler for a supervisor external interrupt.
+
+| `-4 * 7`
+| Jump to the handler for a machine timer interrupt.
+
+| `-4 * 5`
+| Jump to the handler for a supervisor timer interrupt.
+
+| `-4 * 3`
+| Jump to the handler for a machine software interrupt.
+
+| `-4 * 1`
+| Jump to the handler for a supervisor software interrupt.
+
+| `+0`
+| Jump to the common synchronous exception handler and interrupt handler
+
+| `+4 * 1`
+| Jump to the handler for external interrupt minor identity 1.
+
+| `+4 * 2`
+| Jump to the handler for external interrupt minor identity 2.
+
+| `+4 * N`
+| Jump to the handler for external interrupt minor identity N.
+
+| `...`
+| ...
+
+|===
 
 [[smnip, Smnip/Ssnip]]
 === Nested Interrupt Preemption Support (Smnip & Ssnip)
