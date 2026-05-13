@@ -380,7 +380,7 @@ Additional indirect CSR access is provided to the remaining state.
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using the same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The AIA {eidelivery}, {mptopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
+The AIA {eidelivery}, {mtopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
@@ -413,6 +413,56 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
 
 NOTE: Claiming an external interrupt can be done with the same routine as with an IMSIC.
 I.e. a write to the {xtopei} CSR claims the highest-priority pending-and-enabled interrupt.
+
+==== New top Signed Interrupt Status {xtopsi} CSR
+
+[source]
+----
+           Number  Name         Description
+ (NEW)     0x348   mtopsi       Interrupt top signed interrupt
+ (NEW)     0x148   stopsi       Interrupt top signed interrupt
+----
+
+The CSRs {xtopsi} is provided for efficiently handling major and external interrupts
+in a scheme, where interrupts are dispatched by software.
+
+A read of {xtopsi} returns information about the highest-priority pending-and-enabled interrupt for machine level, in this format:
+
+[source]
+----
+mtopsi
+ XLEN:16    SIID  Signed Interrupt Identity
+ 15:8       (reserved)
+ 7:0        IPRIO
+----
+
+If an external interrupt `i` is the highest-priority pending-and-enabled interrupt:
+
+- {SIID} is equivalent to the minor interrupt identity of `i`
+- {IPRIO} is the interrupt priority number of `i` configured with in the external interrupt controller
+
+Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt:
+
+- {SIID} is the two's complement representation of the negated major interrupt identity of `i`
+- {IPRIO} is equivalent to what would be reported in {xtopi}.{IPRIO}
+
+In case the {iprio} array for major interrupts is read-only zeros,
+{xtopsi}.{IPRIO} must be 0 or 255, i.e the simplified implementation, where {IPRIO} is one when an interrupt is pending is not allowed.
+
+NOTE: The intention of providing a signed version of interrupt identity is to index into a table with 
+decreasing memory address per major identity and increasing addresses for minor identities.
+A signed table index can be extracted through an arithmetic right shift.
+
+Else, if no interupt is pending-and-enabled:
+
+- {SIID} is 0
+- {IPRIO} is 0
+
+A write to the {xtopsi} CSR claims the reported interrupt identity by clearing its pending bit if possible.
+The source value written to {xtopsi} is ignored.
+
+If a read and write of the {xtopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
+the value returned by the read indicates the claimed interrupt.
 
 ==== Indirect CSR access to hart-local APLIC domain configuration
 
@@ -796,7 +846,7 @@ Additionally, it provides interrupt vectoring capabilities for external interrup
            Number  Name         Description
  (NEW)     0x346   mistatus     Interrupt status
  (NEW)     0x347   mithreshold  Interrupt enable threshold
- (NEW)     0x348   mtopsi       Interrupt top signed interrupt
+ (changed) 0x348   mtopsi       Interrupt top signed interrupt
  (Changed) 0x342   mcause       Cause register
 ----
 
@@ -905,14 +955,12 @@ mistatus
  0          mie               Alias of mstatus.mie
 ----
 
-===== New Top Signed Interrupt Status ({mtopsi}) CSR
+===== Changed Top Signed Interrupt Status ({mtopsi}) CSR
 
-The CSRs {mtopsi} is provided for efficiently handling major and external interrupts
-in a scheme, where interrupts are dispatched by software.
-It is designed to manage the interrupt threshold when claiming interrupts,
+The CSR is changed to manage the interrupt threshold when claiming interrupts,
 to enable efficient nested preemption.
 
-A read of {mtopsi} returns information about the highest-priority pending-and-enabled interrupt for machine level, in this format:
+The format of {mtopsi} is changed to accomodate the wider {IPRIO} value needed for nested preemption.
 
 [source]
 ----
@@ -922,21 +970,8 @@ mtopsi
  8:0        IPRIO
 ----
 
-If an external interrupt `i` is the highest-priority pending-and-enabled interrupt:
-
-- {SIID} is equivalent to the minor interrupt identity of `i`
-- {IPRIO} is the interrupt priority number of `i` configured with in the external interrupt controller
-
-Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt:
-
-- {SIID} is the two's complement representation of the negated major interrupt identity of `i`
-- {IPRIO} is equivalent to what would be reported in {mtopi}.{IPRIO}
-
-NOTE: The intention of providing a signed version of interrupt identity is to index into a table with 
-decreasing memory address per major identity and increasing addresses for minor identities.
-A signed table index can be extracted through an arithmetic right shift.
-
-Else, if no interupt is pending-and-enabled:
+The read-behavior is changed in the case that no interupt is pending-enabled.
+In this case
 
 - {SIID} is 0
 - {IPRIO} is equivalent to {mithreshold}.{iprio}
@@ -944,14 +979,11 @@ Else, if no interupt is pending-and-enabled:
 NOTE: Returning {mithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
-A write to the {mtopsi} CSR performs the following stepwise actions:
+The write-behavior is changed to perform the following stepwise actions:
 
 . The the source registers bits [16:8] are written to {mithreshold}.{iprio}
 . The reported interrupt identity is claimed by clearing its pending bit if possible.
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio}
-
-If a read and write of the {mtopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
-the value returned by the read indicates the claimed interrupt.
 
 ===== Changed Cause ({mcause}) CSR
 
@@ -973,7 +1005,7 @@ NOTE: The representation of exception code on interrupts is aligned with the {SI
            Number  Name         Description
  (NEW)     0x146   sistatus     Interrupt status
  (NEW)     0x147   sithreshold  Interrupt enable threshold
- (NEW)     0x148   stopsi       Interrupt top signed interrupt
+ (Changed) 0x148   stopsi       Interrupt top signed interrupt
  (Changed) 0x142   scause       Cause register
 ----
 
@@ -1041,14 +1073,12 @@ sithreshold
 
 The field {sithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
 
-===== New Top Signed Interrupt Status ({stopsi}) CSR
+===== Changed Top Signed Interrupt Status ({stopsi}) CSR
 
-The CSRs {stopsi} is provided for efficiently handling major and external interrupts
-in a scheme, where interrupts are dispatched by software.
-It is designed to manage the interrupt threshold when claiming interrupts,
+The CSR is changed to manage the interrupt threshold when claiming interrupts,
 to enable efficient nested preemption.
 
-A read of {stopsi} returns information about the highest-priority pending-and-enabled interrupt for supervisor level, in this format:
+The format of {stopsi} is changed to accomodate the wider {IPRIO} value needed for nested preemption.
 
 [source]
 ----
@@ -1058,21 +1088,8 @@ mtopsi
  8:0        IPRIO
 ----
 
-If an external interrupt `i` is the highest-priority pending-and-enabled interrupt:
-
-- {SIID} is equivalent to the minor interrupt identity of `i`
-- {IPRIO} is the interrupt priority number of `i` configured with in the external interrupt controller
-
-Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt:
-
-- {SIID} is the two's complement representation of the negated major interrupt identity of `i`
-- {IPRIO} is equivalent to what would be reported in {stopi}.{IPRIO}
-
-NOTE: The intention of providing a signed version of interrupt identity is to index into a table with 
-decreasing memory address per major identity and increasing addresses for minor identities.
-A signed table index can be extracted through an arithmetic right shift.
-
-Else, if no interupt is pending-and-enabled:
+The read-behavior is changed in the case that no interupt is pending-enabled.
+In this case
 
 - {SIID} is 0
 - {IPRIO} is equivalent to {sithreshold}.{iprio}
@@ -1080,14 +1097,11 @@ Else, if no interupt is pending-and-enabled:
 NOTE: Returning {sithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
-A write to the {stopsi} CSR performs the following stepwise actions:
+The write-behavior is changed to perform the following stepwise actions:
 
-. The the source registers value is written to {sithreshold}.{iprio}
+. The the source registers bits [16:8] are written to {sithreshold}.{iprio}
 . The reported interrupt identity is claimed by clearing its pending bit if possible.
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio}
-
-If a read and write of the {stopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
-the value returned by the read indicates the claimed interrupt.
 
 ===== Changed Cause ({scause}) CSR
 
