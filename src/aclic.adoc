@@ -748,7 +748,6 @@ If the Smstateen extension is implemented, then the bit 58 (IMSIC) in mstateen i
 If bit 58 of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC (stopei, eip[k] and eie[k])
 by S-mode or a lower-privilege mode results in an illegal instruction exception.
 
-
 [[smeihv, Smeihv/Sseihv]]
 === External interrupt hardware vectoring (Smeihv & Sseihv)
 
@@ -1784,27 +1783,22 @@ this requires either a system call or trap-and-emulate operation.
 
 It is recommended that the handler fetch be ignored for hardware triggers and breakpoints.
 
-==== Vector table fault handling
+==== Interrupt jump table fault handling
 
-Faults that occur during the read of interrupt jump table entries are only recoverable,
-if the double trap extension(s) are implemented.
-For interrupts in M-mode, this additionally requires the Smrnmi extension.
+Faults that occur during the read of interrupt jump table entries are not recoverable.
+If a load page fault can occur during the interrupt jump table read,
+it is recommended configure {xtvec}.{mode} to `10`, if interrupt vectoring is desired.
 
-NOTE: Resuming after a fault on a interrupt jump table read is currently only seen as useful for Load page fault.
-
-In this case, if an exception trap occurs during the interrupt interrupt jump table entry read,
+If an exception trap occurs during the interrupt interrupt jump table entry read,
 the following holds true:
 Depending on where the second trap is handled,
-the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
+the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
 In addition, {tval} is either set to zero or written with the faulting address.
 
 NOTE: For simpler systems, we do not require that {tval} is written
 with the faulting address.  For systems with demand paging, {tval}
 should be written with the faulting address to simplify page-fault
 handling code.
-
-NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
-In case a higher priority interrupt became pending and enabled, this will trap first.
 
 As long as synchronous exceptions can occur during the interrupt jump table read,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
