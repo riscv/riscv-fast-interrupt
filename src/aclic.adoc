@@ -57,7 +57,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :tvec: pass:q[``**__x__**tvec``]
 :ivt: pass:q[``**__x__**ivt``]
 :SHAMT: pass:q[``SHAMT``]
-:xivt: pass:q[``xivt``]
+:xijt: pass:q[``xijt``]
 :EHV: pass:q[``EHV``]
 :xtvec: pass:q[``xtvec``]
 :mode: pass:q[``mode``]
@@ -101,7 +101,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mie: pass:q[``mie``]
 :xie: pass:q[``xie``]
 :mtvec: pass:q[``mtvec``]
-:mivt: pass:q[``mivt``]
+:mijt: pass:q[``mijt``]
 :mscratch: pass:q[``mscratch``]
 :mspcs: pass:q[``mspcs``]
 :mepc: pass:q[``mepc``]
@@ -135,7 +135,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :sideleg: pass:q[``sideleg``]
 :sie: pass:q[``sie``]
 :stvec: pass:q[``stvec``]
-:sivt: pass:q[``sivt``]
+:sijt: pass:q[``sijt``]
 :sscratch: pass:q[``sscratch``]
 :sspcs: pass:q[``sspcs``]
 :sepc: pass:q[``sepc``]
@@ -231,8 +231,8 @@ The table below provides a summary of the ACLIC extensions.
 | Smnip        | Nested Interrupt Preemption support at Machine level
 | Ssnip        | Nested Interrupt Preemption support at Supervisor level
 2+| Fast Interrupt Extensions for Microcontrollers
-| Smivt        | Support for interrupt vector table at Machine level
-| Ssivt        | Support for interrupt vector table at Supervisor level
+| Smijt        | Interrupt jump table at Machine level
+| Ssijt        | Interrupt jump table at Supervisor level
 | Smehv        | Synchronous exception hardware vectoring at Machine level
 | Ssehv        | Synchronous exception hardware vectoring at Supervisor level
 | Smcsps       | Conditional stack pointer swap at Machine level
@@ -835,7 +835,6 @@ The Ssnip extension depends on the Ssidctrl extension and adds nested preemption
 
 The extensions enable higher-priority interrupts to preempt lower-priority interrupts efficiently in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
-Additionally, it provides interrupt vectoring capabilities for external interrupts.
 
 ==== Changed and new CSRs at Machine Level
 
@@ -1343,7 +1342,7 @@ which can reduce latencies for fast interrupt handling.
 
 The features specified here are each capable of shaving of several cycles of a worst-case interrupt latency.
 They include accelerating a conditional swap of the current stack pointer with a more privileged one (<<smcsps>>),
-HW-assisted vectoring of interrupts (<<smivt>>) and synchronous exceptions (<<smehv>>),
+HW-assisted vectoring of interrupts (<<smijt>>) and synchronous exceptions (<<smehv>>),
 and HW-assisted save and restore (<<smip>>).
 
 NOTE: These extensions are targeted at microcontrollers with a comparatively simple microarchitecture.
@@ -1624,13 +1623,15 @@ will raise an illegal-instruction exception.
 Included in: <<smcsps,Sscsps>>
 
 
-[[smivt, Smivt/Ssivt]]
-=== Support for interrupt vector table (Smivt, Ssivt)
+[[smijt, Smijt/Ssijt]]
+=== Support for interrupt jump table (Smijt, Ssijt)
 
-These extensions add a new mode for taking interrupts via a dedicated interrupt vector table.
+These extensions add a new mode for taking interrupts via a dedicated interrupt jump table.
+In contrast to other interrupt vector modes,
+an interrupt jump table is used to perform hardware vectoring of interrupts.
 
-In this new mode, when an interrupt is taken, the hart hardware loads the vector
-table entry for the associated interrupt (table pointed to the new {xivt} CSR),
+In this new mode, when an interrupt is taken, the hart hardware loads the interrupt jump
+table  (table pointed to the new {xijt} CSR) entry for the associated interrupt,
 masks off the least-significant bit (for IALIGN=16) or masks off the two least-significant bits (for IALIGN=32),
 and then jumps to the masked address.
 
@@ -1643,20 +1644,20 @@ This is useful when handlers are more than 2 MiB away from the vector table entr
 ----
        Number  Name         Description
        0x305   mtvec        M-mode Trap-handler base address / interrupt mode
- (NEW) 0x307   mivt         M-mode Interrupt-handler vector table base address
+ (NEW) 0x307   mijt         M-mode Interrupt jump table base address
        0x105   stvec        S-mode Trap-handler base address / interrupt mode
- (NEW) 0x107   sivt         S-mode Interrupt-handler vector table base address
+ (NEW) 0x107   sijt         S-mode Interrupt jump table base address
 ----
 
-===== New {xivt} CSR
+===== New {xijt} CSR
 
-A new base address for the vector table is introduced.
+A new base address for the interrupt jump table is introduced.
 
-The WARL XLEN-bit {xivt} CSR
-holds the base address of the interrupt vector table.
-The address held in {xivt} is aligned on a 64-byte or greater power-of-two boundary.
+The WARL XLEN-bit {xijt} CSR
+holds the base address of the interrupt jump table.
+The address held in {xijt} is aligned on a 64-byte or greater power-of-two boundary.
 
-{xivt} is defined as follows:
+{xijt} is defined as follows:
 
 [bytefield]
 ----
@@ -1684,18 +1685,17 @@ NOTE: The actual alignment can be determined
 by writing ones to the low-order bits
 then reading them back.
 
-NOTE: The resulting vector tables, especially for external interrupts,
-can consume non-negligible memory space.
+NOTE: The resulting jump table can consume non-negligible memory space.
 To limit the overall memory footprint,
-{xivt} values at different privilege levels may be configured to the same values, respectively.
+{xijt} values at different privilege levels may be configured to the same values, respectively.
 
-{xivt}.{SHAMT} configures an additional shift amount that is applied to a vector table offset.
+{xijt}.{SHAMT} configures an additional shift amount that is applied to a jump table offset.
 It is used adjust offset for ABI-defined pointer sizes,
 or to allocate additional space within the table e.g. for storing handler arguments.
 
 ===== New {xtvec} CSR Mode
 
-Interrupt vector table mode is encoded as a new state in the
+Interrupt jump table mode is encoded as a new state in the
 existing {xtvec} WARL register, where {xtvec}.{mode} (the two
 least-significant bits) is `11`.
 
@@ -1704,15 +1704,15 @@ The PC upon interrupt is changed as follows:
 [source]
 ----
  mode  PC on Interrupt
- 11    handler   # Interrupt vector table mode
+ 11    handler_addr   # Interrupt jump table mode
 
 where:
 
   M[a]   = Contents of memory address at address "a"
-  entry = M[VTBASE+(vtoffset << (xivt.SHAMT + 2))]
+  entry = M[VTBASE+(vtoffset << (xijt.SHAMT + 2))]
   VEN    = entry & 0x1  # Vectoring enable
   VTMASK = ~0x1 if IALIGN=16 or ~0x3 if IALIGN=32  # Vector table mask
-  VTBASE = xivt[XLEN-1:6]<<6  # IVT base is at least 64-byte aligned
+  VTBASE = xijt[XLEN-1:6]<<6  # IJT base is at least 64-byte aligned
 
   if external interrupt:
     vtoffset = Minor Interrupt Identity
@@ -1720,12 +1720,12 @@ where:
     vtoffset = - (Major Interrupt Identity)
 
   if VEN = 1
-    handler = entry & VTMASK
+    handler_addr = entry & VTMASK
   else
-    handler = xtvec[XLEN-1:2]<<2
+    handler_addr = xtvec[XLEN-1:2]<<2
 ----
 
-In interrupt vector table mode, when interrupts are taken, the interrupt behavior is modified as follows:
+In interrupt jump table mode, when interrupts are taken, the interrupt behavior is modified as follows:
 After executing the required side-effects as required with the existing behavior,
 the hart then reads an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (VTBASE).
@@ -1738,14 +1738,14 @@ Instead, the trap is redirected to a common entry point defined by {mtvec}.
 NOTE: Even with hardware vectoring, some interrupts are expected to used a common SW dispatcher.
 By deasserting the LSB of their vector table entry,
 a trap will take them to a SW dispatcher at a common entry point indicated by {mtvec}.
-This SW dispatcher may access the table pointed to by {xivt} to retrive the interrupts handler address.
+This SW dispatcher may access the table pointed to by {xijt} to retrive the interrupts handler address.
 
 If the read is successful and the LSB of entry is one,
 the hart clears the low bit(s) (depending on IALIGN) of the handler address
 and sets the PC to this handler address.
 
 NOTE: The original vectored mode simply jumps to an address in
-the trap vector table, while the interrupt vector table mode reads a
+the trap vector table, while the interrupt jump table mode reads a
 handler function address from the table, and jumps to it in hardware.
 
 NOTE: In case of a level-sensitive interrupt,
@@ -1765,7 +1765,7 @@ Such a mode is useful, if interrupts can be installed at run-time.
 Also, treating these accesses as reads harmonizes the permissions with accesses into the table
 by a SW dispatcher based on interrupt identity.
 
-NOTE: If {xivt} is configured such that multiple privilege levels
+NOTE: If {xijt} is configured such that multiple privilege levels
 share a single vector table, the memory protection units
 (e.g., PMP, Smepmp) must grant read permission to the shared vector table
 for all applicable lower privilege levels. +
@@ -1786,13 +1786,13 @@ It is recommended that the handler fetch be ignored for hardware triggers and br
 
 ==== Vector table fault handling
 
-Faults that occur during the fetch of interrupt vector table entries are only recoverable,
+Faults that occur during the read of interrupt jump table entries are only recoverable,
 if the double trap extension(s) are implemented.
 For interrupts in M-mode, this additionally requires the Smrnmi extension.
 
-NOTE: Resuming after a fault on a vector table fetch is currently only seen as useful for instruction page faults.
+NOTE: Resuming after a fault on a interrupt jump table read is currently only seen as useful for Load page fault.
 
-In this case, if an exception trap occurs during the interrupt handler function address fetch,
+In this case, if an exception trap occurs during the interrupt interrupt jump table entry read,
 the following holds true:
 Depending on where the second trap is handled,
 the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
@@ -1806,7 +1806,7 @@ handling code.
 NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
 In case a higher priority interrupt became pending and enabled, this will trap first.
 
-As long as synchronous exceptions can occur during the interrupt vector table fetch,
+As long as synchronous exceptions can occur during the interrupt jump table read,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 
 ==== Handler support
@@ -1815,21 +1815,21 @@ The extension is expected to be used in conjunction with the <<smnip>> extension
 In this case, the handlers introduced in Sections <<smnip-sw-dispatcher>> and <<smnip-fast-handler>> work unmodified.
 
 For the SW dispatcher, an additional configuration assumption is
-that interrupts trapping to the SW dispatcher have the LSB of their interrupt vector table entry zero.
-Interrupts using a fast handler must have the LSB of their vector table entry set to one.
+that interrupts trapping to the SW dispatcher have the LSB of their interrupt jump table entry zero.
+Interrupts using a fast handler must have the LSB of their interrupt jump table entry set to one.
 
 ==== State Enable
 
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in mstateen0 is implemented.
 If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
-then access to the new CSR {sivt} by S-mode or a lower-privilege mode
+then access to the new CSR {sijt} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
 [[smehv, Smehv/Ssehv]]
 === Synchronous exception hardware vectoring (Smehv, Ssehv)
 
-The Smehv and Ssehv extensions depend upon the Smivt and Ssivt extensions, respectively.
+The Smehv and Ssehv extensions depend upon the Smijt and Ssijt extensions, respectively.
 
 Accelerating synchronous exception handlers through vectoring may reduce interrupt latency.
 During synchronous exceptions, interrupts are disabled.
@@ -1838,12 +1838,12 @@ Typical examples of synchronous exceptions that occur as part of normal program 
 
 With this extension, synchronous exceptions can be vectored using {xtvec} as an offset.
 
-==== Additional bit in {xivt} CSR
+==== Additional bit in {xijt} CSR
 
-The {xivt} CSR is changed by adding a bit to control
+The {xijt} CSR is changed by adding a bit to control
 if synchronous exception hardware vectoring is active.
 
-{xivt} is updated to incorporate an additional bit {EHV}.
+{xijt} is updated to incorporate an additional bit {EHV}.
 
 [bytefield]
 ----
@@ -1872,14 +1872,14 @@ if synchronous exception hardware vectoring is active.
 
 ==== Operation
 
-When {xivt}.{EHV} is clear, the exception trap behavior is unchanged.
+When {xijt}.{EHV} is clear, the exception trap behavior is unchanged.
 
-When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry point:
+When {xijt}.{EHV} is set, the synchronous exceptions trap to the following entry point:
 
 [source]
 ----
  mode  PC on Synchronous Exception
- 11    OBASE+4*exccode    # Interrupt vector table mode
+ 11    OBASE+4*exccode    # Interrupt jump table mode
 
  where OBASE = xtvec[XLEN-1:2]<<2  # Vector base is at least 4-byte aligned
 ----
