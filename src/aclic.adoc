@@ -831,9 +831,9 @@ and others, which jump to an interrupt source specific handler.
 [[smnip, Smnip/Ssnip]]
 === Nested Interrupt Preemption Support (Smnip & Ssnip)
 
-The Smnip extension depends on the Smaia extension and adds nested preemption support at machine level.
+The Smnip extension depends on the Smidctrl extension and adds nested preemption support at machine level.
 
-The Ssnip extension depends on the Smnip extension and adds nested preemption support at supervisor level.
+The Ssnip extension depends on the Ssidctrl extension and adds nested preemption support at supervisor level.
 
 The extensions enable higher-priority interrupts to preempt lower-priority interrupts efficiently in a nested fashion.
 It provides additional state to resume execution of the previous handler after a nested preemption.
