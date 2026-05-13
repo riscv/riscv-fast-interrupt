@@ -63,6 +63,8 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mode: pass:q[``mode``]
 :xepc: pass:q[``xepc``]
 :xspcs: pass:q[``xspcs``]
+:sppush: pass:q[``sppush``]
+:psppush: pass:q[``psppush``]
 :scratch: pass:q[``**__x__**scratch``]
 :scratchcsw: pass:q[``**__x__**scratchcsw``]
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
@@ -946,8 +948,9 @@ mistatus
  20:19      VS[1:0]           Vector extension status, mirror of mstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
  16:8       pithreshprio[8:0] Previous mithreshold.iprio value
- 7          psppush           Previous stack pointer push, mirror of mspcs.ppush, if Smcsps is implemented
- 6:1        (reserved)
+ 7          psppush           Previous stack pointer push (only if Smcsps is implemented)
+ 6          sppush            Stack pointer push (only if Smcsps is implemented)
+ 5:1        (reserved)
  0          mie               Alias of mstatus.mie
 ----
 
@@ -1371,66 +1374,45 @@ Conditionally, this stack pointer can be swapped with the currently active one.
 (NEW) 0x149   sspcs        S-mode stack pointer for conditional swap (WARL)
 ----
 
-The CSR is defined as follows:
-
-[bytefield]
-----
-(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
-(def row-height 35 )
-(def row-header-fn nil)
-(def left-margin 100)
-(def right-margin 100)
-(def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["" "" "0" "" "" "" "" "1" "" "" "2" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
-
-(draw-box "SP[XLEN-1:2]" {:span 12 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "PUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-(draw-box "PPUSH" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 3 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
-
-(draw-box "XLEN-2" {:span 22 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-(draw-box "1" {:span 5 :borders {}})
-----
-
-In addition to the stack pointer, this register holds two additional fields, `PUSH` and `PPUSH` (as in previous `PUSH`).
-These indicate if a stack pointer swap is expected during a push or pop sequence, respectively.
+Each CSR holds a full XLEN-wide value, that can be swapped with the designated stack pointer register (x2).
 
 NOTE: As per the RISC-V psABI, stack pointers are at least 4 B aligned.
 Therefore, at least the two least significant bits of the stack pointer are zero in psABI compliant code.
+Nevertheless, a full XLEN-wide register is provided,
+in case a trap happens during non-psABI compliant code.
+It is the responsibilty of the programmer
+to write a psABI compliant stack pointer value into {xspcs}
+before a stack pointer swap can occur.
 
 ==== Instructions for conditional stack pointer swap
 
 To simplify and accelerate the conditional stack pointer swap, two instructions per mode are introduced:
 <<#insns-mcspspush>>, <<#insns-mcspspop>>, <<#insns-scspspush>>, and <<#insns-scspspop>>.
-To decide if a stack pointer swap is required, these instructions evaluate the two LSBs of the register.
-The `PUSH` bit indicates that the stack pointer in {xspcs} shall be swapped during the push sequence of the next handler.
+To decide if a stack pointer swap is required, these instructions evaluate dedicates status bits.
+The {xistatus}.{sppush} (Stack pointer push) bit indicates that the stack pointer in {xspcs} shall be swapped during the push sequence of the next handler.
 
-The `PPUSH` bit indicates that the stack pointer shall be swapped back into {xspcs}.
-It corresponds to the value of the `PUSH` bit in the previous context.
+The {xistatus}.{psppush} (Previous stack pointer push) bit indicates that the stack pointer shall be swapped back into {xspcs} during the pop sequence the current.
+It corresponds to the value of the {xistatus}.{sppush} bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
 
-Software can deactivate the stack pointer swap mechanism
-by writing zero to {xspcs}.`PUSH`.
+Software can deactivate the stack pointer swap mechanism by writing zero to {xistatus}.{sppush}.
 
 An example sequence with one trap from S- to M-mode and one preemption within M-mode will look like this:
 
 [source]
 ----
-Mode  Event            mspcs.PUSH  mspcs.PPUSH  sp-swap
-S     -                1           X            n
-M     trap             1           X            n
-M     mcspspush        0           1            y
-M     save context     0           1            n
-M     trap             0           1            n
-M     mcspspush        0           0            n
-M     mcspspop         0           0            n
-M     mret             0           0            n
-M     restore context  0           1            n
-M     mcspspop         1           0            y
-S     mret             1           0            n
+Mode  Event            sppush  psppush  sp-swap
+S     -                1       X        n
+M     trap             1       X        n
+M     mcspspush        0       1        y
+M     save context     0       1        n
+M     trap             0       1        n
+M     mcspspush        0       0        n
+M     mcspspop         0       0        n
+M     mret             0       0        n
+M     restore context  0       1        n
+M     mcspspop         1       0        y
+S     mret             1       0        n
 ----
 
 In this example,
@@ -1456,7 +1438,7 @@ Synopsis::
 Conditional stack pointer swap (push mode)
 
 Mnemonic::
-mcspspush rd, rs
+mcspspush x2, x2
 
 Encoding::
 [wavedrom, ,svg]
@@ -1478,12 +1460,12 @@ The behavior of the operations is:
 
 [source]
 ----
-mspcs.PPUSH = mspcs.PUSH     /* Latch push bit into the previous push bit */
-if (mspcs.PUSH == 1)         /* stack pointer shall be swapped */
-    tmp = rs                 /* save current sp for writing later */
-    rd = mspcs.SP            /* Write the stack pointer with the low bits cleared */
-    mspcs.SP = tmp[XLEN-1:4] /* save original value of sp into mspcs */
-    mspcs.PUSH = 0           /* Indicates the stack pointer has been swapped */
+mistatus.psppush = mistatus.sppush  /* Latch push bit into the previous push bit */
+if (mistatus.sppush == 1)           /* stack pointer shall be swapped */
+    tmp = rs                        /* save current sp for writing later */
+    rd = mspcs                      /* Write the stack pointer */
+    mspcs = tmp                     /* save original value of sp into mspcs */
+    mistatus.sppush = 0             /* Indicates the stack pointer has been swapped */
 ----
 
 Attempting to execute in a mode less privileged than machine level
@@ -1498,7 +1480,7 @@ Synopsis::
 Conditional stack pointer swap (pop mode)
 
 Mnemonic::
-mcspspop
+mcspspop, x2, x2
 
 Encoding::
 [wavedrom, ,svg]
@@ -1516,17 +1498,17 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of mcspspush, and is used to pop the previous context.
-A swap is performed, if the `PPUSH` field is set.
+A swap is performed, if the {mistatus}.{psppush} field is set.
 
 Behavior::
 
 [source]
 ----
-mspcs.PUSH = mspcs.PPUSH     /* Restore PUSH bit from PPUSH */
-if (mspcs.PPUSH == 1)
-    tmp = mspcs.SP           /* save mspcs.SP as temporary value */
-    mspcs.SP = rs[XLEN-1:4]  /* write current stack pointer to mspcs */
-    mspcs.PPUSH = 0          /* Clear previous push bit */
+mistatus.sppush = mistatus.psppush  /* Restore spppush bit from psppush */
+if (mistatus.psppush == 1)
+    tmp = mspcs              /* save mspcs as temporary value */
+    mspcs = rs               /* write current stack pointer to mspcs */
+    mistatus.psppush = 0     /* Clear previous push bit */
     rd = tmp                 /* write original mspcs value to stack pointer */
 ----
 
@@ -1542,7 +1524,7 @@ Synopsis::
 Conditional stack pointer swap (push mode)
 
 Mnemonic::
-scspspush rd, rs
+scspspush x2,x2
 
 Encoding::
 [wavedrom, ,svg]
@@ -1564,12 +1546,12 @@ The behavior of the operations is:
 
 [source]
 ----
-sspcs.PPUSH = sspcs.PUSH     /* Latch push bit into the previous push bit */
-if (sspcs.PUSH == 1)         /* stack pointer shall be swapped */
-    tmp = rs                 /* save current sp for writing later */
-    rd = sspcs.SP            /* Write the stack pointer with the low bits cleared */
-    sspcs.SP = tmp[XLEN-1:4] /* save original value of sp into sspcs */
-    sspcs.PUSH = 0           /* Indicates the stack pointer has been swapped */
+sistatus.psppush = sistatus.sppush  /* Latch push bit into the previous push bit */
+if (sistatus.sppush == 1)           /* stack pointer shall be swapped */
+    tmp = rs                        /* save current sp for writing later */
+    rd = sspcs                      /* Write the stack pointer */
+    sspcs = tmp                     /* save original value of sp into sspcs */
+    sistatus.sppush = 0             /* Indicates the stack pointer has been swapped */
 ----
 
 Attempting to execute in a mode less privileged than supervisor level
@@ -1584,7 +1566,7 @@ Synopsis::
 Conditional stack pointer swap (pop mode)
 
 Mnemonic::
-scspspop
+scspspop x2, x2
 
 Encoding::
 [wavedrom, ,svg]
@@ -1602,18 +1584,18 @@ Encoding::
 Description::
 
 This instruction performs the opposite operation of scspspush, and is used to pop the previous context.
-A swap is performed, if the `PPUSH` field is set.
+A swap is performed, if the {sistatus}.{psppush} field is set.
 
 Behavior::
 
 [source]
 ----
-sspcs.PUSH = sspcs.PPUSH     /* Restore PUSH bit from PPUSH */
-if (sspcs.PPUSH == 1)
-    tmp = sspcs.SP           /* save sspcs.SP as temporary value */
-    sspcs.SP = rs[XLEN-1:4]  /* write current stack pointer to sspcs */
-    sspcs.PPUSH = 0          /* Clear previous push bit */
-    rd = tmp                 /* write original sspcs value to stack pointer */
+sistatus.sppush = sistatus.psppush  /* Restore spppush bit from psppush */
+if (sistatus.psppush == 1)
+    tmp = sspcs            /* save sspcs as temporary value */
+    sspcs = rs             /* write current stack pointer to sspcs */
+    sistatus.psppush = 0   /* Clear previous push bit */
+    rd = tmp               /* write original sspcs value to stack pointer */
 ----
 
 Attempting to execute in a mode less privileged than supervisor level
