@@ -77,7 +77,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :EHV: pass:q[``EHV``]
 :SIID: pass:q[``SIID``]
 :IPRIO: pass:q[``IPRIO``]
-:iprio: pass:q[``iprio``]
+:iprio_lowercase: pass:q[``iprio``]
 :pithreshprio: pass:q[``pithreshprio``]
 :sppush: pass:q[``sppush``]
 :psppush: pass:q[``psppush``]
@@ -302,7 +302,7 @@ A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specifica
 read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
 writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
  +
-Further, resource-constrained implementations of these extensions are expected to implement the {iprio} array of major interrupts as read-only zeros.
+Further, resource-constrained implementations of these extensions are expected to implement the {iprio_lowercase} array of major interrupts as read-only zeros.
 
 The interrupt control interface contains the hart-level interface to operate a hart-local APLIC,
 by building on the hart-level features of AIA.
@@ -387,7 +387,7 @@ Else, if a major interrupt `i` is the highest-priority pending-and-enabled inter
 - {SIID} is the two's complement representation of the negated major interrupt identity of `i`
 - {IPRIO} is equivalent to what would be reported in {xtopi}.{IPRIO}
 
-In case the {iprio} array for major interrupts is read-only zeros,
+In case the {iprio_lowercase} array for major interrupts is read-only zeros,
 {xtopsi}.{IPRIO} must be 0 or 255, i.e. the simplified implementation, where {IPRIO} is one when an interrupt is pending, is not allowed.
 
 NOTE: The intention of providing a signed version of interrupt identity is to index into a table with
@@ -858,7 +858,7 @@ mithreshold
  8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
-The field {mithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
+The field {mithreshold}.{iprio_lowercase} implements exactly IPRIOLEN+1 bits.
 
 [NOTE]
 ====
@@ -867,7 +867,7 @@ this CSR applies to major and minor interrupt identities.
 
 Because {IPRIO} = 0 is a valid value for major interrupts with a default priority greater
 than external interrupts,
-{mithreshold}.{iprio} = 0 does not enable all interrupts,
+{mithreshold}.{iprio_lowercase} = 0 does not enable all interrupts,
 and the field needs to be one bit wider than IPRIOLEN in order to allow a threshold
 that enables all interrupts.
 ====
@@ -918,16 +918,16 @@ The read-behavior is changed in the case that no interrupt is pending-enabled.
 In this case
 
 - {SIID} is 0
-- {IPRIO} is equivalent to {mithreshold}.{iprio}
+- {IPRIO} is equivalent to {mithreshold}.{iprio_lowercase}
 
-NOTE: Returning {mithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+NOTE: Returning {mithreshold}.{iprio_lowercase} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
 The write-behavior is changed to perform the following stepwise actions:
 
-. The source register bits [16:8] are written to {mithreshold}.{iprio}
+. The source register bits [16:8] are written to {mithreshold}.{iprio_lowercase}
 . The reported interrupt identity is claimed by clearing its pending bit if possible.
-. The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio}
+. The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio_lowercase}
 
 ===== Changed Cause ({mcause}) CSR
 
@@ -1019,7 +1019,7 @@ sithreshold
  8:0        iprio[8:0]  Interrupt-enable threshold
 ----
 
-The field {sithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
+The field {sithreshold}.{iprio_lowercase} implements exactly IPRIOLEN+1 bits.
 
 ===== Changed Top Signed Interrupt Status ({stopsi}) CSR
 
@@ -1040,16 +1040,16 @@ The read-behavior is changed in the case that no interrupt is pending-enabled.
 In this case
 
 - {SIID} is 0
-- {IPRIO} is equivalent to {sithreshold}.{iprio}
+- {IPRIO} is equivalent to {sithreshold}.{iprio_lowercase}
 
-NOTE: Returning {sithreshold}.{iprio} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
+NOTE: Returning {sithreshold}.{iprio_lowercase} as {IPRIO} field allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero, software would need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
 The write-behavior is changed to perform the following stepwise actions:
 
-. The source register bits [16:8] are written to {sithreshold}.{iprio}
+. The source register bits [16:8] are written to {sithreshold}.{iprio_lowercase}
 . The reported interrupt identity is claimed by clearing its pending bit if possible.
-. The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio}
+. The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio_lowercase}
 
 ===== Changed Cause ({scause}) CSR
 
@@ -1091,7 +1091,7 @@ if the interrupt source is the highest priority pending-enabled one.
 [NOTE]
 ====
 The highest possible priority value of {IPRIO} is 0.
-When {xithreshold}.{iprio} and NIPPRIO_MASK is 0,
+When {xithreshold}.{iprio_lowercase} and NIPPRIO_MASK is 0,
 the nested interrupt preemption threshold is 0 and thus,
 all interrupts are considered disabled.
 ====
@@ -1099,7 +1099,7 @@ all interrupts are considered disabled.
 [NOTE]
 ====
 The lowest priority value reported by a pending-enabled interrupt in {IPRIO} is 255.
-When {xithreshold}.{iprio} is 256 or larger,
+When {xithreshold}.{iprio_lowercase} is 256 or larger,
 no interrupts are disabled by the thresholding mechanism.
 ====
 
@@ -1114,10 +1114,10 @@ according to the rules defined in AIA.
 The existing trap behavior is modified as follows:
 
 When a trap is taken into level `x`,
-the current value of {xithreshold}.{iprio} is written to {xistatus}.{pithreshprio}.
+the current value of {xithreshold}.{iprio_lowercase} is written to {xistatus}.{pithreshprio}.
 
 Additionally, if the trap was taken on an interrupt,
-{xithreshold}.{iprio} is set to {xtopsi}.{IPRIO}.
+{xithreshold}.{iprio_lowercase} is set to {xtopsi}.{IPRIO}.
 This automatically raises the interrupt-enable threshold.
 Also, the interrupt is claimed by clearing the pending bit if possible.
 
@@ -1130,7 +1130,7 @@ NOTE: Synchronous exceptions do not modify the value of {xithreshold}.
 
 The behavior of an {xret} instruction is modified as follows:
 
-{xret} sets {xithreshold}.{iprio} to {xistatus}.{pithreshprio}.
+{xret} sets {xithreshold}.{iprio_lowercase} to {xistatus}.{pithreshprio}.
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
 
