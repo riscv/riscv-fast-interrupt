@@ -1785,8 +1785,8 @@ It is recommended that the handler fetch be ignored for hardware triggers and br
 
 ==== Interrupt jump table fault handling
 
-Faults that occur during the read of interrupt jump table entries are not recoverable.
-If a load page fault can occur during the interrupt jump table read,
+Faults that occur during the read of interrupt jump table entries may not be recoverable.
+If an unrecoverable load page fault can occur during the interrupt jump table read,
 it is recommended configure {xtvec}.{mode} to `10`, if interrupt vectoring is desired.
 
 If an exception trap occurs during the interrupt interrupt jump table entry read,
