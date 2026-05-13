@@ -350,6 +350,9 @@ A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specifica
 "When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
 read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
 writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
+ +
+Further, resource contrained implementations of this extensions are expected to implement the {iprio} array of major interrupts are read-only zeros.
+This allows a simplified implementation of field {mtopi}.{IPRIO} in which its value is always 1 whenever {mtopi} is not zero.
 
 The interrupt control interface contains the hart-level interface to operate a hart-local APLIC,
 by building on the hart-level features of AIA.
@@ -377,7 +380,7 @@ Additional indirect CSR access is provided to the remaining state.
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using the same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The AIA {eidelivery} and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
+The AIA {eidelivery}, {mptopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
@@ -401,10 +404,6 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
   * It simplifies the handling of level-sensitive interrupts, avoiding additional checking of the pending flag in the APLIC in a handler of a level sensitive interrupt.
   * It simplifies the register interface, as CSR instructions have single bit operations
 ====
-
-The {xtopei} registers work analogous to the IMSIC operation,
-but map to the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
-The {xtopei} CSR reflects both the interrupt identity and the interrupt priority.
 
 [%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
 |===
