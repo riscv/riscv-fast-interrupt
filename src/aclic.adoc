@@ -1701,8 +1701,6 @@ Interrupt vector table mode is encoded as a new state in the
 existing {xtvec} WARL register, where {xtvec}.{mode} (the two
 least-significant bits) is `11`.
 
-===== Changes to {xtvec} CSR Mode
-
 The PC upon interrupt is changed as follows:
 
 [source]
@@ -1874,6 +1872,11 @@ When {xiconfig}.{xehv} is set, the synchronous exceptions trap to the following 
 ----
 
 In all other modes, the trap behavior of synchronous exceptions is unchanged.
+
+NOTE: If an interrupt does not have vectoring enabled, i.e VEN=0,
+it jumps to {xtvec}, i.e. it uses the same trap entry point as the "Instruction address misaligned exception".
+If 16-bit instructions are supported (IALIGN=16),
+this exception cannot occur.
 
 [[smip, Smip/Ssip]]
 === Interrupt handler push and pop extension (Smip & Ssip)
