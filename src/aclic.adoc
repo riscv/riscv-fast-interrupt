@@ -51,11 +51,6 @@ endif::[]
 Graphics used are either explicitly available for free, are the property of RISC-V International, or were created using Wavedrom.
 
 :xstatus: pass:q[``xstatus``]
-:status: pass:q[``**__x__**status``]
-:ideleg: pass:q[``**__x__**ideleg``]
-:ie: pass:q[``**__x__**ie``]
-:tvec: pass:q[``**__x__**tvec``]
-:ivt: pass:q[``**__x__**ivt``]
 :SHAMT: pass:q[``SHAMT``]
 :xijt: pass:q[``xijt``]
 :EHV: pass:q[``EHV``]
@@ -65,14 +60,8 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xspcs: pass:q[``xspcs``]
 :sppush: pass:q[``sppush``]
 :psppush: pass:q[``psppush``]
-:scratch: pass:q[``**__x__**scratch``]
-:scratchcsw: pass:q[``**__x__**scratchcsw``]
-:scratchcswl: pass:q[``**__x__**scratchcswl``]
-:epc: pass:q[``**__x__**epc``]
 :xcause: pass:q[``xcause``]
-:tval: pass:q[``**__x__**tval``]
-:ip: pass:q[``**__x__**ip``]
-:istatus: pass:q[``**__x__**istatus``]
+:xtval: pass:q[`xtval``]
 :xistatus: pass:q[``xistatus``]
 :pithreshprio: pass:q[``pithreshprio``]
 :mithreshold: pass:q[``mithreshold``]
@@ -81,8 +70,6 @@ Graphics used are either explicitly available for free, are the property of RISC
 
 :eidelivery: pass:q[``eidelivery``]
 :eithreshold: pass:q[``eithreshold``]
-:eipk: pass:q[``eip__k__``]
-:eiek: pass:q[``eie__k__``]
 :setie: pass:q[``setie``]
 :setip: pass:q[``setip``]
 :clrie: pass:q[``clrie``]
@@ -96,7 +83,6 @@ Graphics used are either explicitly available for free, are the property of RISC
 :claimi: pass:q[``claimi``]
 :iprio: pass:q[``iprio``]
 :IPRIO: pass:q[``IPRIO``]
-:FITHRESHOLD: pass:q[``FITHRESHOLD``]
 
 :mstatus: pass:q[``mstatus``]
 :mideleg: pass:q[``mideleg``]
@@ -178,14 +164,11 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xireg5: pass:q[``xireg5``]
 :xireg6: pass:q[``xireg6``]
 
-:pp: pass:q[``**__x__**pp``]
 :xpp: pass:q[``xpp``]
-:pie: pass:q[``**__x__**pie``]
 
 :mpp: pass:q[``mpp``]
 :mpie: pass:q[``mpie``]
 
-:ret: pass:q[``**__x__**ret``]
 :mret: pass:q[``mret``]
 :sret: pass:q[``sret``]
 :xret: pass:q[``xret``]
@@ -1785,10 +1768,10 @@ If an exception trap occurs during the interrupt interrupt jump table entry read
 the following holds true:
 Depending on where the second trap is handled,
 the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
-In addition, {tval} is either set to zero or written with the faulting address.
+In addition, {xtval} is either set to zero or written with the faulting address.
 
-NOTE: For simpler systems, we do not require that {tval} is written
-with the faulting address.  For systems with demand paging, {tval}
+NOTE: For simpler systems, we do not require that {xtval} is written
+with the faulting address.  For systems with demand paging, {xtval}
 should be written with the faulting address to simplify page-fault
 handling code.
 
@@ -2013,7 +1996,7 @@ If an exception trap occurs during the hardware stacking of an interrupt trap,
 the following holds true:
 Depending on where the second trap is handled,
 the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
-In addition, {tval} is either set to zero or written with the faulting address.
+In addition, {xtval} is either set to zero or written with the faulting address.
 
 As long as synchronous exceptions can occur,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
