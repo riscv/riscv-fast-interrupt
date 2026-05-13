@@ -1119,6 +1119,14 @@ NOTE: The representation of exception code on interrupts is aligned with the {SI
 [#op-threshold]
 ==== Operation
 
+Based on NIPPRIO_MASK derived from {xiconfig}.{xnipbits},
+a nested preemption priority threshold is given as
+
+[source]
+----
+NIP_THRESHOLD = (xithreshold.iprio & NIPPRIO_MASK)
+----
+
 When {xiconfig}.{xnipen} is one,
 an interrupt source is considered disabled
 irrespective of its interrupt-enable bit,
@@ -1126,16 +1134,17 @@ when the following condition holds:
 
 [source]
 ----
-IPRIO >= (xithreshold.iprio & NIPPRIO_MASK)
+IPRIO >= NIP_THRESHOLD
 ----
 
-where {IPRIO} is the value reported in the {xtopi} CSR,
+where {IPRIO} is the value reported in the {xtopsi} CSR,
 if the interrupt source is the highest priority pending-enabled one.
 
 [NOTE]
 ====
-The highest priority value of {IPRIO} is 0.
+The highest possible priority value of {IPRIO} is 0.
 When {xithreshold}.{iprio} and NIPPRIO_MASK is 0,
+the nested interrupt preemption threshold is 0 and thus,
 all interrupts are considered disabled.
 ====
 
