@@ -88,8 +88,12 @@ Graphics used are either explicitly available for free, are the property of RISC
 // AIA / IMSIC-compatible CSRs and arrays
 :eidelivery: pass:q[``eidelivery``]
 :eithreshold: pass:q[``eithreshold``]
+:genmsi: pass:q[``genmsi``]
 :eipk: pass:q[``eip__k__``]
 :eiek: pass:q[``eie__k__``]
+:eiek: pass:q[``eie__k__``]
+:sourcecfgi: pass:q[``sourcecfg[__i__]``]
+:xmsiaddrcfgh: pass:q[``xmsiaddrcfg[__h__]``]
 
 // Machine-level CSRs, fields, and instructions
 :mstatus: pass:q[``mstatus``]
@@ -154,7 +158,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 [Preface]
 == Copyright and license information
 
-This RISC-V ACLIC extension specification is © 2018-2025 RISC-V international
+This RISC-V ACLIC specification is © 2018-2026 RISC-V international
 
 This document is released under a Creative Commons Attribution 4.0
 International License. +
@@ -169,7 +173,7 @@ The Advanced Core Local Interrupt Controller (ACLIC) is a single hart interrupt 
   * High throughput interrupt handling
   * Up to 1023 external interrupts
   * Low area overhead
-  * Maximize compatibility with AIA
+  * Maximized compatibility with AIA
 
 The table below provides a summary of the ACLIC extensions.
 
@@ -194,7 +198,7 @@ The table below provides a summary of the ACLIC extensions.
 | Ssip         | Support for interrupt handler push/pop at Supervisor level
 |===
 
-As this specification aims for single-hart systems, no support for the H extension is foreseen.
+This specification aims for single-hart systems and no support for the H extension is foreseen.
 
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
@@ -203,13 +207,8 @@ mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
 This section lays the foundation for fast interrupt handling.
 
-To achieve this, it builds upon the hart-level extensions of AIA,
+To achieve this, it builds upon the hart-level behavior of AIA,
 and integrates a subset of Advanced Platform Level Interrupt Controller (APLIC) functionality into a hart-local interrupt controller.
-
-In terms of compatibility, the goal is that a hart
-can be used with the same trap handlers as one developed for AIA.
-
-Interrupt latency can be improved by adopting handler to exploit the additional features introduced in this specification.
 
 At config-time, the interface differs from AIA,
 but the same structures for configuration as in the APLIC are used.
@@ -223,6 +222,7 @@ The latter is additionally made up of
 
 . Interrupt control interface for pending and enable bits based on IMSIC
 . New indirect CSRs for accessing the remaining state of the hart-local APLIC domains
+. A new CSR {xtopsi} for claiming either major or external interrupts
 
 In addition, extensions are defined for vectoring of external interrupts (<<smeihv>>) and accelerating nested preemption (<<smnip>>).
 
@@ -230,7 +230,8 @@ In addition, extensions are defined for vectoring of external interrupts (<<smei
 === Hart-local APLIC domains (Non-ISA)
 
 The APLIC was designed as a multi-hart interrupt controller.
-Here, APLIC domains are used tightly coupled with a single hart.
+In the context of an ACLIC,
+APLIC domains are used tightly coupled with a single hart.
 The domains used here are a simplified subset of the full domain definition of the APLIC.
 
 ==== Interrupt domain mapping
@@ -270,8 +271,8 @@ Endianness is controlled exclusively by the setting in the {xstatus} register at
 
 Further simplifications are:
 
-* The Child Index field in the sourcecfg[i] register is always '0' when D=1 (i.e. delegation to child domain). This is only possible in Machine mode. In Supervisor mode, D=0, as there is no child domain.
-* As the ACLIC operation is based on direct interrupt delivery, xmsiaddrcfg[h] and genmsi registers are not required.
+* The Child Index field in the {sourcecfgi} register is always '0' when D=1 (i.e. delegation to child domain). This is only possible in Machine mode. In Supervisor mode, D=0, as there is no child domain.
+* As the ACLIC operation is based on direct interrupt delivery, {xmsiaddrcfgh} and {genmsi} registers are not required.
 * Interrupt delivery control (IDC) structures are not needed, as the domain has a fixed relationship with one hart, and IDC functionality is already provided by hart-local CSRs.
 * The hart index inside the target registers is read-only zero, as only one hart is supported.
 
@@ -284,8 +285,7 @@ External interrupt signals are supplied to the hart from the respective domain.
 The interrupts from the root domain appear as MEIP (Machine External Interrupt-Pending),
 and interrupts from the child domain appear as SEIP (Supervisor External Interrupt-Pending).
 
-In addition to signaling a pending interrupt,
-a hart-local APLIC domain signals the priority and identity of the highest priority pending-enabled interrupt to the hart.
+A hart-local APLIC domain signals the priority and identity of the highest priority pending-enabled interrupt to the hart.
 This information influences the arbitration between major and minor interrupts that is ultimately reflected in the {xtopsi} CSRs.
 
 [[smidctrl, Smidctrl/Ssidctrl]]
@@ -342,7 +342,7 @@ The `eip` and `eie` arrays act as an alias of the pending and enable bits of the
 
 [NOTE]
 ====
-For an inactive source, the corresponding bit in `eip` and `eie` are read-only zero.
+For an inactive source, the corresponding bits in {eipk} and {eipk} are read-only zero.
 In addition, the AIA defined rules "Precise effects on interrupt-pending bits" apply.
 ====
 
@@ -355,7 +355,7 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
   * It simplifies the register interface, as CSR instructions have single bit operations
 ====
 
-==== New Top Signed Interrupt Status ({xtopsi}) CSR
+==== New Top Signed Interrupt Status ({xtopsi}) CSRs
 
 [source]
 ----
@@ -423,12 +423,12 @@ When XLEN = 32, each `xireg` register controls the ACLIC priority setting of fou
 | 0x10FF     |   4B          | `acliciprio255`
 |===
 
-Indirect access to `acliciprio[k]` mirrors `target[k*4].iprio` up to `target[k*4+3].iprio`.
+Indirect access to `acliciprio[__k__]` mirrors `target[__k*4__].iprio` up to `target[__k*4+3__].iprio`.
 
 When XLEN = 64, only the even-numbered registers exist and each register controls the priority setting of eight interrupts.
-Indirect access to `acliciprio[k]` mirrors `target[k*8].iprio` up to `target[k*8+7].iprio`.
+Indirect access to `acliciprio[__k__]` mirrors `target[__k*8__].iprio` up to `target[__k*8+7__].iprio`.
 
-The layout of `acliciprio[k]` for XLEN = 32 is as follows:
+The layout of `acliciprio[__k__]` for XLEN = 32 is as follows:
 
 [bytefield]
 ----
@@ -483,7 +483,7 @@ The layout of `acliciprio[k]` for XLEN = 32 is as follows:
 (draw-box "8" {:span 8 :borders {}})
 ----
 
-and for XLEN=64 like:
+and for XLEN = 64 like:
 
 [bytefield]
 ----
@@ -560,8 +560,8 @@ and for XLEN=64 like:
 (draw-box "8" {:span 8 :borders {}})
 ----
 
-APLIC domains do not implement target[0].
-When accessing `acliciprio[0]`, the bits corresponding to target[0] are read-only zero.
+APLIC domains do not implement `target[0]`.
+When accessing `acliciprio[0]`, the bits corresponding to `target[0]` are read-only zero.
 
 When XLEN = 64 and {xiselect} is an odd value in the range 0x1000-0x10FF,
 attempting to access {xireg} raises an illegal instruction exception.
@@ -627,7 +627,7 @@ The layout of `aclicsourcecfg[k]` for XLEN = 32 is as follows:
 (draw-box "16" {:span 16 :borders {}})
 ----
 
-and for XLEN=64 like:
+and for XLEN = 64 like:
 
 [bytefield]
 ----
@@ -688,7 +688,7 @@ then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`, {stopsi}) by 
 results in an illegal instruction exception.
 
 If the Smstateen extension is implemented, then bit 58 (IMSIC) in mstateen0 is implemented, even though IMSIC is not present.
-If bit 58 of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC (eip[k] and eie[k])
+If bit 58 of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC ({eipk} and {eiek})
 by S-mode or a lower-privilege mode results in an illegal instruction exception.
 
 [[smeihv, Smeihv/Sseihv]]
@@ -765,7 +765,7 @@ An example vector table in the new mode could be:
 
 |===
 
-Note that the table contains some entries, which jump to a common interrupt dispatcher,
+Note, that the table contains some entries, which jump to a common interrupt dispatcher,
 and others, which jump to an interrupt source specific handler.
 
 [[smnip, Smnip/Ssnip]]
@@ -901,7 +901,7 @@ mistatus
 
 ===== Changed Top Signed Interrupt Status ({mtopsi}) CSR
 
-The CSR is changed to manage the interrupt threshold when claiming interrupts,
+The CSR is changed to manage the interrupt threshold when claiming interrupts
 to enable efficient nested preemption.
 
 The format of {mtopsi} is changed to accommodate the wider {IPRIO} value needed for nested preemption.
@@ -938,7 +938,7 @@ If a trap was taken on an external interrupt,
 the Exception Code field reports the minor interrupt identity.
 
 Else, if a trap was taken on a major interrupt identity,
-the Exception Code field reports the two's complement representation of the negated major interrupt identity of `i`.
+the Exception Code field reports the two's complement representation of the negated major interrupt identity.
 
 NOTE: The representation of exception code on interrupts is aligned with the {SIID} field in {mtopsi}.
 
@@ -997,9 +997,11 @@ sistatus
  26:21      (reserved)
  20:19      VS[1:0]           Vector extension status, mirror of sstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
- 16:10      (reserved) 
- 9          psppush           Previous stack pointer push, mirror of sspcs.ppush, if Sscsps is implemented
- 8:0        pithreshprio[8:0] Previous sithreshold.iprio value
+ 16:8       pithreshprio[8:0] Previous sithreshold.iprio value
+ 7          psppush           Previous stack pointer push (only if Sscsps is implemented)
+ 6          sppush            Stack pointer push (only if Sscsps is implemented)
+ 5:1        (reserved)
+ 0          sie               Alias of sstatus.sie
 ----
 
 The supervisor {sstatus} register has only a single `spp` bit (to
@@ -1021,7 +1023,7 @@ The field {sithreshold}.{iprio} implements exactly IPRIOLEN+1 bits.
 
 ===== Changed Top Signed Interrupt Status ({stopsi}) CSR
 
-The CSR is changed to manage the interrupt threshold when claiming interrupts,
+The CSR is changed to manage the interrupt threshold when claiming interrupts
 to enable efficient nested preemption.
 
 The format of {stopsi} is changed to accommodate the wider {IPRIO} value needed for nested preemption.
@@ -1058,7 +1060,7 @@ If a trap was taken on an external interrupt,
 the Exception Code field reports the minor interrupt identity.
 
 Else, if a trap was taken on a major interrupt identity,
-the Exception Code field reports the two's complement representation of the negated major interrupt identity of `i`.
+the Exception Code field reports the two's complement representation of the negated major interrupt identity.
 
 NOTE: The representation of exception code on interrupts is aligned with the {SIID} field in {stopsi}.
 
@@ -1115,7 +1117,7 @@ When a trap is taken into level `x`,
 the current value of {xithreshold}.{iprio} is written to {xistatus}.{pithreshprio}.
 
 Additionally, if the trap was taken on an interrupt,
-{xithreshold}.{iprio} is set to {IPRIO}.
+{xithreshold}.{iprio} is set to {xtopsi}.{IPRIO}.
 This automatically raises the interrupt-enable threshold.
 Also, the interrupt is claimed by clearing the pending bit if possible.
 
@@ -1135,7 +1137,7 @@ This automatically restores the interrupt-enable threshold to the level of the p
 [[smnip-handler]]
 ==== Example: Handler code for nested preemption
 
-This section introduces several pseudo-code examples for handling interrupts in the presence of Smnip.
+This section introduces pseudo-code examples for handling interrupts in the presence of Smnip.
 Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
 
 [[smnip-sw-dispatcher]]
@@ -1213,7 +1215,7 @@ fast_interrupt_handler:
 
 As part of the interrupt handling, the pending bit needs to be cleared by software.
 
-It is expected that GNU toolchains will preemptible C-handlers like
+It is expected that GNU toolchains will support preemptible C-handlers like
 
 [,C]
 ----
@@ -1776,7 +1778,7 @@ if synchronous exception hardware vectoring is active.
 (def left-margin 100)
 (def right-margin 100)
 (def boxes-per-row 32)
-(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "" "1" "2" "" "" "5" "6" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "" "1" "2" "" "" "3" "4" "" "" "5" "6" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
 
 (draw-box "BASE" {:span 10 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
