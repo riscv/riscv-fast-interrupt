@@ -69,7 +69,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :scratchcsw: pass:q[``**__x__**scratchcsw``]
 :scratchcswl: pass:q[``**__x__**scratchcswl``]
 :epc: pass:q[``**__x__**epc``]
-:cause: pass:q[``**__x__**cause``]
+:xcause: pass:q[``xcause``]
 :tval: pass:q[``**__x__**tval``]
 :ip: pass:q[``**__x__**ip``]
 :istatus: pass:q[``**__x__**istatus``]
@@ -120,6 +120,9 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mnipbits: pass:q[``mnipbits``]
 :snipbits: pass:q[``snipbits``]
 :xnipbits: pass:q[``xnipbits``]
+:sipu: pass:q[``sipu``]
+:mipu: pass:q[``mipu``]
+:xipu: pass:q[``xipu``]
 :snipen: pass:q[``snipen``]
 :mnipen: pass:q[``mnipen``]
 :xnipen: pass:q[``xnipen``]
@@ -869,7 +872,9 @@ miconfig fields
  19:16       snipbits (if Ssnip is implemented)
  15:12       (reserved)
  11:8        mnipbits
- 7:4         (reserved)
+ 7:6         (reserved)
+ 5           sipu (if Ssip is implemented)
+ 4           mipu (if Smip is implemented)
  3           snipen (if Ssnip is implemented)
  2           mnipen
  1:0         (reserved)
@@ -887,6 +892,8 @@ The fields {mnipen} and {snipen} enable this extension at M-mode and S-mode, res
 Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
 
 If Ssnip is not implemented, then {snipbits} and {snipen} are read-only 0.
+If Ssip is not implemented, then {sipu} is read-only 0.
+If Smip is not implemented, then {mipu} is read-only 0.
 
 The field {miconfig}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
 Interrupts whose priorities differ only in less-significant bits cannot preempt each other.
@@ -1019,7 +1026,7 @@ Additionally, this extension adds an indirect CSR
 The registers {sireg}, {sireg2}, {sireg3}, {sireg5}, and {sireg6} are reserved
 when {siselect} is 0x1000.
 
-===== New Interrupt Preemption Configuration ({siconfig}) CSR
+===== New Interrupt Configuration ({siconfig}) CSR
 
 [source]
 ----
@@ -1028,6 +1035,9 @@ siconfig fields
  XLEN-1:20   (reserved)
  19:16       snipbits
  15:4        (reserved)
+ 7:6         (reserved)
+ 5           sipu (if Ssip is implemented)
+ 4           (reserved)
  3           snipen
  2:0         (reserved)
 ----
@@ -1765,7 +1775,7 @@ this requires either a system call or trap-and-emulate operation.
 
 It is recommended that the handler fetch be ignored for hardware triggers and breakpoints.
 
-==== Interrupt jump table fault handling
+==== Fault handling
 
 Faults that occur during the read of interrupt jump table entries may not be recoverable.
 If an unrecoverable load page fault can occur during the interrupt jump table read,
@@ -1874,17 +1884,18 @@ The Smip and Ssip extensions depend upon the Smcsps and Sscsps extensions, respe
 
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
-which may include the fetch of the vector table entry.
+which may include the read of the interrupt jump table entry with Smijt/Ssijt.
 
-NOTE: In Harvard architectures, the data bus may be idle while the vector table and handler fetch are happening.
+NOTE: In Harvard architectures, the data bus may be idle while the vector table read and handler fetch are happening.
 By starting the context save in parallel, the available data bus bandwidth can be utilized, reducing interrupt latency.
 
-NOTE: In some implementations, executing the context save in parallel to the fetches of the vector table entry and the first instruction
+NOTE: In some implementations, executing the context save in parallel to the read of the table entry and the first instruction
 may contribute to reducing the jitter in interrupt latency,
 by masking variable delays e.g. caused by cache misses on handler fetch.
 
-Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
+NOTE: Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
 Interrupt handling throughput is increased by allowing tail-chaining of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+This is not an architectural requirment, but a possible implementation choice.
 
 This extension does not affect Non-Maskable Interrupts (NMIs).
 
@@ -1892,13 +1903,9 @@ This extension does not affect Non-Maskable Interrupts (NMIs).
 
 This extension adds additional control bits to enable/disable the extended behavior.
 
-If `MIPU`, is set, a trap taken at Machine level due to an interrupt causes automatic stacking.
-If `SIPU`, is set, a trap taken at Supervisor level due to an interrupt causes automatic stacking.
+If {xiconfig}.{xipu} is set, a trap taken at privilege level `x` due to an interrupt causes automatic stacking.
 
-If one of the bits is clear, the trap behavior at the respective level is unmodified.
-
-NOTE: These bits do not yet have an allocated encoding.
-The authors of this specification intend to ask for encoding of these bits in mstatus/sstatus.
+If the bit is clear, the trap behavior at the respective level is unmodified.
 
 NOTE: The state of these bits does not influence the behavior of mipopret/sipopret.
 
@@ -1910,12 +1917,22 @@ this extension ensures the interrupted context is partially saved.
 
 It performs the following operations in order:
 
+  * Conditionally performs a stack pointer swap by executing xcspspush sp, sp
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
-  * Conditionally performs a stack pointer swap by executing xcspspush sp
 
-NOTE: Intentionally, the GPRs are saved on the stack owned by the interrupted context.
-This is done to simplify and accelerate OS thread switching.
+NOTE: The stack pointer swap is performed as the first action,
+as the integrity of the sp of a less privileged level cannot be guaranteed at all times.
+
+The size of the stack frame created is set to XLEN,
+which is the minimum stack frame size that can hold the six pushed registers,
+and is psABI-compliant.
+
+NOTE: It is the responsibility of the programmer to ensure
+that sp contains a psABI-compliant stack pointer value
+before the stack pointer is adjusted.
+If this is not compliant before that,
+the value of sp after the push sequence is also not compliant.
 
 NOTE: As this extension modifies interrupt trap behavior but not the behaviour of synchronous exception traps,
 it should only be used in interrupt handling modes that provide separate entry points for
@@ -1927,16 +1944,16 @@ Interrupt handlers do not require access to the interrupted context.
 
 ==== Returns from interrupt handlers
 
-When executing an {xipopret} instruction the context saved during the trap is restored and a return is executed.
+When executing an {xipopret} instruction, the context saved during the trap is restored and a return is executed.
 
 NOTE: An explicit interrupt return instruction is included, rather than modifying the xret behavior,
 so that the hart does not need to do bookkeeping whether it is in an interrupt or exception context.
 
 It performs the following actions in order:
 
-  * Conditionally performs a stack pointer swap by executing xcspspop sp
-  * Restores registers x10-x15
   * Adjust the stack pointer to destroy the stack frame
+  * Conditionally performs a stack pointer swap by executing xcspspop sp, sp
+  * Restores registers x10-x15
   * Executes an xret according to the current level
 
 NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
@@ -1975,7 +1992,7 @@ it is allowed for an implementation to of a hart
 to optionally check for any pending and enabled interrupts at the current privilege mode.
 
 If such an interrupt exists, the hart may abort executing the xipopret instruction and trigger the following actions:
-  - Update the `xcause.Exception Code` to the corresponding interrupt id.
+  - Update the {xcause}.`Exception Code` to the corresponding interrupt id.
   - Perform the interrupt handler fetch.
   - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted xipopret.
 
@@ -1987,28 +2004,20 @@ In this case, the entire context save and restore sequence can be skipped.
 ==== Fault handling
 
 This extension adds operations to the interrupt trap behavior, which can cause faults.
-Faults that occur during these operations are only recoverable,
-if the double trap extension(s) are implemented.
-For interrupts in M-mode, this additionally requires the Smrnmi extension.
+Specifically, saving registers x10-x15 can cause a faults that lead to synchonous exceptions.
 
-In this case, if an exception trap occurs while executing the trap side effects defined by this extension,
+NOTE: It is not recommended to use this extension,
+if faults can occur during this sequence that are not recoverable.
+
+If an exception trap occurs during the hardware stacking of an interrupt trap,
 the following holds true:
 Depending on where the second trap is handled,
-the corresponding exception pc ({xepc} or {mnepc}) value is set to the exception pc of the first trap.
+the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
 In addition, {tval} is either set to zero or written with the faulting address.
-
-NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
-In case a higher priority interrupt became pending and enabled, this will trap first.
 
 As long as synchronous exceptions can occur,
 side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
 Specifically, the saving of registers needs to be completed before adjusting the stack pointer.
-
-NOTE: As the stack pointer is guaranteed to be 128b-aligned before attempting to execute the conditional stack pointer swap operation,
-no fault can occur from this.
-
-NOTE: After returning from handling the synchronous exception, another trap will happen immediately.
-In case a higher priority interrupt became pending and enabled, this will trap first.
 
 ==== Instructions
 
@@ -2046,7 +2055,6 @@ The behavior in RISC-V assembly is as follows:
 [source]
 ----
 mipopret:
-  mcspspop sp, sp           # Swap stack pointer with mspcs
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -2054,6 +2062,7 @@ mipopret:
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  mcspspop sp, sp           # Swap stack pointer with mspcs
   mret
 
 where
@@ -2098,7 +2107,6 @@ The behavior in RISC-V assembly is as follows:
 [source]
 ----
 sipopret:
-  scspspop sp, sp           # Swap stack pointer with sspcs
   lr a0, OFFSET(sp)         # Restore a0
   lr a1, OFFSET(sp)         # Restore a1
   lr a2, OFFSET(sp)         # Restore a2
@@ -2106,6 +2114,7 @@ sipopret:
   lr a4, OFFSET(sp)         # Restore a4
   lr a5, OFFSET(sp)         # Restore a5
   addi sp, sp, FRAMESIZE    # Adjust stack pointer
+  scspspop sp, sp           # Swap stack pointer with sspcs
   sret
 
 where
