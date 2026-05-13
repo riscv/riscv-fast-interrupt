@@ -56,8 +56,8 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xistatus: pass:q[``xistatus``]
 :xithreshold: pass:q[``xithreshold``]
 :xiconfig: pass:q[``xiconfig``]
-:xtopei: pass:q[``xtopei``]
 :xtopi: pass:q[``xtopi``]
+:xtopei: pass:q[``xtopei``]
 :xtopsi: pass:q[``xtopsi``]
 :xiselect: pass:q[``xiselect``]
 :xireg: pass:q[``xireg``]
@@ -90,8 +90,6 @@ Graphics used are either explicitly available for free, are the property of RISC
 :eithreshold: pass:q[``eithreshold``]
 :eipk: pass:q[``eip__k__``]
 :eiek: pass:q[``eie__k__``]
-:mtopei: pass:q[``mtopei``]
-:stopei: pass:q[``stopei``]
 
 // Machine-level CSRs, fields, and instructions
 :mstatus: pass:q[``mstatus``]
@@ -288,7 +286,7 @@ and interrupts from the child domain appear as SEIP (Supervisor External Interru
 
 In addition to signaling a pending interrupt,
 a hart-local APLIC domain signals the priority and identity of the highest priority pending-enabled interrupt to the hart.
-This information is accessible at the hart through the {xtopei} CSRs, and influences the arbitration between major and minor interrupts that is ultimately reflected in the {xtopi} CSRs.
+This information influences the arbitration between major and minor interrupts that is ultimately reflected in the {xtopsi} CSRs.
 
 [[smidctrl, Smidctrl/Ssidctrl]]
 === Interrupt domain control interface (Smidctrl, Ssidctrl)
@@ -332,7 +330,7 @@ Additional indirect CSR access is provided to the remaining state.
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using the same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The AIA {eidelivery}, {mtopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
+The AIA {eidelivery}, {xtopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
 NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
@@ -357,14 +355,6 @@ Providing access to APLIC pending and enable bits at the hart-level has several 
   * It simplifies the register interface, as CSR instructions have single bit operations
 ====
 
-[%autowidth,float="center",align="center",cols=">,<",grid=none,frame=none]
-|===
-|bits 26:16| Interrupt identity
-|bits 10:0 | Interrupt priority (configured target[identity].iprio)
-|===
-
-NOTE: Claiming an external interrupt can be done with the same routine as with an IMSIC.
-I.e. a write to the {xtopei} CSR claims the highest-priority pending-and-enabled interrupt.
 ==== New Top Signed Interrupt Status ({xtopsi}) CSR
 
 [source]
@@ -846,11 +836,11 @@ If Smip is not implemented, then {mipu} is read-only 0.
 The field {miconfig}.{mnipbits}/{snipbits} defines how many most-significant priority bits participate in nested interrupt preemption grouping.
 Interrupts whose priorities differ only in less-significant bits cannot preempt each other.
 The highest legal value of {miconfig}.{mnipbits}/{snipbits} is IPRIOLEN.
-A mask for filtering out the bits of a priority number that will participate in the selection for nested interrupt preemption at mode `x` is:
+A mask for filtering out the less-significant priority bits that do not participate in nested interrupt preemption at mode `x` is:
 
 [source,subs="attributes"]
 ----
-NIPPRIO_MASK = ~(2^(miconfig.xnipbits) - 1)
+NIPPRIO_MASK = ~((2^(IPRIOLEN - xiconfig.xnipbits)) - 1)
 ----
 
 NOTE: For example, if {miconfig}.{mnipbits}=4, 
@@ -1346,7 +1336,7 @@ before a stack pointer swap can occur.
 To simplify and accelerate the conditional stack pointer swap, two instructions per mode are introduced:
 <<#insns-mcspspush>>, <<#insns-mcspspop>>, <<#insns-scspspush>>, and <<#insns-scspspop>>.
 To decide if a stack pointer swap is required, these instructions evaluate dedicated status bits.
-The {xistatus}.{psppush} (Previous stack pointer push) bit indicates that the stack pointer shall be swapped back into {xspcs} during the pop sequence of the current handler.
+The {xistatus}.{sppush} (Stack pointer push) bit indicates that the stack pointer in {xspcs} shall be swapped during the push sequence of the next handler.
 
 The {xistatus}.{psppush} (Previous stack pointer push) bit indicates that the stack pointer shall be swapped back into {xspcs} during the pop sequence the current.
 It corresponds to the value of the {xistatus}.{sppush} bit in the previous context.
@@ -1610,9 +1600,9 @@ The address held in {xijt} is aligned on a 64-byte or greater power-of-two bound
 (draw-box "BASE" {:span 12 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
 (draw-box (text "(WARL)" {:font-weight "bold"}) {:span 12 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 (draw-box "reserved" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 (draw-box "SHAMT" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
-(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
 
 (draw-box "XLEN-6" {:span 24 :borders {}})
 (draw-box "4" {:span 4 :borders {}})
@@ -1667,7 +1657,7 @@ In interrupt jump table mode, when interrupts are taken, the interrupt behavior 
 After executing the required side-effects as required with the existing behavior,
 the hart then reads an XLEN-bit handler address with permissions corresponding to the handler's mode
 from the in-memory table whose base address (JTBASE).
-The trap handler function address is read from `JTBASE+XLEN/8*vtoffset`.
+The trap handler function address is read from `JTBASE + (vtoffset << ({xijt}.{SHAMT} + 2))`.
 
 If the read is successful and the LSB of the entry is 0,
 the interrupt should not be hardware-vectored.
@@ -1871,7 +1861,7 @@ It performs the following operations in order:
 NOTE: The stack pointer swap is performed as the first action,
 as the integrity of the sp of a less privileged level cannot be guaranteed at all times.
 
-The size of the stack frame created is set to XLEN,
+The size of the stack frame created is set to XLEN bytes,
 which is the minimum stack frame size that can hold the six pushed registers,
 and is psABI-compliant.
 
@@ -1899,8 +1889,8 @@ so that the hart does not need to do bookkeeping whether it is in an interrupt o
 It performs the following actions in order:
 
   * Adjusts the stack pointer to destroy the stack frame
-  * Conditionally performs a stack pointer swap by executing `{xcspspop} sp, sp`
   * Restores registers x10-x15
+  * Conditionally performs a stack pointer swap by executing `{xcspspop} sp, sp`
   * Executes an {xret} according to the current level
 
 NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
@@ -1945,7 +1935,7 @@ If such an interrupt exists, the hart may abort executing the {xipopret} instruc
 
 Explicitly, {xepc}, {xistatus} remain unchanged.
 
-NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the xipopret instruction.
+NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the {xipopret} instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
 ==== Fault handling
