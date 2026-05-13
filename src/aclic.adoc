@@ -58,9 +58,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :ivt: pass:q[``**__x__**ivt``]
 :SHAMT: pass:q[``SHAMT``]
 :xivt: pass:q[``xivt``]
-:mehv: pass:q[``mehv``]
-:sehv: pass:q[``sehv``]
-:xehv: pass:q[``xehv``]
+:EHV: pass:q[``EHV``]
 :xtvec: pass:q[``xtvec``]
 :mode: pass:q[``mode``]
 :xepc: pass:q[``xepc``]
@@ -1840,28 +1838,43 @@ Typical examples of synchronous exceptions that occur as part of normal program 
 
 With this extension, synchronous exceptions can be vectored using {xtvec} as an offset.
 
-==== Additional bit in {xiconfig} CSR
+==== Additional bit in {xivt} CSR
 
-The {xiconfig} CSR is changed by adding a bit to control
+The {xivt} CSR is changed by adding a bit to control
 if synchronous exception hardware vectoring is active.
 
-The following bits of {xiconfig} are allocated to control exception hardware vectoring:
+{xivt} is updated to incorporate an additional bit {EHV}.
 
-[source]
+[bytefield]
 ----
-xiconfig fields
- bits        description
- 7           sehv (if Ssehv is implemented)
- 6           mehv (if Smehv is implemented, reserved in siconfig)
-----
+(defattrs :plain [:plain {:font-family "M+ 1p Fallback"}])
+(def row-height 35 )
+(def row-header-fn nil)
+(def left-margin 100)
+(def right-margin 100)
+(def boxes-per-row 32)
+(draw-column-headers {:height 20 :font-size 18 :labels (reverse ["0" "" "" "1" "2" "" "" "5" "6" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "XLEN-1" ""])})
 
-Other bits remain unchanged.
+(draw-box "BASE" {:span 10 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WARL)" {:font-weight "bold"}) {:span 10 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "reserved" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "EHV" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+(draw-box "SHAMT" {:span 2 :text-anchor "end" :borders {:top :border-unrelated :bottom :border-unrelated :left :border-unrelated}})
+(draw-box (text "(WPRI)" {:font-weight "bold"}) {:span 2 :text-anchor "start" :borders {:top :border-unrelated :bottom :border-unrelated :right :border-unrelated}})
+
+(draw-box "XLEN-6" {:span 20 :borders {}})
+(draw-box "2" {:span 4 :borders {}})
+(draw-box "2" {:span 4 :borders {}})
+(draw-box "2" {:span 4 :borders {}})
+----
 
 ==== Operation
 
-When {xiconfig}.{xehv} is clear, the exception trap behavior is unchanged.
+When {xivt}.{EHV} is clear, the exception trap behavior is unchanged.
 
-When {xiconfig}.{xehv} is set, the synchronous exceptions trap to the following entry point:
+When {xivt}.{EHV} is set, the synchronous exceptions trap to the following entry point:
 
 [source]
 ----
