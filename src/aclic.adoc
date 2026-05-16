@@ -97,6 +97,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 
 // Machine-level CSRs, fields, and instructions
 :mstatus: pass:q[``mstatus``]
+:mstateen0: pass:q[``mstateen0``]
 :mtvec: pass:q[``mtvec``]
 :mijt: pass:q[``mijt``]
 :mspcs: pass:q[``mspcs``]
@@ -683,12 +684,12 @@ and for XLEN = 64 like:
 
 Additional control is provided for the newly added registers `acliciprio[k]` and `aclicsourcecfg[k]`.
 
-If the Smstateen extension is implemented, then the bit 53 (ACLIC) in mstateen0 is implemented. If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+If the Smstateen extension is implemented, then the bit 53 (ACLIC) in {mstateen0} is implemented. If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
 then access to the new CSRs (`acliciprio[k]`, `aclicsourcecfg[k]`, {stopsi}) by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
-If the Smstateen extension is implemented, then bit 58 (IMSIC) in mstateen0 is implemented, even though IMSIC is not present.
-If bit 58 of a controlling mstateen0 CSR is zero, then access to the CSRs reused from the IMSIC ({eipk} and {eiek})
+If the Smstateen extension is implemented, then bit 58 (IMSIC) in {mstateen0} is implemented, even though IMSIC is not present.
+If bit 58 of a controlling {mstateen0} CSR is zero, then access to the CSRs reused from the IMSIC ({eipk} and {eiek})
 by S-mode or a lower-privilege mode results in an illegal instruction exception.
 
 [[smeihv, Smeihv/Sseihv]]
@@ -1281,8 +1282,8 @@ The threshold lineage is preserved across nested preemptions, which can include 
 ==== State Enable
 
 If the Smstateen extension is implemented,
-then the bit 53 (ACLIC) in mstateen0 is implemented.
-If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then the bit 53 (ACLIC) in {mstateen0} is implemented.
+If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
 then access to the new CSRs {sistatus} and {sithreshold} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
@@ -1293,7 +1294,7 @@ which can reduce latencies for fast interrupt handling.
 
 The features specified here are each capable of shaving of several cycles of a worst-case interrupt latency.
 They include accelerating a conditional swap of the current stack pointer with a more privileged one (<<smcsps>>),
-HW-assisted vectoring of interrupts (<<smijt>>) and synchronous exceptions (<<smehv>>),
+HW-vectoring of interrupts using interrupt jump tables (<<smijt>>), and HW-vectoring synchronous exceptions (<<smehv>>),
 and HW-assisted save and restore (<<smip>>).
 
 NOTE: These extensions are targeted at microcontrollers with a comparatively simple microarchitecture.
@@ -1304,12 +1305,13 @@ This is expected to be the case for deeply pipelined machines.
 [[smcsps, Smcsps/Sscsps]]
 === Conditional Stack Pointer Swap extension (Smcsps, Sscsps)
 
-The Sscsps depends on the Smcsps extension and adds the ability for conditional stack pointer swap at supervisor level and below.
+The Smcsps extension adds abilities for efficient conditional stack pointer swap at machine level.
+The Sscsps depends on the Smcsps extension and adds abilities for efficient conditional stack pointer swap at supervisor level.
 
-For security and stack safety reasons, it can be desired to separate the stack areas per privilege level and between traps and normal execution.
+For security and stack safety reasons, it can be necessary to separate the stack areas per privilege level and between traps and normal execution.
 Performing stack pointer swapping in SW can be time consuming, as the conditions for swapping have to be checked first.
 However, stack pointer swapping is among the first things that need to happen even before saving the interrupted context.
-To ensure fast interrupt handling, this extension introduces an instruction to accelerate conditional stack pointer swapping.
+To ensure fast interrupt handling, this extension introduces instructions to accelerate conditional stack pointer swapping.
 
 ==== New stack pointer for conditional swap ({xspcs}) CSR
 
@@ -1340,7 +1342,7 @@ To simplify and accelerate the conditional stack pointer swap, two instructions 
 To decide if a stack pointer swap is required, these instructions evaluate dedicated status bits.
 The {xistatus}.{sppush} (Stack pointer push) bit indicates that the stack pointer in {xspcs} shall be swapped during the push sequence of the next handler.
 
-The {xistatus}.{psppush} (Previous stack pointer push) bit indicates that the stack pointer shall be swapped back into {xspcs} during the pop sequence the current.
+The {xistatus}.{psppush} (Previous stack pointer push) bit indicates that the stack pointer shall be swapped back into {xspcs} during the pop sequence.
 It corresponds to the value of the {xistatus}.{sppush} bit in the previous context.
 This bit is part of the context of an interrupt handler, and needs to be saved and restored if a handler can be preempted.
 
@@ -1373,8 +1375,8 @@ No change of stack pointer occurs for the mcspspush and mcspspop instructions in
 ==== State Enable
 
 If the Smstateen extension is implemented,
-then the bit 53 (ACLIC) in mstateen0 is implemented.
-If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then the bit 53 (ACLIC) in {mstateen0} is implemented.
+If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
 then access to the new CSR {sspcs} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
@@ -1552,13 +1554,12 @@ will raise an illegal-instruction exception.
 
 Included in: <<smcsps,Sscsps>>
 
-
 [[smijt, Smijt/Ssijt]]
 === Support for interrupt jump table (Smijt, Ssijt)
 
 These extensions add a new mode for taking interrupts via a dedicated interrupt jump table.
 In contrast to other interrupt vector modes,
-an interrupt jump table is used to perform hardware vectoring of interrupts.
+an interrupt jump table (IJT) is used to perform hardware vectoring of interrupts.
 
 In this new mode, when an interrupt is taken, the hart hardware loads the interrupt jump
 table  (table pointed to the new {xijt} CSR) entry for the associated interrupt,
@@ -1687,7 +1688,7 @@ privilege mode of the interrupt handler, and requires read permission.
 
 It is recommended that the interrupt jump table reads are ignored for hardware triggers and breakpoints.
 
-NOTE: The "jump via table" instructions have set a precedent for treating indirect jumps via tables as fetches.
+NOTE: The "jump via table" instructions of Zcmt have set a precedent for treating indirect jumps via tables as fetches.
 However, treating the table access as a read is better aligned with existing PMP and ePMP capabilities.
 E.g., it allows sharing an interrupt jump table,
 where M-mode has read/write permissions and S-mode has read-only permissions.
@@ -1746,8 +1747,8 @@ Interrupts using a fast handler must have the LSB of their interrupt jump table 
 ==== State Enable
 
 If the Smstateen extension is implemented,
-then the bit 53 (ACLIC) in mstateen0 is implemented.
-If bit 53 (ACLIC) of a controlling mstateen0 CSR is zero,
+then the bit 53 (ACLIC) in {mstateen0} is implemented.
+If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
 then access to the new CSR {sijt} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
@@ -1852,7 +1853,7 @@ NOTE: The state of these bits does not influence the behavior of {mipopret}/{sip
 
 The existing trap behavior is modified.
 Before executing the first instruction of the trap handler,
-this extension ensures the interrupted context is partially saved.
+this extension partially save the interrupted context.
 
 It performs the following operations in order:
 
@@ -1931,6 +1932,7 @@ it is allowed for an implementation of a hart
 to optionally check for any pending and enabled interrupts at the current privilege mode.
 
 If such an interrupt exists, the hart may abort executing the {xipopret} instruction and trigger the following actions:
+
   - Update the {xcause}.`Exception Code` to the corresponding interrupt id.
   - Perform the interrupt handler fetch.
   - Start executing the interrupt handler, while skipping the portions of context restore that have not yet been executed by the aborted {xipopret}.
