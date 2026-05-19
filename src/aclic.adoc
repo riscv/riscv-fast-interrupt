@@ -75,6 +75,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mode: pass:q[``mode``]
 :SHAMT: pass:q[``SHAMT``]
 :EHV: pass:q[``EHV``]
+:IID: pass:q[``IID``]
 :SIID: pass:q[``SIID``]
 :IPRIO: pass:q[``IPRIO``]
 :iprio_lowercase: pass:q[``iprio``]
@@ -331,11 +332,24 @@ Additional indirect CSR access is provided to the remaining state.
 
 ACLIC provides access to interrupt pending and enable bits of the hart-local APLIC domains using the same mechanisms as access to interrupt pending and enable bits in the interrupt files of an IMSIC.
 
-The AIA {eidelivery}, {xtopei}, and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
+The AIA {eidelivery} and {eithreshold} CSRs defined for the Incoming Message Signaled Interrupt Controller (IMSIC) are not included in the scope of Smidctrl/Ssidctrl.
 
-NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching eidelivery into other modes.
+NOTE: It is not anticipated that ACLIC implementations would allow dynamically switching {eidelivery} into other modes.
 If e.g. MSI delivery is required in a system, it is recommended to use the full AIA implementation with IMSIC.
-Therefore, no dynamic selection of ACLIC operation via eidelivery is provided.
+Therefore, no dynamic selection of ACLIC operation via {eidelivery} is provided.
+
+In an ACLIC, {xtopei} is implemented and reports the current highest-priority pending-and-enabled interrupt of the connected APLIC domain.
+It reports the minor interrupt identity in {IID}, and the configured priority number in {IPRIO}.
+
+----
+xtopei
+ XLEN-1:26   (reserved)
+ 25:16       IID
+ 15:8        (reserved)
+ 7:0         IPRIO
+----
+
+NOTE: As {eithreshold} is not implemented, any interrupt that has its enable bit set to one is considered enabled for the purpose of reporting it in {xtopei}.
 
 In an ACLIC, registers {eipk} and {eiek} serve the same functionality as with {eidelivery} = 1 in an IMSIC,
 i.e. they are the pending and enable bits for an interrupt source `k`.
