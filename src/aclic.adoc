@@ -769,6 +769,10 @@ An example vector table in the new mode could be:
 Note, that the table contains some entries, which jump to a common interrupt dispatcher,
 and others, which jump to an interrupt source specific handler.
 
+NOTE: When Smeihv and/or Sseihv are supported,
+implementation may reserve a sufficient amount (depending on the number of supported interrupt sources) of LSBs as zero in {xtvec},
+which avoids a full adder circuit for calculating the program counter value on interrupt trap.
+
 [[smnip, Smnip/Ssnip]]
 === Nested Interrupt Preemption Support (Smnip & Ssnip)
 
