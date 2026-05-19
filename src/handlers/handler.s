@@ -45,7 +45,7 @@ call_handler:
     jalr    a0
 
 next_handler:
-    csrrw   a0, CSR_MTOPSI, s0  # restores threshold from s0[8:0], claims interrupt and raises threshold
+    csrrw   a0, CSR_MTOPSI, s0  # restores threshold from s0, claims interrupt and raises threshold
     srai    a0, a0, (16 - P_ALIGN) # extract vector table index
 
     j       call_handler
