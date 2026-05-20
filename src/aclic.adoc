@@ -85,6 +85,8 @@ Graphics used are either explicitly available for free, are the property of RISC
 :xnipbits: pass:q[``xnipbits``]
 :xnipen: pass:q[``xnipen``]
 :xipu: pass:q[``xipu``]
+:xpp: pass:q[``xpp``]
+:xpie: pass:q[``xpie``]
 
 // AIA / IMSIC-compatible CSRs and arrays
 :eidelivery: pass:q[``eidelivery``]
@@ -115,6 +117,7 @@ Graphics used are either explicitly available for free, are the property of RISC
 :mipu: pass:q[``mipu``]
 :mpp: pass:q[``mpp``]
 :mpie: pass:q[``mpie``]
+:mie: pass:q[``mie``]
 :mret: pass:q[``mret``]
 :mipopret: pass:q[``mipopret``]
 
@@ -900,6 +903,11 @@ Priority Ceiling Protocol (PCP) that are used with preemptive interrupt schemes.
 ===== New Interrupt Status ({mistatus}) CSR
 
 A new M-mode CSR, {mistatus}, holds consolidated state related to interrupts.
+This CSR aliases several fields of {mstatus}.
+This CSR intends to consolidate the state
+which may need to be saved/restored in interrupt handling supporting nested preemption.
+Additionally, it aliases {mstatus}.{mie},
+which allows setting the interrupt enable flag while reading the register.
 
 [source]
 ----
@@ -908,7 +916,8 @@ mistatus
  XLEN-1:30  (reserved)
  29:28      mpp[1:0]          Previous privilege mode, mirror of mstatus.mpp
  27         mpie              Previous interrupt enable, mirror of mstatus.mpie
- 26:21      (reserved)
+ 26         mpelp             Previous Expected Landing Pad State, mirror of mstatus.mpelp
+ 25:21      (reserved)
  20:19      VS[1:0]           Vector extension status, mirror of mstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of mstatus.FS
  16:8       pithreshprio[8:0] Previous mithreshold.iprio value
@@ -1013,7 +1022,8 @@ sistatus
  XLEN-1:29  (reserved)
  28         spp               Previous privilege mode, mirror of sstatus.spp
  27         spie              Previous interrupt enable, mirror of sstatus.spie
- 26:21      (reserved)
+ 26         spelp             Previous Expected Landing Pad State, mirror of sstatus.spelp
+ 25:21      (reserved)
  20:19      VS[1:0]           Vector extension status, mirror of sstatus.VS
  18:17      FS[1:0]           Floating-point extension status, mirror of sstatus.FS
  16:8       pithreshprio[8:0] Previous sithreshold.iprio value
