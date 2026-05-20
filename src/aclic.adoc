@@ -1771,7 +1771,7 @@ For systems that need to recover from a page fault,
 {xtval} should be written with the faulting address to enable page-fault handling code.
 Because the instruction pointed to by {xepc} is not the instruction that caused the fault,
 it should not be considered during fault handling.
-Instead, fault handling for aborted traps should use only {xcause} and {xtval}.
+Instead, fault handling for aborted interrupt traps should use only {xcause} and {xtval}.
 
 ==== Handler support
 
