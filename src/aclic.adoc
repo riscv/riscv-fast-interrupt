@@ -1733,25 +1733,45 @@ this requires either a system call or trap-and-emulate operation.
 
 It is recommended that the handler fetch be ignored for hardware triggers and breakpoints.
 
-==== Fault handling
+[[interrupt-fault-handling, Interrupt Fault Handling]]
+==== Interrupt Fault Handling
 
-Faults that occur during the read of interrupt jump table entries may not be recoverable.
-If an unrecoverable load page fault can occur during the interrupt jump table read,
-it is recommended to configure {xtvec}.{mode} to `10`, if interrupt vectoring is desired.
+This extension introduces side effects to an interrupt trap,
+which can cause faults.
+With this extension,
+faults can occur during the interrupt jump table read.
+Therefore, this section defines the required behavior
+if a fault occurs while taking an interrupt trap,
+before executing the first instruction of the handler.
 
-If an exception trap occurs during the interrupt jump table entry read,
-the following holds true:
-Depending on where the second trap is handled,
-the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
-In addition, {xtval} is either set to zero or written with the faulting address.
+NOTE: Faults that can occur include __Load page fault__ and __Load access fault__.
 
-NOTE: For simpler systems, we do not require that {xtval} is written
-with the faulting address.  For systems with demand paging, {xtval}
-should be written with the faulting address to simplify page-fault
-handling code.
+If a fault occurs while taking an interrupt trap,
+before executing the first instruction of the handler,
+the interrupt trap must be aborted,
+and a synchronous exception trap must be taken instead.
+Such a synchronous exception trap following an aborted interrupt trap is referred to as a precise interrupt fault trap.
 
-As long as synchronous exceptions can occur during the interrupt jump table read,
-side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
+Precise interrupt fault traps require that:
+
+* the instruction at the `pc` where the aborted interrupt trap was taken is considered the trapping instruction;
+* all instructions older than the trapping instruction have committed their results;
+* no instructions newer than the trapping instruction have altered architectural state;
+* no operations within the aborted interrupt trap have altered architectural state,
+  unless the altered state allows restarting and completing the interrupt trap while still producing the correct final architectural state.
+
+The last requirement is relaxed to allow speculative modification of parts of the CSRs,
+specifically those that are overwritten by a trap.
+This includes, for example, {xcause} and fields of {xistatus},
+including {xpp}, {xpie}, and {pithreshprio},
+as these fields will be overwritten by the synchronous exception trap.
+
+NOTE: For simpler systems, {xtval} is not required to be written with the faulting address.
+For systems that need to recover from a page fault,
+{xtval} should be written with the faulting address to enable page-fault handling code.
+Because the instruction pointed to by {xepc} is not the instruction that caused the fault,
+it should not be considered during fault handling.
+Instead, fault handling for aborted interrupt traps should use only {xcause} and {xtval}.
 
 ==== Handler support
 
@@ -1960,23 +1980,20 @@ Explicitly, {xepc}, {xistatus} remain unchanged.
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the {xipopret} instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
-==== Fault handling
+==== Interrupt Fault Handling
 
-This extension adds operations to the interrupt trap behavior, which can cause faults.
-Specifically, saving registers x10-x15 can cause faults that lead to synchronous exceptions.
+This extension introduces additional operations during an interrupt trap
+that can cause faults.
+Specifically, the store operations can cause faults such as
+__Store/AMO access fault__ or __Store/AMO page fault__.
 
-NOTE: It is not recommended to use this extension,
-if faults can occur during this sequence that are not recoverable.
+For the purpose of handling such faults,
+the interrupt trap is aborted and a precise interrupt fault trap is taken as a synchronous exception,
+as described in <<interrupt-fault-handling>>.
 
-If an exception trap occurs during the hardware stacking of an interrupt trap,
-the following holds true:
-Depending on where the second trap is handled,
-the corresponding exception pc ({xepc} or {mnepc} in case of an unexpected exception in M-mode with Smdbltrp) value is set to the exception pc of the first trap.
-In addition, {xtval} is either set to zero or written with the faulting address.
-
-As long as synchronous exceptions can occur,
-side-effects of the trap may only be executed if they allow resuming of operation after the handling of the synchronous exception.
-Specifically, the saving of registers needs to be completed before adjusting the stack pointer.
+In idempotent memory regions,
+the store operations of the aborted interrupt trap may have updated memory.
+Non-idempotent memory regions must not have been updated during the aborted interrupt trap.
 
 ==== Instructions
 
