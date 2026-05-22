@@ -1305,7 +1305,7 @@ The threshold lineage is preserved across nested preemptions, which can include 
 If the Smstateen extension is implemented,
 then the bit 53 (ACLIC) in {mstateen0} is implemented.
 If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
-then access to the new CSRs {sistatus} and {sithreshold} by S-mode or a lower-privilege mode
+then access to the new CSRs {sistatus}, {sithreshold}, and {stopsi} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
 == Fast Interrupt Extensions for Microcontrollers
