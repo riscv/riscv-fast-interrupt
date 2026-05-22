@@ -897,10 +897,10 @@ mtopsi
 ----
 
 If an external interrupt `i` is the highest-priority pending-and-enabled interrupt,
-{MIID} is equivalent to the minor interrupt identity of `i`.
+{SIID} is equivalent to the minor interrupt identity of `i`.
 Else, if a major interrupt `i` is the highest-priority pending-and-enabled interrupt,
-{MIID} is the two's complement representation of the negated major interrupt identity of `i`.
-Else, if no interrupt is pending-and-enabled, {MIID} is 0.
+{SIID} is the two's complement representation of the negated major interrupt identity of `i`.
+Else, if no interrupt is pending-and-enabled, {SIID} is 0.
 
 NOTE: The intention of providing a signed version of interrupt identity is to index into a table with
 decreasing memory address per major identity and increasing addresses for minor identities.
