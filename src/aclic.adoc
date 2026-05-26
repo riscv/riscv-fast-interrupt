@@ -1861,8 +1861,6 @@ this exception cannot occur.
 [[smip, Smip/Ssip]]
 === Interrupt handler push and pop extension (Smip & Ssip)
 
-The Smip and Ssip extensions depend upon the Smcsps and Sscsps extensions, respectively.
-
 The interrupt handler push and pop extension adds automatic (partial) context save and restore behavior.
 Interrupt handler latency is reduced by allowing the context save to happen in parallel with the handler fetch,
 which may include the read of the interrupt jump table entry with Smijt/Ssijt.
@@ -1898,7 +1896,7 @@ this extension partially save the interrupted context.
 
 It performs the following operations in order:
 
-  * Conditionally performs a stack pointer swap by executing `{xcspspush} sp, sp`
+  * Conditionally performs a stack pointer swap by executing `{xcspspush} sp, sp` (if Smcsps/Sscsps is implemented)
   * Save registers x10-x15 (these are the caller saved registers available in RVC)
   * Adjusts the stack pointer to create the stack frame
 
@@ -1934,7 +1932,7 @@ It performs the following actions in order:
 
   * Adjusts the stack pointer to destroy the stack frame
   * Restores registers x10-x15
-  * Conditionally performs a stack pointer swap by executing `{xcspspop} sp, sp`
+  * Conditionally performs a stack pointer swap by executing `{xcspspop} sp, sp` (if Smcsps/Sscsps is implemented)
   * Executes an {xret} according to the current level
 
 NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
@@ -2049,6 +2047,7 @@ where
 ----
 
 The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
+If Smcsps is not implemented, mcspspop should be viewed as a NOP.
 
 Included in: <<smip,Smip>>
 
@@ -2101,5 +2100,6 @@ where
 ----
 
 The order and access size of the loads, as well as the OFFSETS, are implementation-defined.
+If Sscsps is not implemented, scspspop should be viewed as a NOP.
 
 Included in: <<smip,Ssip>>
