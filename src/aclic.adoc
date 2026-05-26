@@ -253,6 +253,8 @@ The latter is additionally made up of
 . Interrupt control interface for pending and enable bits based on IMSIC
 . New indirect CSRs for accessing the remaining state of the hart-local APLIC domains
 
+In addition, extensions are defined for vectoring of external interrupts (<<smeihv>>) and accelerating nested preemption (<<smnip>>).
+
 [[domains, Hart-local APLIC Domains]]
 === Hart-local APLIC domains (Non-ISA)
 
