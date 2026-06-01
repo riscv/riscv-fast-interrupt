@@ -210,6 +210,29 @@ This specification aims for single-hart systems and no support for the H extensi
 NOTE: The extensions defined here are orthogonal to the NMI and RNMI
 mechanisms. Their behavior is unchanged by the extensions of ACLIC.
 
+[NOTE]
+====
+
+"Fast" interrupt features have become state of the art in microcontrollers in incumbent architectures.
+Namely, automatic hardware stacking, tailchaining, late arrival, lazy stacking, hardware vectoring, interrupt nesting, and stack separation.
+These features were introduced to minimize interrupt latency and memory footprint in microcontrollers.
+These are vital in ultra low-cost MCUs fabricated in less dense process nodes, running at 10s of MHz with only KiB of memory.
+It is therefore important to make a distinction between these two types of system, hereafter termed "Constrained Microcontrollers" and "High Performance Microcontrollers".
+
+Constrained Microcontrollers are characterized by lower performance (10s of MHz), lower memory availability (KiB), less dense technology nodes and running bare metal code.
+For these systems, the cycles and memory saved from fast interrupt features can have a large relative impact on the overall system cost and interrupt latency.
+Therefore, even features that have minimal cycle impact on interrupt latency and only bare metal code could take advantage of are considered for Constrained Microcontrollers.
+
+High Performance Microcontrollers are characterized by high performance (100s of MHz), high memory availability (MiB), denser technology nodes, and running an real-time operating system (RTOS) or real-time hypervisor.
+For these systems, the cycles and memory saved from fast interrupt features have a relatively small impact on the overall system cost and interrupt latency.
+Therefore, only features that have a large cycle impact on interrupt latency and that major RTOSes could take advantage of are considered for High Performance Microcontrollers.
+
+Both types of microcontrollers are expected to implement some or all of <<fundamental-ext>>.
+Constrained microcontrollers are expected to implement some or all of <<uc-ext>> in addition.
+
+====
+
+[[fundamental-ext, Fundamental ACLIC Extensions]]
 == Fundamental ACLIC Extensions
 
 This section lays the foundation for fast interrupt handling.
@@ -1308,6 +1331,7 @@ If bit 53 (ACLIC) of a controlling {mstateen0} CSR is zero,
 then access to the new CSRs {sistatus}, {sithreshold}, and {stopsi} by S-mode or a lower-privilege mode
 results in an illegal instruction exception.
 
+[[uc-ext, Fast Interrupt Extensions for Microcontrollers]]
 == Fast Interrupt Extensions for Microcontrollers
 
 This section introduces additional extensions,
