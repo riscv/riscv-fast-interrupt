@@ -1993,6 +1993,14 @@ Explicitly, {xepc}, {xistatus} remain unchanged.
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the {xipopret} instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
+==== Aborting Interrupt Traps
+
+The requirements on how to abort an interrupt in <<interrupt-trap-abort>> also apply to this extension.
+
+In idempotent memory regions,
+the store operations of an aborted interrupt trap may have updated memory.
+Non-idempotent memory regions must not have been updated during the aborted interrupt trap.
+
 ==== Interrupt Fault Handling
 
 This extension introduces additional operations during an interrupt trap
@@ -2003,10 +2011,6 @@ __Store/AMO access fault__ or __Store/AMO page fault__.
 For the purpose of handling such faults,
 the interrupt trap is aborted and a precise interrupt fault trap is taken as a synchronous exception,
 as described in <<interrupt-fault-handling>>.
-
-In idempotent memory regions,
-the store operations of the aborted interrupt trap may have updated memory.
-Non-idempotent memory regions must not have been updated during the aborted interrupt trap.
 
 ==== Instructions
 
