@@ -1760,13 +1760,32 @@ this requires either a system call or trap-and-emulate operation.
 
 It is recommended that the handler fetch be ignored for hardware triggers and breakpoints.
 
+[[interrupt-trap-abort, Aborting Interrupt Traps]]
+==== Aborting Interrupt Traps
+
+This extension changes interrupt traps to a multi-cycle operation.
+It is implementation-defined
+whether an interrupt trap can be aborted in favor of a higher-priority event.
+
+NOTE: Examples of higher-priority events include NMIs or interrupts at a more-privileged level.
+
+Interrupts should be aborted in a way
+such that no operations within the aborted interrupt trap have altered architectural state,
+unless the altered state allows restarting and completing the interrupt trap while still producing the correct final architectural state.
+
+Allowing state to be partially updated is a relaxation with respect to the precise exception model of RISC-V.
+It allows speculative modification of parts of the CSRs,
+specifically those that are overwritten by a trap.
+This includes, for example, {xcause} and fields of {xistatus},
+including {xpp}, {xpie}, and {pithreshprio},
+as these fields will be overwritten by a subsequent trap.
+
 [[interrupt-fault-handling, Interrupt Fault Handling]]
 ==== Interrupt Fault Handling
 
 This extension introduces side effects to an interrupt trap,
 which can cause faults.
-With this extension,
-faults can occur during the interrupt jump table read.
+Faults can occur during the interrupt jump table read.
 Therefore, this section defines the required behavior
 if a fault occurs while taking an interrupt trap,
 before executing the first instruction of the handler.
@@ -1781,17 +1800,10 @@ Such a synchronous exception trap following an aborted interrupt trap is referre
 
 Precise interrupt fault traps require that:
 
+* The interrupt trap during which the fault occured is aborted as defined in <<interrupt-trap-abort>>;
 * the instruction at the `pc` where the aborted interrupt trap was taken is considered the trapping instruction;
 * all instructions older than the trapping instruction have committed their results;
-* no instructions newer than the trapping instruction have altered architectural state;
-* no operations within the aborted interrupt trap have altered architectural state,
-  unless the altered state allows restarting and completing the interrupt trap while still producing the correct final architectural state.
-
-The last requirement is relaxed to allow speculative modification of parts of the CSRs,
-specifically those that are overwritten by a trap.
-This includes, for example, {xcause} and fields of {xistatus},
-including {xpp}, {xpie}, and {pithreshprio},
-as these fields will be overwritten by the synchronous exception trap.
+* no instructions newer than the trapping instruction have altered architectural state.
 
 NOTE: For simpler systems, {xtval} is not required to be written with the faulting address.
 For systems that need to recover from a page fault,
@@ -2005,6 +2017,14 @@ Explicitly, {xepc}, {xistatus} remain unchanged.
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the {xipopret} instruction.
 In this case, the entire context save and restore sequence can be skipped.
 
+==== Aborting Interrupt Traps
+
+The requirements on how to abort an interrupt in <<interrupt-trap-abort>> also apply to this extension.
+
+In idempotent memory regions,
+the store operations of an aborted interrupt trap may have updated memory.
+Non-idempotent memory regions must not have been updated during the aborted interrupt trap.
+
 ==== Interrupt Fault Handling
 
 This extension introduces additional operations during an interrupt trap
@@ -2015,10 +2035,6 @@ __Store/AMO access fault__ or __Store/AMO page fault__.
 For the purpose of handling such faults,
 the interrupt trap is aborted and a precise interrupt fault trap is taken as a synchronous exception,
 as described in <<interrupt-fault-handling>>.
-
-In idempotent memory regions,
-the store operations of the aborted interrupt trap may have updated memory.
-Non-idempotent memory regions must not have been updated during the aborted interrupt trap.
 
 ==== Instructions
 
