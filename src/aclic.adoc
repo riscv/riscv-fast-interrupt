@@ -190,8 +190,6 @@ The table below provides a summary of the ACLIC extensions.
 2+| Fundamental ACLIC Extensions
 | Smidctrl     | Interrupt domain control interface at Machine level
 | Ssidctrl     | Interrupt domain control interface at Supervisor level
-| Smeihv       | External interrupt hardware vectoring at Machine level
-| Sseihv       | External interrupt hardware vectoring at Supervisor level
 | Smnip        | Nested Interrupt Preemption support at Machine level
 | Ssnip        | Nested Interrupt Preemption support at Supervisor level
 2+| Fast Interrupt Extensions for Microcontrollers
@@ -253,7 +251,7 @@ The latter is additionally made up of
 . Interrupt control interface for pending and enable bits based on IMSIC
 . New indirect CSRs for accessing the remaining state of the hart-local APLIC domains
 
-In addition, extensions are defined for vectoring of external interrupts (<<smeihv>>) and accelerating nested preemption (<<smnip>>).
+In addition, extensions are defined for accelerating nested preemption (<<smnip>>).
 
 [[domains, Hart-local APLIC Domains]]
 === Hart-local APLIC domains (Non-ISA)
@@ -682,87 +680,6 @@ results in an illegal instruction exception.
 If the Smstateen extension is implemented, then bit 58 (IMSIC) in {mstateen0} is implemented, even though IMSIC is not present.
 If bit 58 of a controlling {mstateen0} CSR is zero, then access to the CSRs reused from the IMSIC ({stopei}, {eipk} and {eiek})
 by S-mode or a lower-privilege mode results in an illegal instruction exception.
-
-[[smeihv, Smeihv/Sseihv]]
-=== External interrupt hardware vectoring (Smeihv & Sseihv)
-
-In this extension, a new mode is enabled in {xtvec}.{mode}.
-
-[source]
-----
- mode  PC on Interrupt
- 10    OBASE+4*siid                         # External interrupt vectored mode
-
-where:
-  on external interrupt:
-    siid = minor interrupt identity
-  else, on major interrupt
-    siid = - major interrupt identity
-
-  OBASE  = xtvec[XLEN-1:2]<<2   # Vector base is at least 4-byte aligned
-----
-
-An example vector table in the new mode could be:
-
-.Hardware vector table layout for `{xtvec}.MODE=10`
-[cols="1,1,1",options="header"]
-|===
-| Event
-| Address relative to `OBASE`
-| Contents
-
-| custom IRQ N
-| `-4 * N`
-| j handler_irq_n.
-
-| `...`
-| ...
-| 
-
-| Machine timer interrupt
-| `-4 * 7`
-| j interrupt_dispatcher
-
-| Supervisor timer interrupt
-| `-4 * 5`
-| j interrupt_dispatcher
-
-| Machine software interrupt
-| `-4 * 3`
-| j interrupt_dispatcher
-
-| Supervisor software interrupt
-| `-4 * 1`
-| j interrupt_dispatcher
-
-| Synchronous exception
-| `+0`
-| j exception_handler
-
-| External IRQ 1
-| `+4 * 1`
-| j handler_ext_1
-
-| External IRQ 2
-| `+4 * 2`
-| j interrupt_dispatcher
-
-| `...`
-| ...
-| 
-
-| External IRQ N
-| `+4 * N`
-| j handler_ext_n
-
-|===
-
-Note, that the table contains some entries, which jump to a common interrupt dispatcher,
-and others, which jump to an interrupt source specific handler.
-
-NOTE: When Smeihv and/or Sseihv are supported,
-implementation may reserve a sufficient amount (depending on the number of supported interrupt sources) of LSBs as zero in {xtvec},
-which avoids a full adder circuit for calculating the program counter value on interrupt trap.
 
 [[smnip, Smnip/Ssnip]]
 === Nested Interrupt Preemption Support (Smnip & Ssnip)
@@ -1195,7 +1112,6 @@ if their nested interrupt preemption priority is higher than any interrupt that 
 In this case, the entry in the interrupt table corresponding to those interrupts,
 which should use the SW dispatcher,
 need to cause the execution to jump to the common SW dispatcher.
-
 
 [,c]
 ----
