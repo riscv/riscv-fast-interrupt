@@ -1880,10 +1880,10 @@ Included in: <<smip,Ssip>>
 
 [appendix]
 [[smnip-handler]]
-== Example Handler Code for Nested Preemption
+== Example Handler Code
 
-This section introduces pseudo-code examples for handling interrupts in the presence of Smnip.
-Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
+This section introduces pseudo-code and assembly examples for handling interrupts in the presence of ACLIC extensions.
+Examples are given at M-mode, and S-mode examples can be constructed analogously by using the equivalent S-mode CSRs.
 
 [[smnip-sw-dispatcher]]
 === Smnip/Ssnip SW dispatcher
@@ -1942,7 +1942,9 @@ include::handlers/handler.s[]
 [[smnip-fast-handler]]
 === Smnip/Ssnip Preemptible Fast Interrupt Handler
 
-An example of a preemptible fast interrupt handler is
+A fast interrupt handler does not use a common SW dispatcher.
+It is directly jumped to after taking the interrupt trap.
+An example of a preemptible fast interrupt handler is:
 
 [,C]
 ----
@@ -1957,7 +1959,8 @@ fast_interrupt_handler:
   return from trap
 ----
 
-As part of the interrupt handling, the pending bit needs to be cleared by software.
+In order to be able to resume and return after preemption,
+{mepc} and {mistatus} need to be saved prior to enabling interrupts.
 
 It is expected that GNU toolchains will support preemptible C-handlers like
 
@@ -1985,7 +1988,7 @@ include::handlers/fast-handler.s[]
 
 === Smip/Ssip C interrupt handlers
 
-When this extension is implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
+When Smip/Ssip extensions are implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
 
 [source,c]
 ----
@@ -2004,6 +2007,12 @@ void interrupt_handler() __attribute__((interrupt("preemptible", "push-pop")));
 ----
 
 To indicate that the nested preemption is used in addition.
+In that case, a possible assembly version of the handler is as follows:
+
+[source,asm]
+----
+include::handlers/fast-handler-smip.s[]
+----
 
 [appendix]
 [[ex-threshold-nested]]
