@@ -1096,149 +1096,6 @@ The behavior of an {xret} instruction is modified as follows:
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
 
-[[smnip-handler]]
-==== Example: Handler code for nested preemption
-
-This section introduces pseudo-code examples for handling interrupts in the presence of Smnip.
-Ssnip examples can be constructed analogously by using the equivalent S-mode CSRs.
-
-[[smnip-sw-dispatcher]]
-===== SW dispatcher
-
-The first example modifies the example handler from AIA by adding support for nested preemption.
-When {mtvec}.{mode} = Direct (0), all interrupts use the SW dispatcher as a common entry point.
-In vectored mode, some interrupt may jump directly into a custom handler,
-if their nested interrupt preemption priority is higher than any interrupt that uses the SW dispatcher.
-In this case, the entry in the interrupt table corresponding to those interrupts,
-which should use the SW dispatcher,
-need to cause the execution to jump to the common SW dispatcher.
-
-[,c]
-----
-save processor registers
-i = read CSR mcause
-if (i >= 0) {
-    handle synchronous exception i
-    restore mstatus if necessary
-}
-if (mstatus.MPIE == 1) {
-    save mistatus
-    enable interrupts
-
-    loop {
-        call the interrupt handler for major interrupt id
-
-        topsi_val = read/write CSR mtopsi with value of mistatus
-        i = (int) topsi_val >> 16
-    }
-
-    disable interrupts
-    restore mistatus
-}
-restore processor registers
-return from trap
-----
-(This example can be further optimized, but with an increase in complexity.)
-
-A pending-and-enabled higher-priority interrupt can preempt a currently running interrupt handler.
-
-The interrupt threshold is raised automatically on interrupt trap,
-and through the write portion of the {mtopsi} access.
-
-If no interrupt is pending-enabled when {mtopsi} is read,
-a special handler, located at vector table entry of interrupt id 0,
-jumps to the epilogue of the handler.
-
-Below is an example of the SW dispatcher written in assembly:
-
-[source,asm]
-----
-include::handlers/handler.s[]
-----
-
-[[smnip-fast-handler]]
-===== Preemptible Fast Interrupt Handler
-
-An example of a preemptible fast interrupt handler is
-
-[,C]
-----
-fast_interrupt_handler:
-  save mepc, mistatus
-  enable interrupts
-
-  /* interrupt handling */
-
-  disable interrupts
-  restore mepc, mistatus
-  return from trap
-----
-
-As part of the interrupt handling, the pending bit needs to be cleared by software.
-
-It is expected that GNU toolchains will support preemptible C-handlers like
-
-[,C]
-----
-void fast_interrupt_handler() __attribute__((interrupt("preemptible")))
-{
-
-  /* interrupt handling */
-
-  return;
-}
-----
-
-Context needed to return after preemption is saved before enabling interrupts.
-Interrupts are enabled before executing the first statement of the function.
-Before returning, interrupts are disabled, and context is restored.
-
-A possible assembly version of the handler is as follows:
-
-[source,asm]
-----
-include::handlers/fast-handler.s[]
-----
-
-[[ex-threshold-nested]]
-==== Example: Threshold behavior under nested traps and interrupts
-
-This example illustrates heavy nesting with explicit threshold management,
-under the following assumptions:
-
-* Any handler must save xistatus before enabling interrupts
-* Any handler that had interrupts enabled at any time must restore xistatus with interrupts disabled before executing xret
-
-.Preconditions
-* Thread **T** starts with `xithreshold = 128`.
-* Interrupt **A** has `IPRIO = 32`; interrupt **B** has `IPRIO = 4`; interrupt **C** has `IPRIO = 2`.
-
-[cols="3,2,3,3,3,6", options="header"]
-|===
-| Step | Context | Event | xithreshold | xistatus.pithreshprio | Notes
-
-| 0  | T (thread) | —                         | 128 | X   | Baseline: thread running with cutoff 128.
-| 1  | A          | trap (interrupt A)        | 32  | 128 | Trap writes `pithreshprio=128`; interrupt entry sets `xithreshold=32`.
-| 1  | A          | save context; IE=1        | 32  | 128 | Save xistatus and enable interrupts afterwards.
-| 2  | A          | raise threshold           | 2   | 128 | Short critical section in A; `pithreshprio` unchanged.
-| 3  | A          | lower threshold           | 32  | 128 | End of A's critical section; restore handler threshold to 32.
-| 4  | B          | trap (interrupt B)        | 4   | 32  | Trap writes `pithreshprio=32`; interrupt entry sets `xithreshold=4`.
-| 1  | B          | save context; IE=1        | 4   | 32  | Save xistatus and enable interrupts afterwards.
-| 5  | E          | trap (exception E)        | 4   | 4   | Exception trap captures current threshold into `pithreshprio=4`.
-| 1  | E          | save context; IE=1        | 4   | 32  | Save xistatus and enable interrupts afterwards.
-| 7  | C          | trap (interrupt C)        | 2   | 4   | Trap writes `pithreshprio=4`; interrupt entry sets `xithreshold=2`.
-| 9  | C→E        | return (xRET)             | 4   | 4   | On C's return, `xithreshold` restored from `pithreshprio=4`; resume E.
-| 1  | E          | IE=0; restore context     | 4   | 4   | Disable interrupts and restore xistatus afterwards.
-| 10 | E→B        | return (xRET)             | 4   | 4   | E returns; `xithreshold` restored from `pithreshprio=4`; resume B.
-| 1  | B          | IE=0; restore context     | 4   | 32  | Disable interrupts and restore xistatus afterwards.
-| 11 | B→A        | return (xRET)             | 32  | 32  | On B's return, `xithreshold=32` from `pithreshprio=32`; resume A.
-| 1  | A          | IE=0; restore context     | 32  | 128 | Disable interrupts and restore xistatus afterwards.
-| 12 | A→T        | return (xRET)             | 128 | 128 | On A's return, `xithreshold=128` from `pithreshprio=128`; resume T.
-|===
-
-This example demonstrates, how the correct threshold is always restored to the original level after a preemption completes.
-The threshold lineage is preserved across nested preemptions, which can include a mix of interrupts and synchronous exceptions.
-
 ==== State Enable
 
 If the Smstateen extension is implemented,
@@ -1657,23 +1514,6 @@ Such a mode is useful, if interrupts can be installed at run-time.
 Also, treating these accesses as reads harmonizes the permissions with accesses into the table
 by a SW dispatcher based on interrupt identity.
 
-NOTE: If {xijt} is configured such that multiple privilege levels
-share a single interrupt jump table, the memory protection units
-(e.g., PMP, Smepmp) must grant read permission to the shared interrupt jump table
-for all applicable lower privilege levels. +
- +
-Example 1: Standard PMP +
-For a system with M-mode and S-mode, a PMP entry with L=1, R=1, W=0 and X=0
-permits both privilege levels to execute from the table while preventing modifications.
-If L=0, S-mode retains execute only permission while M-mode maintains full permissions. +
- +
-Example 2: Smepmp Extension +
-Under the Smepmp extension, the shared interrupt jump table can be secured as a "Shared data region".
-Setting L=0, R=0, W=1 and X=0 grants both M-mode and S-mode read only permission to the interrupt jump table.
-Additionally, M-mode has write permissions to the interrupt jump table.
-If S-mode requires modifying the table,
-this requires either a system call or trap-and-emulate operation.
-
 It is recommended that the handler fetch be ignored for hardware triggers and breakpoints.
 
 [[interrupt-trap-abort, Aborting Interrupt Traps]]
@@ -1890,28 +1730,6 @@ It performs the following actions in order:
 NOTE: As this instruction is intended to be executed at the end of the handler, interrupts are typically disabled during its execution.
 It is however an implementation choice to perform tail-chaining to the next highest priority pending-enabled interrupt upon this instruction.
 
-==== C interrupt handlers
-
-When this extension is implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
-
-[source,c]
-----
-void interrupt_handler() __attribute__((interrupt("push-pop")));
-----
-
-that the registers x10-x15 have been saved.
-Additionally, the compiler does not need to restore these registers.
-Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
-
-The attribute can be combined with other attributes, e.g. like
-
-[source,c]
-----
-void interrupt_handler() __attribute__((interrupt("preemptible", "push-pop")));
-----
-
-To indicate that the nested preemption is used in addition.
-
 ==== Late Preemption of the interrupt handler
 
 While executing the trap side effects of an interrupt, it is allowed for an implementation to optionally check for higher priority pending and enabled interrupts at the current privilege mode, and switch to fetching this interrupt handler instead.
@@ -2059,3 +1877,201 @@ The order and access size of the loads, as well as the OFFSETS, are implementati
 If Sscsps is not implemented, scspspop should be viewed as a NOP.
 
 Included in: <<smip,Ssip>>
+
+[appendix]
+[[smnip-handler]]
+== Example Handler Code
+
+This section introduces pseudo-code and assembly examples for handling interrupts in the presence of ACLIC extensions.
+Examples are given at M-mode, and S-mode examples can be constructed analogously by using the equivalent S-mode CSRs.
+
+[[smnip-sw-dispatcher]]
+=== Smnip/Ssnip SW dispatcher
+
+The first example modifies the example handler from AIA by adding support for nested preemption.
+When {mtvec}.{mode} = Direct (0), all interrupts use the SW dispatcher as a common entry point.
+In vectored mode, some interrupt may jump directly into a custom handler,
+if their nested interrupt preemption priority is higher than any interrupt that uses the SW dispatcher.
+In this case, the entry in the interrupt table corresponding to those interrupts,
+which should use the SW dispatcher,
+need to cause the execution to jump to the common SW dispatcher.
+
+[,c]
+----
+save processor registers
+i = read CSR mcause
+if (i >= 0) {
+    handle synchronous exception i
+    restore mstatus if necessary
+}
+if (mstatus.MPIE == 1) {
+    save mistatus
+    enable interrupts
+
+    loop {
+        call the interrupt handler for major interrupt id
+
+        topsi_val = read/write CSR mtopsi with value of mistatus
+        i = (int) topsi_val >> 16
+    }
+
+    disable interrupts
+    restore mistatus
+}
+restore processor registers
+return from trap
+----
+(This example can be further optimized, but with an increase in complexity.)
+
+A pending-and-enabled higher-priority interrupt can preempt a currently running interrupt handler.
+
+The interrupt threshold is raised automatically on interrupt trap,
+and through the write portion of the {mtopsi} access.
+
+If no interrupt is pending-enabled when {mtopsi} is read,
+a special handler, located at vector table entry of interrupt id 0,
+jumps to the epilogue of the handler.
+
+Below is an example of the SW dispatcher written in assembly:
+
+[source,asm]
+----
+include::handlers/handler.s[]
+----
+
+[[smnip-fast-handler]]
+=== Smnip/Ssnip Preemptible Fast Interrupt Handler
+
+A fast interrupt handler does not use a common SW dispatcher.
+It is directly jumped to after taking the interrupt trap.
+An example of a preemptible fast interrupt handler is:
+
+[,C]
+----
+fast_interrupt_handler:
+  save mepc, mistatus
+  enable interrupts
+
+  /* interrupt handling */
+
+  disable interrupts
+  restore mepc, mistatus
+  return from trap
+----
+
+In order to be able to resume and return after preemption,
+{mepc} and {mistatus} need to be saved prior to enabling interrupts.
+
+It is expected that GNU toolchains will support preemptible C-handlers like
+
+[,C]
+----
+void fast_interrupt_handler() __attribute__((interrupt("preemptible")))
+{
+
+  /* interrupt handling */
+
+  return;
+}
+----
+
+Context needed to return after preemption is saved before enabling interrupts.
+Interrupts are enabled before executing the first statement of the function.
+Before returning, interrupts are disabled, and context is restored.
+
+A possible assembly version of the handler is as follows:
+
+[source,asm]
+----
+include::handlers/fast-handler.s[]
+----
+
+=== Smip/Ssip C interrupt handlers
+
+When Smip/Ssip extensions are implemented, a GNU compiler may assume for any interrupt handler defined with the interrupt attribute like
+
+[source,c]
+----
+void interrupt_handler() __attribute__((interrupt("push-pop")));
+----
+
+that the registers x10-x15 have been saved.
+Additionally, the compiler does not need to restore these registers.
+Finally, it should generate an {xipopret} instruction at the end of the function instead of an {xret}.
+
+The attribute can be combined with other attributes, e.g. like
+
+[source,c]
+----
+void interrupt_handler() __attribute__((interrupt("preemptible", "push-pop")));
+----
+
+To indicate that the nested preemption is used in addition.
+In that case, a possible assembly version of the handler is as follows:
+
+[source,asm]
+----
+include::handlers/fast-handler-smip.s[]
+----
+
+[appendix]
+[[ex-threshold-nested]]
+== Example threshold behavior under nested traps and interrupts
+
+This example illustrates heavy nesting with explicit threshold management,
+under the following assumptions:
+
+* Any handler must save xistatus before enabling interrupts
+* Any handler that had interrupts enabled at any time must restore xistatus with interrupts disabled before executing xret
+
+.Preconditions
+* Thread **T** starts with `xithreshold = 128`.
+* Interrupt **A** has `IPRIO = 32`; interrupt **B** has `IPRIO = 4`; interrupt **C** has `IPRIO = 2`.
+
+[cols="3,2,3,3,3,6", options="header"]
+|===
+| Step | Context | Event | xithreshold | xistatus.pithreshprio | Notes
+
+| 0  | T (thread) | —                         | 128 | X   | Baseline: thread running with cutoff 128.
+| 1  | A          | trap (interrupt A)        | 32  | 128 | Trap writes `pithreshprio=128`; interrupt entry sets `xithreshold=32`.
+| 1  | A          | save context; IE=1        | 32  | 128 | Save xistatus and enable interrupts afterwards.
+| 2  | A          | raise threshold           | 2   | 128 | Short critical section in A; `pithreshprio` unchanged.
+| 3  | A          | lower threshold           | 32  | 128 | End of A's critical section; restore handler threshold to 32.
+| 4  | B          | trap (interrupt B)        | 4   | 32  | Trap writes `pithreshprio=32`; interrupt entry sets `xithreshold=4`.
+| 1  | B          | save context; IE=1        | 4   | 32  | Save xistatus and enable interrupts afterwards.
+| 5  | E          | trap (exception E)        | 4   | 4   | Exception trap captures current threshold into `pithreshprio=4`.
+| 1  | E          | save context; IE=1        | 4   | 32  | Save xistatus and enable interrupts afterwards.
+| 7  | C          | trap (interrupt C)        | 2   | 4   | Trap writes `pithreshprio=4`; interrupt entry sets `xithreshold=2`.
+| 9  | C→E        | return (xRET)             | 4   | 4   | On C's return, `xithreshold` restored from `pithreshprio=4`; resume E.
+| 1  | E          | IE=0; restore context     | 4   | 4   | Disable interrupts and restore xistatus afterwards.
+| 10 | E→B        | return (xRET)             | 4   | 4   | E returns; `xithreshold` restored from `pithreshprio=4`; resume B.
+| 1  | B          | IE=0; restore context     | 4   | 32  | Disable interrupts and restore xistatus afterwards.
+| 11 | B→A        | return (xRET)             | 32  | 32  | On B's return, `xithreshold=32` from `pithreshprio=32`; resume A.
+| 1  | A          | IE=0; restore context     | 32  | 128 | Disable interrupts and restore xistatus afterwards.
+| 12 | A→T        | return (xRET)             | 128 | 128 | On A's return, `xithreshold=128` from `pithreshprio=128`; resume T.
+|===
+
+This example demonstrates, how the correct threshold is always restored to the original level after a preemption completes.
+The threshold lineage is preserved across nested preemptions, which can include a mix of interrupts and synchronous exceptions.
+
+[appendix]
+== (ePMP) Configuration for sharing Interrupt Jump Tables among Privilege Levels
+
+If {xijt} is configured such that multiple privilege levels
+share a single interrupt jump table, the memory protection units
+(e.g., PMP, Smepmp) must grant read permission to the shared interrupt jump table
+for all applicable lower privilege levels.
+
+=== Example 1: Standard PMP
+
+For a system with M-mode and S-mode, a PMP entry with L=1, R=1, W=0 and X=0
+permits both privilege levels to execute from the table while preventing modifications.
+If L=0, S-mode retains execute only permission while M-mode maintains full permissions.
+
+=== Example 2: Smepmp Extension
+
+Under the Smepmp extension, the shared interrupt jump table can be secured as a "Shared data region".
+Setting L=0, R=0, W=1 and X=0 grants both M-mode and S-mode read only permission to the interrupt jump table.
+Additionally, M-mode has write permissions to the interrupt jump table.
+If S-mode requires modifying the table,
+this requires either a system call or trap-and-emulate operation.

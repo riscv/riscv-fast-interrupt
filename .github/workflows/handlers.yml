@@ -34,3 +34,8 @@ jobs:
         run: |
           as -march=rv32e_zicsr -mabi=ilp32e \
              -o build/fast-handler-rv32e.o src/handlers/fast-handler.s
+
+      - name: Build fast-handler-smip.s for rv32e_zicsr
+        run: |
+          as -march=rv32e_zicsr -mabi=ilp32e \
+             -o build/fast-handler-smip-rv32e.o src/handlers/fast-handler-smip.s
