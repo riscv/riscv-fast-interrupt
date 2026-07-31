@@ -4,8 +4,8 @@ include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Example Specification Document (Zexmpl)
 :revdate: current
-:revnumber: dev
-:revremark: This document is under development. Expect potential changes. Visit http://riscv.org/spec-state for further details.
+:revnumber: stable
+:revremark: This document is in Stable state. Assume anything could still change, but limited change should be expected. Visit http://riscv.org/spec-state for further details.
 :revinfo:
 :preface-title: Preamble
 :colophon:
