@@ -17,7 +17,7 @@ DOCS := \
 
 DATE ?= $(shell date +%Y-%m-%d)
 VERSION ?= dev
-REVMARK ?= Draft
+REVMARK ?= Stable
 DOCKER_IMG := ghcr.io/riscv/riscv-docs-base-container-image:latest
 ifneq ($(SKIP_DOCKER),true)
 	DOCKER_CMD := docker run --rm -v ${PWD}:/build -w /build \
@@ -29,8 +29,14 @@ endif
 SRC_DIR := src
 BUILD_DIR := build
 
-DOCS_PDF := $(DOCS:%.adoc=%.pdf)
-DOCS_HTML := $(DOCS:%.adoc=%.html)
+ifeq ($(VERSION),dev)
+	SUFFIX := $(DATE)
+else
+	SUFFIX := $(VERSION)
+endif
+
+DOCS_PDF := $(DOCS:%.adoc=%-$(SUFFIX).pdf)
+DOCS_HTML := $(DOCS:%.adoc=%-$(SUFFIX).html)
 
 XTRA_ADOC_OPTS :=
 ASCIIDOCTOR_PDF := asciidoctor-pdf
@@ -59,11 +65,11 @@ build-docs: $(DOCS_PDF) $(DOCS_HTML)
 
 vpath %.adoc $(SRC_DIR)
 
-%.pdf: %.adoc
-	$(DOCKER_CMD) $(DOCKER_QUOTE) $(ASCIIDOCTOR_PDF) $(OPTIONS) $(REQUIRES) $< $(DOCKER_QUOTE)
+$(DOCS_PDF): %-$(SUFFIX).pdf: %.adoc
+	$(DOCKER_CMD) $(DOCKER_QUOTE) $(ASCIIDOCTOR_PDF) $(OPTIONS) $(REQUIRES) -o $@ $< $(DOCKER_QUOTE)
 
-%.html: %.adoc
-	$(DOCKER_CMD) $(DOCKER_QUOTE) $(ASCIIDOCTOR_HTML) $(OPTIONS) $(REQUIRES) $< $(DOCKER_QUOTE)
+$(DOCS_HTML): %-$(SUFFIX).html: %.adoc
+	$(DOCKER_CMD) $(DOCKER_QUOTE) $(ASCIIDOCTOR_HTML) $(OPTIONS) $(REQUIRES) -o $@ $< $(DOCKER_QUOTE)
 
 build:
 	@echo "Checking if Docker is available..."
