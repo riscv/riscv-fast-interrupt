@@ -1490,7 +1490,8 @@ a trap will take them to a SW dispatcher at a common entry point indicated by {m
 This SW dispatcher may access the table pointed to by {xijt} to retrieve the interrupt handler address.
 
 If the read is successful and the LSB of entry is one,
-the hart clears the low bit(s) (depending on IALIGN) of the handler address
+the hart clears the low bit(s) (depending on IALIGN) of the handler address,
+clears the corresponding interrupt-pending bit if possible,
 and sets the PC to this handler address.
 
 NOTE: The original vectored mode simply jumps to an address in
