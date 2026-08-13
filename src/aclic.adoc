@@ -1696,9 +1696,9 @@ It performs the following operations in order:
 NOTE: The stack pointer swap is performed as the first action,
 as the integrity of the sp of a less privileged level cannot be guaranteed at all times.
 
-The size of the stack frame created is set to XLEN bytes,
-which is the minimum stack frame size that can hold the six pushed registers,
-and is psABI-compliant.
+The size of the stack frame created is set to 24 bytes on RV32E, 32 bytes on RV32I
+and 48 bytes on RV64, which are the minimum stack frame sizes that can hold the
+six pushed registers, and are psABI-compliant.
 
 NOTE: It is the responsibility of the programmer to ensure
 that sp contains a psABI-compliant stack pointer value
