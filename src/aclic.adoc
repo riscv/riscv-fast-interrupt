@@ -1505,6 +1505,8 @@ For permissions-checking purposes, the memory access to retrieve the
 function pointer for hardware vectoring is a read at the
 privilege mode of the interrupt handler, and requires read permission.
 
+Table entries follow the current data endianness.
+
 It is recommended that the interrupt jump table reads are ignored for hardware triggers and breakpoints.
 
 NOTE: The "jump via table" instructions of Zcmt have set a precedent for treating indirect jumps via tables as fetches.
