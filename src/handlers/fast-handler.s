@@ -25,7 +25,7 @@ fast_interrupt_entry:
     sr      s0, 0*REGSZ, sp
     csrr    s0, mepc             # save mepc
     sr      s1, 1*REGSZ, sp
-    csrrsi  s1, CSR_MISTATUS, 2  # save mistatus, enable interrupts
+    csrrsi  s1, CSR_MISTATUS, 1  # save mistatus, enable interrupts
 
 fast_interrupt_main:
     # handle interrupt
