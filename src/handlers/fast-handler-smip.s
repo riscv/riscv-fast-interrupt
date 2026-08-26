@@ -6,7 +6,7 @@
 
 fast_interrupt_entry:
     csrr    a0, mepc             # save mepc
-    csrrsi  a1, CSR_MISTATUS, 2  # save mistatus, enable interrupts
+    csrrsi  a1, CSR_MISTATUS, 1  # save mistatus, enable interrupts
 
 fast_interrupt_main:
     # handle interrupt
