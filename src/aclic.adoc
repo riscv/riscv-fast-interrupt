@@ -740,7 +740,7 @@ The supervisor-level CSR {siconfig} is a subset of {miconfig}.
 Reading or writing a field of {siconfig} reads or writes the corresponding field of {miconfig}.
 
 The fields {mnipen} and {snipen} enable this extension at M-mode and S-mode, respectively.
-Enablement of the extension refers to activating the modified operative behavior specified in <<op-threshold>>.
+See <<enabling-the-extension>> for details.
 
 If Ssnip is not implemented, then {snipbits} and {snipen} are read-only 0.
 If Ssip is not implemented, then {sipu} is read-only 0.
@@ -1095,6 +1095,18 @@ The behavior of an {xret} instruction is modified as follows:
 {xret} sets {xithreshold}.{iprio_lowercase} to {xistatus}.{pithreshprio}.
 
 This automatically restores the interrupt-enable threshold to the level of the previous context.
+
+[#enabling-the-extension]
+==== Enabling the Extensions
+
+{xiconfig}.{xnipen} is used to enable this extension at M- or S-Mode.
+When disabled, legacy software that is unaware of this extension can run unmodified.
+
+When {xiconfig}.{xnipen} is zero, the following applies at the corresponding privilege level:
+
+- The modified operative behavior specified in <<op-threshold>> is not applied to traps.
+- The exception code in {xcause} is not modified and reported as established in machine and supervisor mode specifications.
+- The enablement of an interrupt source is not gated by {xithreshold}.
 
 ==== State Enable
 
@@ -1753,6 +1765,11 @@ Explicitly, {xepc}, {xistatus} remain unchanged.
 
 NOTE: In the typical case of tail chaining, the check for another pending enabled interrupt is at the start of the {xipopret} instruction.
 In this case, the entire context save and restore sequence can be skipped.
+
+==== Hardware Triggers and Breakpoints
+
+Implicit stores initiated by the modified trap behavior and the implicit loads initiated by the mipopret and sipopret instructions be ignored for hardware triggers that raise a breakpoint.
+
 
 ==== Aborting Interrupt Traps
 
