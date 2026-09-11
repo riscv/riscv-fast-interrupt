@@ -28,6 +28,8 @@ endif
 
 SRC_DIR := src
 BUILD_DIR := build
+NORM_RULE_DEF_DIR := normative_rule_defs
+DOC_NORM_TAG_SUFFIX := -norm-tags.json
 
 ifeq ($(VERSION),dev)
 	SUFFIX := $(DATE)
@@ -37,6 +39,31 @@ endif
 
 DOCS_PDF := $(DOCS:%.adoc=%-$(SUFFIX).pdf)
 DOCS_HTML := $(DOCS:%.adoc=%-$(SUFFIX).html)
+
+# --- Normative rule tagging ---------------------------------------------------
+# Per-document extracted tag files, e.g. build/aclic-norm-tags.json
+DOCS_NORM_TAGS := $(addprefix $(BUILD_DIR)/, $(DOCS:%.adoc=%$(DOC_NORM_TAG_SUFFIX)))
+NORM_RULES_JSON := $(BUILD_DIR)/norm-rules-$(SUFFIX).json
+NORM_RULES_HTML := $(BUILD_DIR)/norm-rules-$(SUFFIX).html
+
+# All normative rule definition input YAML files.
+NORM_RULE_DEF_FILES := $(wildcard $(NORM_RULE_DEF_DIR)/*.yaml)
+
+# asciidoctor "tags" backend (the source-of-truth extractor) and the
+# generator tool shipped in the docs-resources submodule.
+ASCIIDOCTOR_TAGS := asciidoctor --backend tags --require=./docs-resources/converters/tags.rb
+CREATE_NORM_RULE_TOOL := docs-resources/tools/create_normative_rules.py
+CREATE_NORM_RULE_PYTHON := python3 $(CREATE_NORM_RULE_TOOL)
+
+# -t <tagfile> for each extracted tag file (input to the generator).
+NORM_TAG_FILE_ARGS := $(foreach f,$(DOCS_NORM_TAGS),-t $(f))
+
+# -d <deffile> for each definition YAML.
+NORM_RULE_DEF_ARGS := $(foreach f,$(NORM_RULE_DEF_FILES),-d $(f))
+# -tag2url mapping: tag file -> the rendered HTML it links into. The tag-file
+# path here MUST match the path passed via -t above.
+NORM_RULE_DOC2URL_ARGS := $(foreach d,$(DOCS),-tag2url $(BUILD_DIR)/$(d:%.adoc=%$(DOC_NORM_TAG_SUFFIX)) $(d:%.adoc=%)-$(SUFFIX).html)
+# ------------------------------------------------------------------------------
 
 XTRA_ADOC_OPTS :=
 ASCIIDOCTOR_PDF := asciidoctor-pdf
@@ -58,10 +85,12 @@ REQUIRES := --require=asciidoctor-bibtex \
             --require=asciidoctor-mathematical
 
 .PHONY: all build clean build-container build-no-container build-docs
+.PHONY: build-tags build-norm-rules build-norm-rules-json build-norm-rules-html
+
 
 all: build
 
-build-docs: $(DOCS_PDF) $(DOCS_HTML)
+build-docs: $(DOCS_PDF) $(DOCS_HTML) build-norm-rules
 
 vpath %.adoc $(SRC_DIR)
 
@@ -90,6 +119,46 @@ build-no-container:
 	@echo "Starting build..."
 	$(MAKE) SKIP_DOCKER=true build-docs
 	@echo "Build completed successfully."
+
+# --- Normative rule targets ---------------------------------------------------
+#
+# build-tags            : extract "norm:" tags from the .adoc sources into
+#                         build/<doc>-norm-tags.json
+# build-norm-rules-json : combine extracted tags + definition YAML into
+#                         build/norm-rules-<suffix>.json
+# build-norm-rules-html : same, but human-readable build/norm-rules-<suffix>.html
+# build-norm-rules      : both of the above
+#
+# Tag extraction uses the asciidoctor "tags" backend (source of truth), run
+# inside the RISC-V docs Docker image when available, or a local asciidoctor
+# otherwise. Docker or asciidoctor is required for tag extraction.
+
+build-tags: $(DOCS_NORM_TAGS)
+build-norm-rules-json: $(NORM_RULES_JSON)
+build-norm-rules-html: $(NORM_RULES_HTML)
+build-norm-rules: build-norm-rules-json build-norm-rules-html
+
+$(BUILD_DIR)/%$(DOC_NORM_TAG_SUFFIX): $(SRC_DIR)/%.adoc docs-resources/converters/tags.rb
+	@mkdir -p $(BUILD_DIR)
+	@if command -v docker >/dev/null 2>&1 ; then \
+		echo "Extracting tags via asciidoctor tags backend (Docker)..."; \
+		$(DOCKER_CMD) $(DOCKER_QUOTE) $(ASCIIDOCTOR_TAGS) --trace -a tags-match-prefix='norm:' -a tags-output-suffix='$(DOC_NORM_TAG_SUFFIX)' -D $(BUILD_DIR) $< $(DOCKER_QUOTE); \
+	elif command -v asciidoctor >/dev/null 2>&1 ; then \
+		echo "Extracting tags via asciidoctor tags backend (local)..."; \
+		SKIP_DOCKER=true $(ASCIIDOCTOR_TAGS) --trace -a tags-match-prefix='norm:' -a tags-output-suffix='$(DOC_NORM_TAG_SUFFIX)' -D $(BUILD_DIR) $< ; \
+	else \
+		echo "ERROR: Docker or asciidoctor is required to extract norm: tags." >&2 ; \
+		exit 1 ; \
+	fi
+
+
+$(NORM_RULES_JSON): $(DOCS_NORM_TAGS) $(NORM_RULE_DEF_FILES) $(CREATE_NORM_RULE_TOOL)
+	@mkdir -p $(BUILD_DIR)
+	$(DOCKER_CMD) $(DOCKER_QUOTE) $(CREATE_NORM_RULE_PYTHON) -j $(NORM_TAG_FILE_ARGS) $(NORM_RULE_DEF_ARGS) $(NORM_RULE_DOC2URL_ARGS) $@ $(DOCKER_QUOTE)
+
+$(NORM_RULES_HTML): $(DOCS_NORM_TAGS) $(NORM_RULE_DEF_FILES) $(CREATE_NORM_RULE_TOOL)
+	@mkdir -p $(BUILD_DIR)
+	$(DOCKER_CMD) $(DOCKER_QUOTE) $(CREATE_NORM_RULE_PYTHON) --html $(NORM_TAG_FILE_ARGS) $(NORM_RULE_DEF_ARGS) $(NORM_RULE_DOC2URL_ARGS) $@ $(DOCKER_QUOTE)
 
 # Update docker image to latest
 docker-pull-latest:

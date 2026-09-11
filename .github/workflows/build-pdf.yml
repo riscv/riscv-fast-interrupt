@@ -60,12 +60,14 @@ jobs:
       - name: Build Files
         run: make
 
-      # Upload the built PDF files as a single artifact
+      # Upload the built PDF and HTML files as a single artifact
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v6
         with:
           name: Build Artifacts
-          path: ${{ github.workspace }}/build/*.pdf
+          path: |
+            ${{ github.workspace }}/build/*.pdf
+            ${{ github.workspace }}/build/*.html
           retention-days: 30
 
       # Create Release
