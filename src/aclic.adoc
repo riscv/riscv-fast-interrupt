@@ -230,6 +230,97 @@ Constrained microcontrollers are expected to implement some or all of <<uc-ext>>
 
 ====
 
+[[requirements, Architecture Requirements]]
+== Architecture Requirements
+
+This chapter lists the interrupt architecture requirements that guide ACLIC development.
+
+=== Top-level requirements
+
+  * Functional: feature completeness, use case coverage
+  * Scalability: feature-wise, platform-wise scalability
+  * Compatibility: RISC-V specifications compliance, existing software support
+  * Unification: platform configurations and usage scenarios coverage
+  * Efficiency: aggregate effort cost, proven feature benefit, PPA (power, performance, area)
+
+=== Functional requirements
+
+==== Run-time features
+
+  * Configurable interrupt priorities
+  * Interrupt preemption (nested interrupts)
+  * Direct handling (single entry point, software vectoring)
+  * Vectored handling (per-interrupt entry point, hardware vectoring)
+  * Software priority threshold
+  * Low-level interrupt chaining (mixed handling: high priority vectored, low priority direct)
+  * Injection (including message signaling)
+  * Low-priority software interrupt (Arm SVC)
+  * Soft latency optimizations (software late preemption, tail chaining)
+  * Hard latency optimizations (hardware late preemption, tail chaining, stacking, shadow registers)
+  * Stack pointer management (vertical traps)
+  * Stack pointer management (horizontal traps)
+  * Interrupt trap error handling (such as vector fetch fault recovery)
+
+==== Configuration features
+
+  * Per-interrupt enable/disable
+  * Configurable interrupt source trigger conditions
+  * Configurable interrupt priorities (including preemption level)
+  * Configurable interrupt routing (to core:privilege)
+
+=== Scalability requirements
+
+==== Feature-level scalability
+
+  * Nested vectored interrupt extension: preemptive direct/vectored interrupt handling, soft latency optimization
+  * Stack pointer management: hardware stack pointer management
+  * Interrupt context frame management: hardware stacking
+
+==== Platform-level scalability
+
+  * Number of interrupt sources 1..1K
+  * Number of configurable interrupt priorities 1..256
+  * Number of configurable interrupt preemption levels 1..256
+  * Number of privileges 1..3 (M, M/S, M/HS/VS)
+  * Number of cores 1..n
+
+=== Compatibility
+
+==== RISC-V compliance
+
+  * RISC-V ISA (mandatory)
+  * RISC-V AIA (desired)
+  * ABI compatibility (mandatory)
+  * No conflicts with other ISA and non-ISA specifications
+  * Reuse and extend existing standards, avoid redefinition
+  * RVI development pipeline compliance: specification, review, simulation, software porting, hardware prototyping
+
+==== Software compatibility
+
+  * Existing toolchains: minimal or no modifications required
+  * Existing simulators: minimal modifications required
+  * Existing RTOS architectures: minimal porting effort, no performance regression
+  * List of software: FreeRTOS, Zephyr, ThreadX, RT-Thread, Linux PREEMPT_RT
+
+=== Unification
+
+90% of generic cases do not require extreme timing.
+The remaining 10% are domain-specific and inherently diverse — no single universal feature set can address all of them.
+
+  * Hardware unification: same run-time and configuration features across a wide range of system configurations (from single-core and single-privilege to heterogeneous multi-core with virtualization)
+  * Software unification: standard hardware agnostic API and interrupt handlers
+  * Unification with legacy specification: strong evidence for ISA modifications
+  * Just enough core IC configuration: minimal set of extensions, limited dependencies, generic use cases coverage
+  * Domain-specific extensions: proven demand and measured benefits
+
+=== Efficiency
+
+  * Toolchain - support efforts
+  * Simulation - support efforts
+  * Software - porting effort, code size, memory consumption, latency
+  * Hardware - implementation effort, power, performance, area
+  * Testing - test efforts
+
 [[fundamental-ext, Fundamental ACLIC Extensions]]
 == Fundamental ACLIC Extensions
 
