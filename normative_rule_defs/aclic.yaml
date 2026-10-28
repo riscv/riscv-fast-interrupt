@@ -1,0 +1,847 @@
+---
+# yaml-language-server: $schema=../docs-resources/schemas/defs-schema.json
+
+# Normative rule definitions for the ACLIC (Advanced Core-Local Interrupt
+# Controller) chapter (src/aclic.adoc).
+#
+# Naming convention (per riscv-isa-manual/tagging_normative_rules.adoc):
+#   - Rule names start with the CSR (or CSR.field) name and use a standard
+#     suffix taxonomy:
+#       _sz   size in bits
+#       _acc  access type (rw / ro / ro-0 / WARL / WLRL behavior)
+#       _mode associated privilege mode
+#       _op   operation / system-behavior effect
+#   - CSR-field rules use <csr>_<field>_<suffix>.
+#   - The rule name mirrors the "norm:" anchor name in src/aclic.adoc (minus
+#     the "norm:" prefix).
+#   - Implementation-defined behaviors use an ALL-CAPS name (underscores only,
+#     no suffix/prefix) and set impl-def-behavior: true, plus kind/instance and,
+#     for a WARL/WLRL field, impl-def-category.
+
+chapter_name: ACLIC
+
+$schema: "../docs-resources/schemas/defs-schema.json#"
+
+normative_rule_definitions:
+
+  # --- New Interrupt Configuration (miconfig) CSR ---
+
+  # Access type of the miconfig CSR (WARL).
+  - name: miconfig_acc
+    tags: ["norm:miconfig_acc"]
+
+  # Operation: snipbits/snipen control S-level nested preemption when Ssnip.
+  - name: miconfig_snip_op
+    tags: ["norm:miconfig_snip_op"]
+
+  # Access type of siconfig: it is a subset/alias of miconfig.
+  - name: siconfig_acc
+    tags: ["norm:siconfig_acc"]
+
+  # Operation: mnipen/snipen enable the extension at M/S level.
+  - name: miconfig_en_op
+    tags: ["norm:miconfig_en_op"]
+
+  # Access type: snipbits/snipen are read-only 0 when Ssnip absent.
+  - name: miconfig_snip_acc
+    tags: ["norm:miconfig_snip_acc"]
+
+  # Access type: sipu is read-only 0 when Ssip absent.
+  - name: miconfig_sipu_acc
+    tags: ["norm:miconfig_sipu_acc"]
+
+  # Access type: mipu is read-only 0 when Smip absent.
+  - name: miconfig_mipu_acc
+    tags: ["norm:miconfig_mipu_acc"]
+
+  # Operation of the mnipbits/snipbits field: MSB grouping semantics.
+  # One rule mapped to several tags (1:many) that together form the rule.
+  - name: miconfig_nipbits_op
+    tags:
+      - "norm:miconfig_nipbits_op_grouping"
+      - "norm:miconfig_nipbits_op_lsb"
+
+  # Size/legal range of the mnipbits/snipbits field: max is IPRIOLEN.
+  - name: miconfig_nipbits_sz
+    tags: ["norm:miconfig_nipbits_sz_max"]
+
+  # Implementation-defined: legal value written to the mnipbits/snipbits WARL
+  # field is implementation-defined up to the IPRIOLEN maximum.
+  - name: MICONFIG_NIPBITS_LEGAL_VALUES
+    tags: ["norm:miconfig_nipbits_sz_max"]
+    impl-def-behavior: true
+    impl-def-category: WARL
+    kind: csr_field
+    instance: miconfig
+
+  # --- New Interrupt enable threshold (mithreshold) CSR ---
+
+  # Operation of the mithreshold CSR (WLRL priority cutoff).
+  - name: mithreshold_op
+    tags: ["norm:mithreshold_op"]
+
+  # Size of the mithreshold.iprio field: exactly IPRIOLEN+1 bits.
+  - name: mithreshold_iprio_sz
+    tags: ["norm:mithreshold_iprio_sz"]
+
+  # Implementation-defined: the mithreshold.iprio field is WLRL; the legal-value
+  # set an implementation accepts is implementation-defined.
+  - name: MITHRESHOLD_IPRIO_LEGAL_VALUES
+    tags: ["norm:mithreshold_iprio_sz"]
+    impl-def-behavior: true
+    impl-def-category: WLRL
+    kind: csr_field
+    instance: mithreshold
+
+  # ==========================================================================
+  # Fundamental ACLIC (batch 1)
+  # ==========================================================================
+
+  # --- Interrupt domain mapping ---
+
+  # Operation: maximum number of hart-local APLIC domains supported.
+  - name: aclic_domain_count_max_op
+    tags: ["norm:aclic_domain_count_max_op"]
+
+  # Operation: which privilege modes the supported domains are associated with.
+  - name: aclic_domain_count_mode_op
+    tags: ["norm:aclic_domain_count_mode_op"]
+
+  # Privilege mode of the root hart-local APLIC domain.
+  - name: aclic_root_domain_mode
+    tags: ["norm:aclic_root_domain_mode"]
+
+  # Operation of the (optional) child hart-local APLIC domain.
+  - name: aclic_child_domain_op
+    tags: ["norm:aclic_child_domain_op"]
+
+  # --- Simplifications to domain state ---
+
+  # Access type: DM is fixed to 0 (direct delivery mode).
+  - name: aclic_dm_acc
+    tags: ["norm:aclic_dm_acc"]
+
+  # Access type: additional domaincfg field restrictions (table).
+  - name: aclic_domaincfg_acc
+    tags: ["norm:aclic_domaincfg_acc"]
+
+  # Access type: the IE bit is fixed to 1.
+  - name: aclic_ie_acc
+    tags: ["norm:aclic_ie_acc"]
+
+  # Reserved field: the BE bit is reserved.
+  - name: aclic_be_rsv
+    tags: ["norm:aclic_be_rsv"]
+
+  # Operation: endianness is controlled exclusively by xstatus at the hart.
+  - name: aclic_endianness_op
+    tags: ["norm:aclic_endianness_op"]
+
+  # Operation: the sourcecfgi Child Index field behavior.
+  - name: aclic_childindex_op
+    tags: ["norm:aclic_childindex_op"]
+
+  # Operation: xmsiaddrcfgh and genmsi registers are not required.
+  - name: aclic_msicfg_genmsi_op
+    tags: ["norm:aclic_msicfg_genmsi_op"]
+
+  # Operation: interrupt delivery control (IDC) structures are not needed.
+  - name: aclic_idc_op
+    tags: ["norm:aclic_idc_op"]
+
+  # Access type: the hart index in the target registers is read-only zero.
+  - name: aclic_hartindex_acc
+    tags: ["norm:aclic_hartindex_acc"]
+
+  # Access type: unused APLIC registers or fields are read-only zero.
+  - name: aclic_unused_acc
+    tags: ["norm:aclic_unused_acc"]
+
+  # --- Interrupt delivery ---
+
+  # Operation: APLIC rules of direct interrupt delivery apply.
+  - name: aclic_delivery_op
+    tags: ["norm:aclic_delivery_op"]
+
+  # Operation: root-domain interrupts appear as MEIP, child-domain as SEIP.
+  - name: aclic_delivery_meip_seip_op
+    tags: ["norm:aclic_delivery_meip_seip_op"]
+
+  # Operation: a hart-local APLIC domain signals priority and identity to hart.
+  - name: aclic_delivery_signal_op
+    tags: ["norm:aclic_delivery_signal_op"]
+
+  # --- Smidctrl / Ssidctrl dependencies ---
+
+  # Operation: Smidctrl depends on Smcsrind and Smaia.
+  - name: smidctrl_dep_op
+    tags: ["norm:smidctrl_dep_op"]
+
+  # Operation: Ssidctrl depends on Sscsrind and Ssaia.
+  - name: ssidctrl_dep_op
+    tags: ["norm:ssidctrl_dep_op"]
+
+  # --- IMSIC-based interface ---
+
+  # Operation: eip/eie access uses the same mechanism as an IMSIC.
+  - name: aclic_eip_eie_mechanism_op
+    tags: ["norm:aclic_eip_eie_mechanism_op"]
+
+  # Access type: eidelivery and eithreshold are out of Smidctrl/Ssidctrl scope.
+  - name: aclic_eidelivery_eithreshold_acc
+    tags: ["norm:aclic_eidelivery_eithreshold_acc"]
+
+  # Operation: xtopei reports the highest-priority pending-and-enabled interrupt.
+  - name: xtopei_op
+    tags: ["norm:xtopei_op"]
+
+  # Operation: eip/eie arrays alias the connected APLIC domain pending/enable.
+  - name: aclic_eip_eie_alias_op
+    tags: ["norm:aclic_eip_eie_alias_op"]
+
+  # --- Indirect CSR access ---
+
+  # Access type: xireg4..xireg6 are reserved and raise illegal instruction.
+  - name: xireg456_acc
+    tags: ["norm:xireg456_acc"]
+
+  # --- Interrupt Priority (acliciprio) ---
+
+  # Operation: XLEN=32 mapping - each xireg controls four interrupts.
+  - name: acliciprio_xlen32_op
+    tags: ["norm:acliciprio_xlen32_op"]
+
+  # Operation: XLEN=32 acliciprio[k] mirrors target[k*4..k*4+3].iprio.
+  - name: acliciprio_map32_op
+    tags: ["norm:acliciprio_map32_op"]
+
+  # Operation: XLEN=64 mapping - even registers only, eight interrupts each.
+  - name: acliciprio_xlen64_op
+    tags: ["norm:acliciprio_xlen64_op"]
+
+  # Access type: acliciprio[0] bits for target[0] are read-only zero.
+  - name: acliciprio0_target0_acc
+    tags: ["norm:acliciprio0_target0_acc"]
+
+  # Access type: XLEN=64 odd xiselect access to xireg raises illegal instruction.
+  - name: acliciprio_xlen64_odd_acc
+    tags: ["norm:acliciprio_xlen64_odd_acc"]
+
+  # --- Source Configuration (aclicsourcecfg) ---
+
+  # Access type: only the lower 16 bits are accessible; rest is reserved.
+  - name: aclicsourcecfg_acc
+    tags: ["norm:aclicsourcecfg_acc"]
+
+  # Operation: XLEN=32 mapping - xireg2/xireg3 control four interrupts.
+  - name: aclicsourcecfg_xlen32_op
+    tags: ["norm:aclicsourcecfg_xlen32_op"]
+
+  # Operation: XLEN=32 aclicsourcecfg[k] mirrors sourcecfg[k*2..k*2+1][15:0].
+  - name: aclicsourcecfg_map32_op
+    tags: ["norm:aclicsourcecfg_map32_op"]
+
+  # Access type: aclicsourcecfg[0][15:0] is read-only zero.
+  - name: aclicsourcecfg0_acc
+    tags: ["norm:aclicsourcecfg0_acc"]
+
+  # Operation: XLEN=64 mapping - even registers only, eight interrupts.
+  - name: aclicsourcecfg_xlen64_op
+    tags: ["norm:aclicsourcecfg_xlen64_op"]
+
+  # --- State Enable (Smstateen) ---
+
+  # Operation: mstateen0 bit 53 (ACLIC) is implemented when Smstateen present.
+  - name: aclic_mstateen_bit53_op
+    tags: ["norm:aclic_mstateen_bit53_op"]
+
+  # Access type: bit 53 zero -> S/lower-mode access to new CSRs is illegal.
+  - name: aclic_mstateen_bit53_acc
+    tags: ["norm:aclic_mstateen_bit53_acc"]
+
+  # Operation: mstateen0 bit 58 (IMSIC) is implemented when Smstateen present.
+  - name: aclic_mstateen_bit58_op
+    tags: ["norm:aclic_mstateen_bit58_op"]
+
+  # Access type: bit 58 zero -> S/lower-mode access to reused IMSIC CSRs illegal.
+  - name: aclic_mstateen_bit58_acc
+    tags: ["norm:aclic_mstateen_bit58_acc"]
+
+  # ==========================================================================
+  # Smnip / Ssnip: changed and new CSRs, operation, trap/return, enabling
+  # (batch 2)
+  # ==========================================================================
+
+  # --- Machine-level CSR reservations and status ---
+
+  # Reserved: mireg/2/3/5/6 are reserved when miselect is 0x1000.
+  - name: miconfig_mireg_rsv
+    tags: ["norm:miconfig_mireg_rsv"]
+
+  # Operation: mistatus consolidates interrupt state and aliases mstatus fields.
+  - name: mistatus_op
+    tags: ["norm:mistatus_op"]
+
+  # Operation: mistatus aliases mstatus.mie.
+  - name: mistatus_mie_op
+    tags: ["norm:mistatus_mie_op"]
+
+  # --- mtopsi CSR ---
+
+  # Operation: a read of mtopsi reports the top pending-and-enabled interrupt.
+  - name: mtopsi_read_op
+    tags: ["norm:mtopsi_read_op"]
+
+  # Operation: SIID encoding rules for mtopsi.
+  - name: mtopsi_siid_op
+    tags: ["norm:mtopsi_siid_op"]
+
+  # Operation: IPRIO encoding rules for mtopsi (including the no-interrupt case
+  # where IPRIO equals mithreshold.iprio).
+  - name: mtopsi_iprio_op
+    tags: ["norm:mtopsi_iprio_op"]
+
+  # Operation: the stepwise actions performed on a write to mtopsi.
+
+  - name: mtopsi_write_op
+    tags: ["norm:mtopsi_write_op"]
+
+  # Operation: combined read/write of mtopsi returns the claimed interrupt.
+  - name: mtopsi_rw_op
+    tags: ["norm:mtopsi_rw_op"]
+
+  # --- mcause CSR ---
+
+  # Operation: mcause exception-code encoding when miconfig.mnipen is one.
+  - name: mcause_op
+    tags: ["norm:mcause_op"]
+
+  # --- Supervisor-level CSRs ---
+
+  # Reserved: sireg/2/3/5/6 are reserved when siselect is 0x1000.
+  - name: siconfig_sireg_rsv
+    tags: ["norm:siconfig_sireg_rsv"]
+
+  # Access type: siconfig is a WARL subset/alias of miconfig.
+  - name: siconfig_alias_acc
+    tags: ["norm:siconfig_alias_acc"]
+
+  # Operation: siconfig.snipen enables the extension at S-mode.
+  - name: siconfig_snipen_op
+    tags: ["norm:siconfig_snipen_op"]
+
+  # Operation: siconfig.snipbits configures S-mode preemption grouping.
+  - name: siconfig_snipbits_op
+    tags: ["norm:siconfig_snipbits_op"]
+
+  # Operation: sstatus has only a single spp bit.
+  - name: sistatus_spp_op
+    tags: ["norm:sistatus_spp_op"]
+
+  # Operation of the sithreshold CSR (WLRL priority cutoff).
+  - name: sithreshold_op
+    tags: ["norm:sithreshold_op"]
+
+  # Size of the sithreshold.iprio field: exactly IPRIOLEN+1 bits.
+  - name: sithreshold_iprio_sz
+    tags: ["norm:sithreshold_iprio_sz"]
+
+  # Implementation-defined: the sithreshold.iprio field is WLRL; the legal-value
+  # set an implementation accepts is implementation-defined.
+  - name: SITHRESHOLD_IPRIO_LEGAL_VALUES
+    tags: ["norm:sithreshold_iprio_sz"]
+    impl-def-behavior: true
+    impl-def-category: WLRL
+    kind: csr_field
+    instance: sithreshold
+
+  # --- stopsi CSR ---
+
+  # Operation: a read of stopsi reports the top pending-and-enabled interrupt.
+  - name: stopsi_read_op
+    tags: ["norm:stopsi_read_op"]
+
+  # Operation: SIID encoding rules for stopsi.
+  - name: stopsi_siid_op
+    tags: ["norm:stopsi_siid_op"]
+
+  # Operation: IPRIO encoding rules for stopsi.
+  - name: stopsi_iprio_op
+    tags: ["norm:stopsi_iprio_op"]
+
+  # Operation: the stepwise actions performed on a write to stopsi.
+  - name: stopsi_write_op
+    tags: ["norm:stopsi_write_op"]
+
+  # Operation: combined read/write of stopsi returns the claimed interrupt.
+  - name: stopsi_rw_op
+    tags: ["norm:stopsi_rw_op"]
+
+  # --- scause CSR ---
+
+  # Operation: scause exception-code encoding when siconfig.snipen is one.
+  - name: scause_op
+    tags: ["norm:scause_op"]
+
+  # --- Operation (threshold-based nested preemption) ---
+
+  # Operation: NIP_THRESHOLD derivation from NIPPRIO_MASK and xithreshold.iprio.
+  - name: op_threshold_nip_op
+    tags: ["norm:op_threshold_nip_op"]
+
+  # Operation: interrupt source considered disabled when IPRIO >= NIP_THRESHOLD.
+  - name: op_threshold_disable_op
+    tags: ["norm:op_threshold_disable_op"]
+
+  # Operation: IPRIO is the value reported in xtopsi for the top interrupt.
+  - name: op_threshold_iprio_op
+    tags: ["norm:op_threshold_iprio_op"]
+
+  # --- Trap behavior ---
+
+  # Operation: on trap, save xithreshold.iprio to xistatus.pithreshprio.
+  - name: trap_save_threshold_op
+    tags: ["norm:trap_save_threshold_op"]
+
+  # Operation: on interrupt trap, raise threshold to xtopsi.IPRIO and claim.
+  - name: trap_raise_threshold_op
+    tags: ["norm:trap_raise_threshold_op"]
+
+  # Operation: double trap in M-mode leaves xistatus.pithreshprio unchanged.
+  - name: trap_double_op
+    tags: ["norm:trap_double_op"]
+
+  # --- Returns from handlers ---
+
+  # Operation: xret restores xithreshold.iprio from xistatus.pithreshprio.
+  - name: xret_restore_threshold_op
+    tags: ["norm:xret_restore_threshold_op"]
+
+  # --- Enabling the extensions ---
+
+  # Operation: xiconfig.xnipen enables the extension at M/S mode.
+  - name: xnipen_enable_op
+    tags: ["norm:xnipen_enable_op"]
+
+  # Operation: behavior when xiconfig.xnipen is zero (extension disabled).
+  - name: xnipen_disabled_op
+    tags: ["norm:xnipen_disabled_op"]
+
+  # --- State Enable (Smnip) ---
+
+  # Operation: mstateen0 bit 53 (ACLIC) is implemented when Smstateen present.
+  - name: smnip_mstateen_bit53_op
+    tags: ["norm:smnip_mstateen_bit53_op"]
+
+  # Access type: bit 53 zero -> S/lower-mode access to new CSRs is illegal.
+  - name: smnip_mstateen_bit53_acc
+    tags: ["norm:smnip_mstateen_bit53_acc"]
+
+  # ==========================================================================
+  # Smcsps / Sscsps: conditional stack pointer swap - CSR, status bits,
+  # state enable, and the four swap instructions (batch 3)
+  # ==========================================================================
+
+  # --- New stack pointer for conditional swap (xspcs) CSR ---
+
+  # Access type: mspcs (0x349) and sspcs (0x149) are WARL registers.
+  - name: xspcs_acc
+    tags: ["norm:xspcs_acc"]
+
+  # Implementation-defined: the legal value set of the xspcs WARL registers
+  # is implementation-defined (subject to alignment expectations). mspcs and
+  # sspcs are whole WARL CSRs (not bitfields), so kind is csr and the rule
+  # covers both instances.
+  - name: XSPCS_LEGAL_VALUES
+    tags: ["norm:xspcs_acc"]
+    impl-def-behavior: true
+    impl-def-category: WARL
+    kind: csr
+    instances: [mspcs, sspcs]
+
+  # Size: xspcs holds a full XLEN-wide value.
+
+  - name: xspcs_sz
+    tags: ["norm:xspcs_sz"]
+
+  # --- Status bits (xistatus.sppush / xistatus.psppush) ---
+
+  # Operation: xistatus.sppush requests a swap during the next push sequence.
+  - name: xistatus_sppush_op
+    tags: ["norm:xistatus_sppush_op"]
+
+  # Operation: xistatus.psppush requests a swap-back during the pop sequence
+  # and forms part of the preemptible handler context.
+  - name: xistatus_psppush_op
+    tags: ["norm:xistatus_psppush_op"]
+
+  # --- State Enable (Smstateen) ---
+
+  # Operation: mstateen0 bit 53 (ACLIC) is implemented when Smstateen present.
+  - name: smcsps_mstateen_bit53_op
+    tags: ["norm:smcsps_mstateen_bit53_op"]
+
+  # Access type: bit 53 zero -> S/lower-mode access to sspcs is illegal.
+  - name: smcsps_mstateen_bit53_acc
+    tags: ["norm:smcsps_mstateen_bit53_acc"]
+
+  # --- Instruction: mcspspush ---
+
+  # Encoding of the mcspspush instruction.
+  - name: mcspspush_enc
+    tags: ["norm:mcspspush_enc"]
+    kind: instruction
+    instance: mcspspush
+
+  # Operation: conditional stack pointer swap (push mode) at machine level.
+  - name: mcspspush_op
+    tags: ["norm:mcspspush_op"]
+    kind: instruction
+    instance: mcspspush
+
+  # Privilege mode: executing below machine level raises illegal instruction.
+  - name: mcspspush_mode
+    tags: ["norm:mcspspush_mode"]
+    kind: instruction
+    instance: mcspspush
+
+  # --- Instruction: mcspspop ---
+
+  # Encoding of the mcspspop instruction.
+  - name: mcspspop_enc
+    tags: ["norm:mcspspop_enc"]
+    kind: instruction
+    instance: mcspspop
+
+  # Operation: conditional stack pointer swap (pop mode) at machine level.
+  - name: mcspspop_op
+    tags: ["norm:mcspspop_op"]
+    kind: instruction
+    instance: mcspspop
+
+  # Privilege mode: executing below machine level raises illegal instruction.
+  - name: mcspspop_mode
+    tags: ["norm:mcspspop_mode"]
+    kind: instruction
+    instance: mcspspop
+
+  # --- Instruction: scspspush ---
+
+  # Encoding of the scspspush instruction.
+  - name: scspspush_enc
+    tags: ["norm:scspspush_enc"]
+    kind: instruction
+    instance: scspspush
+
+  # Operation: conditional stack pointer swap (push mode) at supervisor level.
+  - name: scspspush_op
+    tags: ["norm:scspspush_op"]
+    kind: instruction
+    instance: scspspush
+
+  # Privilege mode: executing below supervisor level raises illegal instruction.
+  - name: scspspush_mode
+    tags: ["norm:scspspush_mode"]
+    kind: instruction
+    instance: scspspush
+
+  # --- Instruction: scspspop ---
+
+  # Encoding of the scspspop instruction.
+  - name: scspspop_enc
+    tags: ["norm:scspspop_enc"]
+    kind: instruction
+    instance: scspspop
+
+  # Operation: conditional stack pointer swap (pop mode) at supervisor level.
+  - name: scspspop_op
+    tags: ["norm:scspspop_op"]
+    kind: instruction
+    instance: scspspop
+
+  # Privilege mode: executing below supervisor level raises illegal instruction.
+  - name: scspspop_mode
+    tags: ["norm:scspspop_mode"]
+    kind: instruction
+    instance: scspspop
+
+  # ==========================================================================
+  # Smijt / Ssijt: interrupt jump table (hardware vectoring) - xijt CSR,
+  # xtvec IJT mode, vectoring/abort behavior, precise-fault traps, state enable
+  # (batch 4)
+  # ==========================================================================
+
+  # --- xijt CSR (interrupt jump table base) ---
+
+  # Access type: mijt (0x307) and sijt (0x107) are the new/changed CSRs that
+  # hold the interrupt jump table base address.
+  - name: xijt_addr
+    tags: ["norm:xijt_addr"]
+
+  # Access type: xijt is a WARL XLEN-bit CSR holding the jump-table base.
+  - name: xijt_acc
+    tags: ["norm:xijt_acc"]
+
+  # Implementation-defined: the exact alignment granularity accepted by the
+  # xijt WARL register (64-byte or greater power-of-two) is implementation-
+  # defined. mijt and sijt are whole WARL CSRs, so kind is csr.
+  - name: XIJT_ALIGNMENT
+    tags: ["norm:xijt_alignment_op"]
+    impl-def-behavior: true
+    impl-def-category: WARL
+    kind: csr
+    instances: [mijt, sijt]
+
+  # Operation: xijt.SHAMT configures an additional offset shift amount.
+  - name: xijt_shamt_op
+    tags: ["norm:xijt_shamt_op"]
+
+  # --- xtvec interrupt jump table mode ---
+
+  # Operation: xtvec.mode = 11 encodes interrupt jump table mode.
+  - name: xtvec_ijt_mode_op
+    tags: ["norm:xtvec_ijt_mode_op"]
+
+  # Operation: PC computation upon interrupt in jump table mode.
+  - name: xtvec_ijt_pc_op
+    tags: ["norm:xtvec_ijt_pc_op"]
+
+  # --- Vectoring behavior ---
+
+  # Operation: read the handler address from the in-memory jump table.
+  - name: xijt_vector_read_op
+    tags: ["norm:xijt_vector_read_op"]
+
+  # Operation: entry LSB = 0 redirects the trap to the common xtvec entry point.
+  - name: xijt_ven0_redirect_op
+    tags: ["norm:xijt_ven0_redirect_op"]
+
+  # Operation: entry LSB = 1 hardware-vectors to the cleaned handler address.
+  - name: xijt_ven1_vector_op
+    tags: ["norm:xijt_ven1_vector_op"]
+
+  # Operation: the jump-table fetch is a read at the handler's privilege mode.
+  - name: xijt_fetch_perm_op
+    tags: ["norm:xijt_fetch_perm_op"]
+
+  # Operation: table entries follow the current data endianness.
+  - name: xijt_entry_endianness_op
+    tags: ["norm:xijt_entry_endianness_op"]
+
+  # Operation: recommended that interrupt jump table reads are ignored for
+  # hardware triggers and breakpoints.
+  - name: xijt_trigger_read_op
+    tags: ["norm:xijt_trigger_read_op"]
+
+  # Operation: recommended that the handler fetch is ignored for hardware
+  # triggers and breakpoints.
+  - name: xijt_fetch_trigger_op
+    tags: ["norm:xijt_fetch_trigger_op"]
+
+  # --- Interrupt trap abort / precise fault behavior ---
+
+  # Operation: whether an interrupt trap can be aborted for a higher-priority
+  # event is implementation-defined.
+  - name: ijt_abort_impl_op
+    tags: ["norm:ijt_abort_impl_op"]
+
+  # Implementation-defined: the ability to abort a multi-cycle interrupt trap
+  # in favor of a higher-priority event is implementation-defined.
+  - name: IJT_INTERRUPT_ABORT
+    tags: ["norm:ijt_abort_impl_op"]
+    impl-def-behavior: true
+
+  # Operation: aborted interrupts must not leave altered architectural state
+  # (unless restartable to the correct final state).
+  - name: ijt_abort_state_op
+    tags: ["norm:ijt_abort_state_op"]
+
+  # Operation: partial state update relaxation (permits speculative CSR writes).
+  - name: ijt_abort_partial_op
+    tags: ["norm:ijt_abort_partial_op"]
+
+  # Operation: a fault while taking an interrupt trap aborts it and takes a
+  # synchronous (precise interrupt fault) exception trap instead.
+  - name: ijt_fault_abort_op
+    tags: ["norm:ijt_fault_abort_op"]
+
+  # Operation: requirements a precise interrupt fault trap must satisfy.
+  - name: ijt_precise_fault_op
+    tags: ["norm:ijt_precise_fault_op"]
+
+  # --- State Enable (Smijt) ---
+
+  # Operation: mstateen0 bit 53 (ACLIC) is implemented when Smstateen present.
+  - name: smijt_mstateen_bit53_op
+    tags: ["norm:smijt_mstateen_bit53_op"]
+
+  # Access type: bit 53 zero -> S/lower-mode access to sijt is illegal.
+  - name: smijt_mstateen_bit53_acc
+    tags: ["norm:smijt_mstateen_bit53_acc"]
+
+  # ==========================================================================
+  # Smehv / Ssehv: synchronous exception hardware vectoring - xijt.EHV bit and
+  # vectored synchronous-exception trap entry (batch 5)
+  # ==========================================================================
+
+  # Operation: Smehv/Ssehv depend on Smijt/Ssijt, respectively.
+  - name: smehv_dep_op
+    tags: ["norm:smehv_dep_op"]
+    kind: extension_dependency
+    instance: Smehv
+
+  # Operation: xijt gains an EHV bit controlling synchronous-exception vectoring.
+  - name: xijt_ehv_op
+    tags: ["norm:xijt_ehv_op"]
+
+  # Operation: EHV clear leaves synchronous-exception trap behavior unchanged.
+  - name: ehv_clear_op
+    tags: ["norm:ehv_clear_op"]
+
+  # Operation: EHV set vectors synchronous exceptions to the computed entry.
+  - name: ehv_set_op
+    tags: ["norm:ehv_set_op"]
+
+  # ==========================================================================
+  # Smip / Ssip: interrupt handler push and pop - control bit, automatic
+  # context save/restore, late preemption, tail chaining, abort/fault, and the
+  # mipopret/sipopret instructions (batch 6)
+  # ==========================================================================
+
+  # Operation: this extension does not affect NMIs.
+  - name: smip_nmi_op
+    tags: ["norm:smip_nmi_op"]
+
+  # --- Controlling the extension behavior ---
+
+  # Operation: xiconfig.xipu set enables automatic interrupt-trap stacking.
+  - name: xipu_enable_op
+    tags: ["norm:xipu_enable_op"]
+
+  # Operation: xiconfig.xipu clear leaves trap behavior unmodified.
+  - name: xipu_disabled_op
+    tags: ["norm:xipu_disabled_op"]
+
+  # --- Interrupt trap (push) behavior ---
+
+  # Operation: the ordered push sequence performed before the first handler
+  # instruction (conditional sp swap, save x10-x15, adjust sp).
+  - name: smip_trap_push_op
+    tags: ["norm:smip_trap_push_op"]
+
+  # Size: stack frame is 24 bytes (RV32E), 32 bytes (RV32I), 48 bytes (RV64).
+  - name: smip_framesize_sz
+    tags: ["norm:smip_framesize_sz"]
+
+  # --- Returns from interrupt handlers ---
+
+  # Operation: xipopret restores the saved context and returns (ordered pop
+  # sequence).
+  - name: smip_ipopret_op
+    tags: ["norm:smip_ipopret_op"]
+
+  # --- Late preemption ---
+
+  # Operation: an implementation may check for higher-priority interrupts during
+  # the trap side effects and switch to that handler.
+  - name: smip_late_preempt_op
+    tags: ["norm:smip_late_preempt_op"]
+
+  # --- Tail chaining ---
+
+  # Operation: xipopret may be aborted to tail-chain into a pending-and-enabled
+  # interrupt (with xepc/xistatus unchanged).
+  - name: smip_tailchain_op
+    tags: ["norm:smip_tailchain_op"]
+
+  # --- Aborting interrupt traps ---
+
+  # Operation: the interrupt-trap-abort requirements apply to this extension.
+  - name: smip_abort_ref_op
+    tags: ["norm:smip_abort_ref_op"]
+
+  # Operation: aborted-trap stores may update idempotent memory; non-idempotent
+  # regions must not have been updated.
+  - name: smip_abort_mem_op
+    tags: ["norm:smip_abort_mem_op"]
+
+  # --- Interrupt fault handling ---
+
+  # Operation: store faults during the trap abort it and take a precise
+  # interrupt fault trap.
+  - name: smip_fault_op
+    tags: ["norm:smip_fault_op"]
+
+  # --- Instruction: mipopret ---
+
+  # Encoding of the mipopret instruction.
+  - name: mipopret_enc
+    tags: ["norm:mipopret_enc"]
+    kind: instruction
+    instance: mipopret
+
+  # Privilege mode: below machine level raises illegal instruction.
+  - name: mipopret_mode
+    tags: ["norm:mipopret_mode"]
+    kind: instruction
+    instance: mipopret
+
+  # Operation: pop interrupt context and return at machine level.
+  - name: mipopret_op
+    tags: ["norm:mipopret_op"]
+    kind: instruction
+    instance: mipopret
+
+  # Operation: the load order/access size/OFFSETS are implementation-defined.
+  - name: mipopret_load_layout_op
+    tags: ["norm:mipopret_load_layout_op"]
+    kind: instruction
+    instance: mipopret
+
+  # Operation: mcspspop acts as a NOP when Smcsps is not implemented.
+  - name: mipopret_nop_op
+    tags: ["norm:mipopret_nop_op"]
+    kind: instruction
+    instance: mipopret
+
+  # --- Instruction: sipopret ---
+
+  # Encoding of the sipopret instruction.
+  - name: sipopret_enc
+    tags: ["norm:sipopret_enc"]
+    kind: instruction
+    instance: sipopret
+
+  # Privilege mode: below supervisor level raises illegal instruction.
+  - name: sipopret_mode
+    tags: ["norm:sipopret_mode"]
+    kind: instruction
+    instance: sipopret
+
+  # Operation: pop interrupt context and return at machine/supervisor level.
+  - name: sipopret_op
+    tags: ["norm:sipopret_op"]
+    kind: instruction
+    instance: sipopret
+
+  # Operation: the load order/access size/OFFSETS are implementation-defined.
+  - name: sipopret_load_layout_op
+    tags: ["norm:sipopret_load_layout_op"]
+    kind: instruction
+    instance: sipopret
+
+  # Operation: scspspop acts as a NOP when Sscsps is not implemented.
+  - name: sipopret_nop_op
+    tags: ["norm:sipopret_nop_op"]
+    kind: instruction
+    instance: sipopret
+
+  # Implementation-defined: the load order, access size, and stack-frame
+  # OFFSETS used by the xipopret pop sequence are implementation-defined. The
+  # rule covers both the mipopret and sipopret load-layout tags.
+  - name: XIPOPRET_LOAD_LAYOUT
+    tags: ["norm:mipopret_load_layout_op", "norm:sipopret_load_layout_op"]
+    impl-def-behavior: true
+
+
+
