@@ -839,11 +839,11 @@ and nested preemption is supported.
 [[norm:mtopsi_read_op]]
 A read of {mtopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {mithreshold} register,
-at machine level, in this format:
+at machine level, in the following read format:
 
 [source]
 ----
-mtopsi
+mtopsi (read)
  XLEN-1:16  SIID  Signed Interrupt Identity
  15:9       (reserved)
  8:0        IPRIO
@@ -997,11 +997,11 @@ and nested preemption is supported.
 [[norm:stopsi_read_op]]
 A read of {stopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {sithreshold} register,
-at supervisor level, in this format:
+at supervisor level, in the following read format:
 
 [source]
 ----
-stopsi
+stopsi (read)
  XLEN-1:16  SIID  Signed Interrupt Identity
  15:9       (reserved)
  8:0        IPRIO
