@@ -290,7 +290,7 @@ The following, additional restrictions are applied to the `domaincfg` register:
 
 [%autowidth,float="center",align="center",cols="<,<",grid=none,frame=none]
 |===
-|bits 31:24 |read-only 0x80 
+|bits 31:24 |read-only 0x80
 |bit 8|IE = 1 (read-only)
 |bit 7|read-only 0
 |bit 2 |DM = 0
@@ -326,12 +326,12 @@ This information influences the arbitration between major and minor interrupts t
 [#norm:smidctrl_dep_op]#Smidctrl depends on the Smcsrind and Smaia extensions.#
 [#norm:ssidctrl_dep_op]#Ssidctrl depends on the Sscsrind and Ssaia extensions.#
 
-NOTE: Many AIA features like programmable IPRIO may not be needed in resource-constrained systems. 
+NOTE: Many AIA features like programmable IPRIO may not be needed in resource-constrained systems.
 Since these are already controlled by WARL registers, implementations can save area by choosing to not support them. +
  +
 A minimal implementation of the AIA `mvip` CSR is suggested by the AIA specification: +
 "When supervisor mode is implemented, the minimal required implementation of mvien and mvip has all bits being
-read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing 
+read-only zeros except for mvip bits 1 and 9, and sometimes bit 5, each of which is an alias of an existing
 writable bit in mip. When supervisor mode is not implemented, registers mvien and mvip do not exist."
  +
 Further, resource-constrained implementations of these extensions are expected to implement the {iprio_lowercase} array of major interrupts as read-only zeros.
@@ -351,7 +351,7 @@ This approach has several advantages:
 - Atomic access: Atomic read/write, read & set and read & clear instructions are available for CSRs
 - Resource efficiency: Due to smaller access granularity and range,
   implementations using indirect CSRs can be more resource efficient.
-- Platform-independent: Memory-mapped base addresses are platform-defined. 
+- Platform-independent: Memory-mapped base addresses are platform-defined.
   This places an additional configuration burden in the hands of a user.
   CSR-based interfaces always use the same CSR register numbers
 
@@ -765,7 +765,7 @@ A mask for filtering out the less-significant priority bits that do not particip
 NIPPRIO_MASK = ~((2^(IPRIOLEN - xiconfig.xnipbits)) - 1)
 ----
 
-NOTE: For example, if {miconfig}.{mnipbits}=4, 
+NOTE: For example, if {miconfig}.{mnipbits}=4,
 NIPPRIO_MASK=11110000, i.e. the four MSBs are participating in interrupt preemption.
 
 ===== New Interrupt enable threshold ({mithreshold}) CSR
@@ -837,6 +837,7 @@ in a scheme where interrupts are dispatched by software,
 and nested preemption is supported.
 
 [[norm:mtopsi_read_op]]
+--
 A read of {mtopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {mithreshold} register,
 at machine level, in the following read format:
@@ -848,6 +849,7 @@ mtopsi (read)
  15:9       (reserved)
  8:0        IPRIO
 ----
+--
 
 [[norm:mtopsi_siid_op]]
 If an external interrupt `i` is the highest-priority pending-and-enabled interrupt,
@@ -997,6 +999,7 @@ in a scheme where interrupts are dispatched by software,
 and nested preemption is supported.
 
 [[norm:stopsi_read_op]]
+--
 A read of {stopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {sithreshold} register,
 at supervisor level, in the following read format:
@@ -1008,6 +1011,7 @@ stopsi (read)
  15:9       (reserved)
  8:0        IPRIO
 ----
+--
 
 [[norm:stopsi_siid_op]]
 If an external interrupt `i` is the highest-priority pending-and-enabled interrupt,
