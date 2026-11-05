@@ -879,6 +879,19 @@ allows software to use this priority as threshold for spurious interrupts handle
 If it would return zero,
 software may need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
+[[norm:mtopsi_write_format]]
+--
+For a write access, {mtopsi} has the following format:
+
+[source]
+----
+mtopsi (write)
+ XLEN-1:17  (reserved)
+ 16:9       IPRIO
+ 8:0        (reserved)
+----
+--
+
 [[norm:mtopsi_write_op]]
 A write to the {mtopsi} CSR performs the following stepwise actions:
 
@@ -1040,6 +1053,19 @@ NOTE: Reading {sithreshold}.{iprio_lowercase} as {IPRIO} field
 allows software to use this priority as threshold for spurious interrupts handlers.
 If it would return zero,
 software may need special handling of spurious interrupts to prevent writing 0 to the threshold register.
+
+[[norm:stopsi_write_format]]
+--
+For a write access, {stopsi} has the following format:
+
+[source]
+----
+stopsi (write)
+ XLEN-1:17  (reserved)
+ 16:9       IPRIO
+ 8:0        (reserved)
+----
+--
 
 [[norm:stopsi_write_op]]
 A write to the {stopsi} CSR performs the following stepwise actions:
