@@ -893,6 +893,7 @@ mtopsi (write)
 --
 
 [[norm:mtopsi_write_op]]
+--
 A write to the {mtopsi} CSR performs the following stepwise actions:
 
 . The source register bits [16:8] are written to {mithreshold}.{iprio_lowercase}
@@ -900,6 +901,7 @@ A write to the {mtopsi} CSR performs the following stepwise actions:
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio_lowercase}
 
 The sequence of actions cannot be interrupted.
+--
 
 [[norm:mtopsi_rw_op]]
 If a read and write of the {mtopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
@@ -1068,6 +1070,7 @@ stopsi (write)
 --
 
 [[norm:stopsi_write_op]]
+--
 A write to the {stopsi} CSR performs the following stepwise actions:
 
 . The source register bits [16:8] are written to {sithreshold}.{iprio_lowercase}
@@ -1075,6 +1078,7 @@ A write to the {stopsi} CSR performs the following stepwise actions:
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio_lowercase}
 
 The sequence of actions cannot be interrupted.
+--
 
 [[norm:stopsi_rw_op]]
 If a read and write of the {stopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
