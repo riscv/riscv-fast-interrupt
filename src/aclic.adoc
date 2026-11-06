@@ -227,6 +227,11 @@ Therefore, only features that have a large cycle impact on interrupt latency and
 
 Both types of microcontrollers are expected to implement some or all of <<fundamental-ext>>.
 Constrained microcontrollers are expected to implement some or all of <<uc-ext>> in addition.
+Constrained microcontrollers might often implement only M- und U-mode.
+
+Use-cases for M/S/U systems exist, that make use of the extensions in <<uc-ext>> at supervisor level.
+This is only profitable, if S-mode is not preempted by M-mode during typical operation.
+In this scenario, M-mode is only used for boot and for handling critical events.
 
 ====
 
