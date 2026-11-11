@@ -1752,8 +1752,8 @@ NOTE: In some implementations, executing the context save in parallel to the rea
 may contribute to reducing the jitter in interrupt latency,
 by masking variable delays e.g. caused by cache misses on handler fetch.
 
-NOTE: Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt or synchronous exception.
-Interrupt handling throughput is increased by allowing tail-chaining of interrupts or synchronous exceptions, skipping the context restore and save in between servicing two handlers.
+NOTE: Additional latency reduction can be achieved by implementing late-preemption of the push sequence in favor of a higher-priority interrupt.
+Interrupt handling throughput is increased by allowing tail-chaining of interrupts, skipping the context restore and save in between servicing two handlers.
 This is not an architectural requirement, but a possible implementation choice.
 
 [#norm:smip_nmi_op]#This extension does not affect Non-Maskable Interrupts (NMIs).#
