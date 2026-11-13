@@ -842,17 +842,19 @@ in a scheme where interrupts are dispatched by software,
 and nested preemption is supported.
 
 [[norm:mtopsi_read_op]]
+--
 A read of {mtopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {mithreshold} register,
-at machine level, in this format:
+at machine level, in the following read format:
 
 [source]
 ----
-mtopsi
+mtopsi (read)
  XLEN-1:16  SIID  Signed Interrupt Identity
  15:9       (reserved)
  8:0        IPRIO
 ----
+--
 
 [[norm:mtopsi_siid_op]]
 If an external interrupt `i` is the highest-priority pending-and-enabled interrupt,
@@ -882,7 +884,21 @@ allows software to use this priority as threshold for spurious interrupts handle
 If it would return zero,
 software may need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
+[[norm:mtopsi_write_format]]
+--
+For a write access, {mtopsi} has the following format:
+
+[source]
+----
+mtopsi (write)
+ XLEN-1:17  (reserved)
+ 16:9       IPRIO
+ 8:0        (reserved)
+----
+--
+
 [[norm:mtopsi_write_op]]
+--
 A write to the {mtopsi} CSR performs the following stepwise actions:
 
 . The source register bits [16:8] are written to {mithreshold}.{iprio_lowercase}
@@ -890,6 +906,7 @@ A write to the {mtopsi} CSR performs the following stepwise actions:
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {mithreshold}.{iprio_lowercase}
 
 The sequence of actions cannot be interrupted.
+--
 
 [[norm:mtopsi_rw_op]]
 If a read and write of the {mtopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
@@ -1002,17 +1019,19 @@ in a scheme where interrupts are dispatched by software,
 and nested preemption is supported.
 
 [[norm:stopsi_read_op]]
+--
 A read of {stopsi} returns information about the highest-priority pending-and-enabled interrupt,
 that also exceeds the priority threshold specified by the {sithreshold} register,
-at supervisor level, in this format:
+at supervisor level, in the following read format:
 
 [source]
 ----
-stopsi
+stopsi (read)
  XLEN-1:16  SIID  Signed Interrupt Identity
  15:9       (reserved)
  8:0        IPRIO
 ----
+--
 
 [[norm:stopsi_siid_op]]
 If an external interrupt `i` is the highest-priority pending-and-enabled interrupt,
@@ -1042,7 +1061,21 @@ allows software to use this priority as threshold for spurious interrupts handle
 If it would return zero,
 software may need special handling of spurious interrupts to prevent writing 0 to the threshold register.
 
+[[norm:stopsi_write_format]]
+--
+For a write access, {stopsi} has the following format:
+
+[source]
+----
+stopsi (write)
+ XLEN-1:17  (reserved)
+ 16:9       IPRIO
+ 8:0        (reserved)
+----
+--
+
 [[norm:stopsi_write_op]]
+--
 A write to the {stopsi} CSR performs the following stepwise actions:
 
 . The source register bits [16:8] are written to {sithreshold}.{iprio_lowercase}
@@ -1050,6 +1083,7 @@ A write to the {stopsi} CSR performs the following stepwise actions:
 . The interrupt threshold is raised by writing the reported {IPRIO} value to {sithreshold}.{iprio_lowercase}
 
 The sequence of actions cannot be interrupted.
+--
 
 [[norm:stopsi_rw_op]]
 If a read and write of the {stopsi} CSR are done together by a single CSR instruction (CSRRW, CSRRS, or CSRRC),
