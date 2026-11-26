@@ -1862,8 +1862,8 @@ When executing an {xipopret} instruction, the context saved during the trap is r
 
 It performs the following actions in order:
 
-  * Adjusts the stack pointer to destroy the stack frame
   * Restores registers x10-x15
+  * Adjusts the stack pointer to destroy the stack frame
   * Conditionally performs a stack pointer swap by executing `{xcspspop} sp, sp` (if Smcsps/Sscsps is implemented)
   * Executes an {xret} according to the current level
 --
