@@ -896,8 +896,8 @@ For a write access, {mtopsi} has the following format:
 ----
 mtopsi (write)
  XLEN-1:17  (reserved)
- 16:9       IPRIO
- 8:0        (reserved)
+ 16:8       IPRIO
+ 7:0        (reserved)
 ----
 --
 
@@ -1073,8 +1073,8 @@ For a write access, {stopsi} has the following format:
 ----
 stopsi (write)
  XLEN-1:17  (reserved)
- 16:9       IPRIO
- 8:0        (reserved)
+ 16:8       IPRIO
+ 7:0        (reserved)
 ----
 --
 
